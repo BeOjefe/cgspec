@@ -40,10 +40,16 @@
    - **Numeric Invariant:** Sprouted directories **MUST retain the two-digit numerical prefix** to maintain strict ordering:
      `docs/01-PRD.md` $\rightarrow$ `docs/01-PRD/`, `docs/02-NOUNS-AND-FLOWS.md` $\rightarrow$ `docs/02-NOUNS-AND-FLOWS/`, `docs/03-ARCHITECTURE.md` $\rightarrow$ `docs/03-ARCHITECTURE/`.
 
-9. **Law 9 — Real Multi-Agent Orchestration (Strict Prohibition on Single-Agent Simulation):**
-   - When executing `/cgspec-council` or multi-perspective review, the agent is **STRICTLY PROHIBITED** from pretending to be multiple debaters by typing simulated dialog into a single markdown file or response.
-   - The agent **MUST explicitly call the platform subagent tool (`invoke_subagent` in Antigravity, `Agent`/`Task` in Claude Code / Cursor)** to spawn 3 independent, concurrent subagents with isolated prompts, reasoning traces, and conversation IDs.
-   - The host supervises the exchange via message passing (`send_message`), ensuring genuine cognitive diversity, independent challenge, and real clashes.
+9. **Law 9 — Real 4-Subagent Council (Main Agent Stays with Human):**
+   - When executing `/cgspec-council`, the **Main Agent MUST remain in the chat with the user** at all times and never get trapped in debater loops.
+   - The Main Agent **MUST call `invoke_subagent` to spawn 4 real subagents in parallel**:
+     1. `Council Supervisor & Inspector` (Chairs the debate, manages rounds, logs to `docs/.working/council/COUNCIL-NNN-<slug>/`, and sends round reports to Main Agent).
+     2. `Debater 1 — Systems & Modularity`
+     3. `Debater 2 — Security & Edge Cases`
+     4. `Debater 3 — Pragmatic DX & Ship Speed`
+   - Single-agent simulation (typing fake dialog into markdown files) is **strictly prohibited**.
+   - As rounds finish, the Main Agent relays concise 3-line updates to the human.
+
 
 
 
