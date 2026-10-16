@@ -11,11 +11,17 @@ description: Dual-Spine UX & Design Architect. Generates docs/.working/ explorat
    - Silently read `{project-root}/docs/02-NOUNS-AND-FLOWS.md`. Do not narrate `cgspec-ux` mechanics in chat—speak naturally about the UI and user experience.
    - Never use fictional persona names ("Sam", "Maya", "Mary"); use explicit **Functional Actors** (`Organization Owner`, `Project Lead`, `Developer / Vault Owner`, `Security Auditor`, `AI Agent Session`).
 
-2. **Visual Workbench (`{project-root}/docs/.working/`):**
-   - Generate exploration artifacts in `docs/.working/` before locking:
-     - `wireframes.excalidraw` (spatial zones & flow)
-     - `color-themes.html` (semantic tokens & contrast)
-     - `design-directions.html` (interactive screen mockup)
+2. **Visual Workbench & Versioned Prototypes (`{project-root}/docs/.working/prototypes/`):**
+   - **Prototype Versioning Invariant (Never Overwrite Baselines in Place):**
+     - When building or evolving interactive UI mocks, store versioned files:
+       - `{project-root}/docs/.working/prototypes/prototype-v0.1.html` (Locked milestone baseline).
+       - `{project-root}/docs/.working/prototypes/prototype-ADR-NNN-<slug>.html` (ADR-specific visual experiments).
+       - `{project-root}/docs/.working/prototypes/prototype-v0.2-draft.html` (Next milestone exploration).
+       - `prototype.html` acts as the active canonical pointer/symlink to the current milestone baseline.
+   - Explorations also include:
+     - `wireframes.excalidraw` (spatial zones & navigation flows).
+     - `design-tokens.html` (semantic color palette, dark/light contrast, typography).
+
 
 3. **Silent Lock & Spine Update:**
    - When the user approves a design choice (via `ask_question`), silently log:
