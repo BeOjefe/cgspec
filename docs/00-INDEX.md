@@ -1,0 +1,32 @@
+# docs/00-INDEX.md — CGSpec (`cgspec`) Live State & Control Center
+
+> **Single Source of Truth:** This file tracks the live engineering state of **CGSpec (`cgspec`)** — the AI-agnostic Spec-Driven SDLC Engine & CortexGate Bridge.
+
+---
+
+## 1. Current System Phase
+- **Active Phase:** `PHASE 2: ARCHITECTURE & SKILL SPECIFICATION LOCKED`
+- **Active Milestone:** `v0.1 — Core Portable Skill Suite & Non-Linear .memlog.md Engine`
+- **Current Focus:** Reviewing the vendor-neutral `cgspec` documentation in `/home/ojefe/Documents/Project/cgspec/docs/` (compatible with Hermes, Claude Code, Codex, Cursor, and Antigravity) before generating the portable `skills/cgspec-*/SKILL.md` files and `scripts/memlog.py`.
+
+---
+
+## 2. Canonical Document Status Matrix
+
+| Pillar Document | Status | Last ADR | Purpose |
+| :--- | :--- | :--- | :--- |
+| [`00-INBOX.md`](file:///home/ojefe/Documents/Project/cgspec/docs/00-INBOX.md) | `🟢 Active` | — | Idea Parking Lot & `v0.2+` Future Features for `cgspec` |
+| [`01-PRD.md`](file:///home/ojefe/Documents/Project/cgspec/docs/01-PRD.md) | `✅ Ready for Review` | [`ADR-001`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-001-why-flowspec-over-speckit-bmad-gstack.md) | Problem Statement, Plain-English Glossary, Autopilot Coach UX, `v0.1` Scope & Non-Goals |
+| [`02-NOUNS-AND-FLOWS.md`](file:///home/ojefe/Documents/Project/cgspec/docs/02-NOUNS-AND-FLOWS.md) | `✅ Ready for Review` | [`ADR-002`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-002-monorepo-vs-polyrepo-and-db-migrations.md) | Core Objects, Non-Linear `.memlog.md` Loop, 3-Tier Pivot Flow, Monorepo vs. Polyrepo & DB Migration Layout |
+| [`03-ARCHITECTURE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-ARCHITECTURE.md) | `✅ Ready for Review` | [`ADR-003`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-003-supervised-peer-council-architecture.md) | Vendor-Neutral Skill Architecture (`AGENTS.md`, `CLAUDE.md`, `skills/cgspec-*/SKILL.md`, `scripts/memlog.py`, CortexGate MCP Bridge) |
+| [`04-DESIGN.md`](file:///home/ojefe/Documents/Project/cgspec/docs/04-DESIGN.md) | `✅ Ready for Review` | — | Universal Templates (including Google Labs `DESIGN.md` + `EXPERIENCE.md` + `.working/` Workbench) |
+
+---
+
+## 3. Active & Upcoming Vertical Slices (`v0.1`)
+
+| Slice ID | Slice Name | Spec Status | Build Status | Verification |
+| :--- | :--- | :--- | :--- | :--- |
+| **Slice 001** | **CGSpec Blueprint & Architecture Docs (`/Project/cgspec/docs/`)** | `✅ Locked` | `✅ Built` | `🔄 User Review` |
+| **Slice 002** | **Portable `cgspec` Skills (`skills/cgspec-*/SKILL.md` + `scripts/memlog.py`)** | `✅ Locked in 03` | `⏳ Queued Next` | `⏳ Pending` |
+| **Slice 003** | **Real-Project Validation on `CortexGate` (`/Project/cortexgate/`)** | `⏳ Queued` | `⏳ Pending` | `⏳ Pending` |

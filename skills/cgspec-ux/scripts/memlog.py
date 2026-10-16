@@ -1,0 +1,1 @@
+../../../scripts/memlog.py
