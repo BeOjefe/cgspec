@@ -20,7 +20,8 @@ description: Atomic Vertical Slice Builder. Generates a bounded slice contract f
 
 3. **Write Bounded Slice Spec (`{project-root}/docs/slices/SLICE-NNN-<slug>.md`):**
    - Target nouns & permissions (`read|invoke|propose_edit|write|share|admin`).
-   - Exact files/modules in scope.
+   - Exact files/modules in scope across mounted services.
+   - **Contract-First Interface Decoupling:** If Service A depends on Service B, define the shared schema/payload in `docs/slices/` first so dependent teams build against mock adapters without waiting for backend deployment.
    - Test & 7-state UI verification criteria.
 
 4. **Implement & Verify:**

@@ -34,3 +34,9 @@
 - **Tooling Defaults:** Use `uv` for Python and `bun`/`pnpm` for TypeScript/JS.
 - **Strict Modularity:** Enforce Ports & Adapters. Never allow UI components to import database or crypto clients directly.
 - **Visual QA Gate:** Verify all UI changes in a real headless browser across all 7 required states (`loading`, `empty`, `error`, `offline`, `partial`, `populated`, `denied`).
+
+## 3. Microservices & Arbitrary Polyrepo Topologies (Zero Hardcoded Silos)
+- **Zero Binary Assumptions:** Never assume a system is rigidly limited to just "one frontend and one backend". Modern engineering projects routinely have $N$ microservice repositories (e.g. `services/auth`, `services/order-matching`, `services/payments`, `workers/ingestion`, `workers/notifications`).
+- **Arbitrary Virtual Mounting:** In CortexGate or multi-repo hubs, mount $N$ repositories with customizable virtual path prefixes (`mount_path`), custom titles (`mount_alias`), and isolated Git targets.
+- **Contract-First Parallel Slices:** When Service A depends on Service B, define the shared interface (REST/gRPC/Kafka event schema) in `CG-Core` first. Both services can then build in parallel using mock adapters without blocking each other.
+

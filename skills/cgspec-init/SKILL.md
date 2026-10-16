@@ -8,7 +8,11 @@ description: Initialize or migrate a monorepo/polyrepo into CGSpec (AGENTS.md, 1
 ## Execution Steps
 
 1. **Topology Detection:**
-   - Determine if `{project-root}` is **Mode A (Monorepo)** or **Mode B (Polyrepo Hub `<project>-blueprint`)**. Ask a 1-click question only if ambiguous.
+   - Determine the workspace topology:
+     - **Mode A (Monorepo):** Single repository containing docs, specs, backend services, frontend, and workers.
+     - **Mode B (Multi-Service Polyrepo Hub `<project>-blueprint`):** Central blueprint holding shared PRD, cross-cutting nouns, and mounting $N$ arbitrary microservice/worker/frontend repos under virtual prefixes (e.g. `services/*`, `workers/*`, `apps/*`).
+     - **Mode C (Service Satellite Repo):** A single microservice repo (e.g. `meoce-api` or `meoce-intraday-worker`) with its own code and migrations, consuming shared contracts from the central blueprint or CortexGate MCP.
+   - Ask a 1-click question only if ambiguous.
 
 2. **Root Constitution:**
    - Write `{project-root}/AGENTS.md` with Autopilot Coach rules (non-linear `.memlog.md` spine derivation, mid-stream spark parking into `00-INBOX.md`, explicit `Owner` + `read|invoke|propose_edit|write|share|admin` permissions, Ports & Adapters modularity, browser visual QA).
