@@ -27,8 +27,13 @@ Adopted from **[Google Labs `design.md`](https://github.com/google-labs-code/des
 - `docs/.working/color-themes.html` — Interactive palette & token comparison
 - `docs/.working/wireframes.excalidraw` — Low-fidelity Excalidraw layout & flow wireframes
 - `docs/.working/design-directions.html` — High-craft key screen variations
+- `docs/.working/prototypes/staging/` — Dedicated Anti-Slop Prompt Staging & Iteration Lab
 
-### B. `docs/04-DESIGN.md` (Visual System Spine — Google Labs Format)
+### B. The Anti-Slop UX Codex (Invariants from `gstack`, `bmad-ux`, and Anthropic)
+1. **10 Forbidden AI Slop Tropes:** No purple-indigo gradients, no unstyled Inter/Arial, no 3-column circle-icon boxes, no centered fluffy cards, no toy rounded-2xl radii, no low-density fluffy padding, no vague marketing buzzwords, no emojis as UI icons, no missing UI states, no disembodied drop-shadows.
+2. **8 High-Craft Invariants:** Surface elevation (`#09090b` -> `#121316` -> `#18191e`), 1px hairline borders (`border-white/10`), characterful typography paired with monospace metrics (`tabular-nums`, `font-mono`), dense table rows (36-40px), `<kbd>` hotkeys, real domain data, asymmetric functional layouts, and an interactive 7-state switcher.
+
+### C. `docs/04-DESIGN.md` (Visual Design System Spine — Google Labs Format)
 ```markdown
 # docs/04-DESIGN.md — Visual Design System Spine
 ## 1. Aesthetic Direction & Domain Exemplars
@@ -36,9 +41,10 @@ Adopted from **[Google Labs `design.md`](https://github.com/google-labs-code/des
 ## 3. Typography Scale & Rhythm
 ## 4. Layout Grid, Spacing & Breakpoints
 ## 5. Core Component Catalogue & Variants
+## 6. Anti-Slop Guardrails & Interactive State Harness
 ```
 
-### C. `docs/05-EXPERIENCE.md` (Behavioral UX & Screen-State Spine)
+### D. `docs/05-EXPERIENCE.md` (Behavioral UX & Screen-State Spine)
 ```markdown
 # docs/05-EXPERIENCE.md — Behavioral Experience & Screen Inventory
 ## 1. Named Protagonists & Context of Use
