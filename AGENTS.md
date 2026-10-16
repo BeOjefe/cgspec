@@ -40,6 +40,12 @@
    - **Numeric Invariant:** Sprouted directories **MUST retain the two-digit numerical prefix** to maintain strict ordering:
      `docs/01-PRD.md` $\rightarrow$ `docs/01-PRD/`, `docs/02-NOUNS-AND-FLOWS.md` $\rightarrow$ `docs/02-NOUNS-AND-FLOWS/`, `docs/03-ARCHITECTURE.md` $\rightarrow$ `docs/03-ARCHITECTURE/`.
 
+9. **Law 9 — Real Multi-Agent Orchestration (Strict Prohibition on Single-Agent Simulation):**
+   - When executing `/cgspec-council` or multi-perspective review, the agent is **STRICTLY PROHIBITED** from pretending to be multiple debaters by typing simulated dialog into a single markdown file or response.
+   - The agent **MUST explicitly call the platform subagent tool (`invoke_subagent` in Antigravity, `Agent`/`Task` in Claude Code / Cursor)** to spawn 3 independent, concurrent subagents with isolated prompts, reasoning traces, and conversation IDs.
+   - The host supervises the exchange via message passing (`send_message`), ensuring genuine cognitive diversity, independent challenge, and real clashes.
+
+
 
 ## 2. Universal Engineering & Communication Rules
 - **Language:** English only.
