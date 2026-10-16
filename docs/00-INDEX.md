@@ -30,3 +30,16 @@
 | **Slice 001** | **CGSpec Blueprint & Architecture Docs (`/Project/cgspec/docs/`)** | `✅ Locked` | `✅ Built` | `🔄 User Review` |
 | **Slice 002** | **Portable `cgspec` Skills (`skills/cgspec-*/SKILL.md` + `scripts/memlog.py`)** | `✅ Locked in 03` | `⏳ Queued Next` | `⏳ Pending` |
 | **Slice 003** | **Real-Project Validation on `CortexGate` (`/Project/cortexgate/`)** | `⏳ Queued` | `⏳ Pending` | `⏳ Pending` |
+
+---
+
+## 4. Accepted Architecture Decision Records (`docs/adr/`)
+
+| ADR | Title & Invariant | Status |
+| :--- | :--- | :--- |
+| **[`ADR-001`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-001-why-flowspec-over-speckit-bmad-gstack.md)** | **Why CGSpec Over SpecKit, BMAD, and GStack** | `✅ Accepted` |
+| **[`ADR-002`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-002-monorepo-vs-polyrepo-and-db-migrations.md)** | **Adaptive Monorepo vs. Multi-Repo (Polyrepo) & Database Migration Architecture** | `✅ Accepted` |
+| **[`ADR-003`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-003-supervised-peer-council-architecture.md)** | **Supervised 3-Agent Peer Debate Council Architecture** | `✅ Accepted` |
+| **[`ADR-004`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-004-arbitrary-multi-service-topologies-and-virtual-mounting.md)** | **Arbitrary Multi-Service Topologies, Virtual Mounting & Contract-First Interface Decoupling** | `✅ Accepted` |
+| **[`ADR-005`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-005-hierarchical-adrs-and-documentation-scaling.md)** | **Hierarchical ADRs, Documentation Scaling & Multi-Tenant Scoping** | `✅ Accepted` |
+

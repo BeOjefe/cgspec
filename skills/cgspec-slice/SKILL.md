@@ -9,7 +9,9 @@ description: Atomic Vertical Slice Builder. Generates a bounded slice contract f
 
 1. **Pre-Flight Check & Compass:**
    - Verify that requirements, nouns, and UI screens are agreed upon.
+   - **Mandatory ADR Invariant Audit:** Read all `{project-root}/docs/adr/*.md` to ensure the slice architecture, database schema, and crypto contracts strictly comply with accepted ADRs.
    - Show the 1-line compass (`📍 Where we are: ...`). Never use raw slice codes without plain-English descriptions.
+
 
 2. **Propose Concrete Next Actions (Never Vague Open-Ended Questions):**
    - **Never** ask a vague *"How would you like to proceed?"*.

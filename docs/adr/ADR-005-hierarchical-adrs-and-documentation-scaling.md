@@ -10,9 +10,18 @@
   1. **Two-Tier Hierarchical ADRs (Never Mixed):**
      - **Global / System ADRs (in `CG-Core` / `blueprint/docs/adr/`):** Decisions affecting the whole product, cross-service communication, global auth schemas, and data conventions (e.g. `JWT format`, `PostgreSQL as primary DB`, `Kafka event bus`).
      - **Local / Service ADRs (in `<service-repo>/docs/adr/`):** Decisions strictly internal to that service (e.g. `Use SQLAlchemy 2.0 with asyncpg in meoce-api`, `Airflow CeleryExecutor configuration in meoce-airflow`). Frontend and other teams are not burdened with internal backend ADRs.
-  2. **File-to-Folder Sprouting (Cell Division):**
-     - In `v0.1`, keeping core spines as single files (`01-PRD.md`, `02-NOUNS-AND-FLOWS.md`, `03-ARCHITECTURE.md`) provides maximum readability and agent context efficiency.
-     - When a domain grows beyond $\sim 300-500$ lines, the file sprouts into a directory of the same name (e.g. `docs/01-PRD.md` $\rightarrow$ `docs/prd/` with `overview.md`, `features/`, `actors.md`). `docs/00-INDEX.md` remains the central compass.
+  2. **File-to-Folder Sprouting ("Cell Division" with Numeric Prefix Preservation):**
+     - **Numeric Prefix Invariant:** When a spine sprouts into a directory, it **MUST retain its two-digit numerical prefix** to maintain strict alphabetical/numerical ordering in file trees and terminal `ls` commands:
+       - `docs/01-PRD.md` $\longrightarrow$ `docs/01-PRD/` (contains `00-INDEX.md`, `features/`, etc.)
+       - `docs/02-NOUNS-AND-FLOWS.md` $\longrightarrow$ `docs/02-NOUNS-AND-FLOWS/` (contains `00-INDEX.md`, `flows/`, etc.)
+       - `docs/03-ARCHITECTURE.md` $\longrightarrow$ `docs/03-ARCHITECTURE/` (contains `00-INDEX.md`, `contracts/`, etc.)
+     - **Deterministic Trigger Criteria (Zero Ambiguity for AI):**
+       - **Rule 1 (v0.1 Default):** Spines MUST remain single files (`docs/01-PRD.md` through `docs/05-EXPERIENCE.md`) during `v0.1` for maximum reading speed and minimal LLM prompt token consumption.
+       - **Rule 2 (Sprout Gate):** An agent is ONLY permitted to convert a spine file into a numbered folder if:
+         - **Condition A (Line Limit):** The spine file exceeds **500 lines** on disk (`wc -l > 500`), OR
+         - **Condition B (Multi-Squad Gate):** The project phase in `docs/00-INDEX.md` is explicitly set to `v0.2+` with multiple squads editing distinct sub-domains concurrently.
+       - If neither condition is met, the file MUST remain a single file.
+
   3. **Multi-Tenant & Role Isolation:**
      - **Organization Boundary:** Hard cryptographic and database isolation. Tenant A cannot search, read, or discover Tenant B's ADRs or specs.
      - **Project Boundary:** Studio groups ADRs cleanly by provenance (`Global / System` vs. `Service-Specific`).

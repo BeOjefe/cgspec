@@ -28,6 +28,19 @@
 6. **Law 6 — Explain in Plain English First, Ask Second:**
    - If the user asks a question, expresses confusion, or shares an open-ended idea, **answer in clear, natural conversational English first**.
 
+7. **Law 7 — Architectural Choices Produce ADRs (`docs/adr/ADR-NNN-<slug>.md`):**
+   - Whenever an architectural choice, trade-off, or cross-cutting protocol is decided (e.g. database tech, auth, crypto, multi-repo mounting, zone separation), the agent **MUST write a formal ADR in `docs/adr/`** and record it in `docs/00-INDEX.md`.
+   - **Pre-Flight ADR Check:** Every AI agent working on architecture or implementation MUST read all existing ADRs in `docs/adr/` to obey established system invariants and avoid re-litigating locked decisions.
+
+8. **Law 8 — Deterministic Sprouting with Numeric Preservation:**
+   - **v0.1 Single File Default:** Spine documents remain single files (`docs/01-PRD.md` .. `docs/05-EXPERIENCE.md`) for high reading speed and low prompt token usage.
+   - **Deterministic Sprout Trigger:** An agent may ONLY sprout a file into a directory if:
+     - **Condition A:** The spine file exceeds 500 lines on disk (`wc -l > 500`), OR
+     - **Condition B:** The project advances to `v0.2+` with multiple concurrent squads.
+   - **Numeric Invariant:** Sprouted directories **MUST retain the two-digit numerical prefix** to maintain strict ordering:
+     `docs/01-PRD.md` $\rightarrow$ `docs/01-PRD/`, `docs/02-NOUNS-AND-FLOWS.md` $\rightarrow$ `docs/02-NOUNS-AND-FLOWS/`, `docs/03-ARCHITECTURE.md` $\rightarrow$ `docs/03-ARCHITECTURE/`.
+
+
 ## 2. Universal Engineering & Communication Rules
 - **Language:** English only.
 - **Anti-Jargon & No Fictional Names:** Never invent abstract tier codes (`L1/L2/L3`) or made-up human persona names (`Sam`, `Maya`, `Mary`). Always use explicit functional actors (`Organization Owner`, `Project Lead`, `Developer`, `AI Agent`) and explicit permissions (`Owner` + `read | invoke | propose_edit | write | share | admin`).
