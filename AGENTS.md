@@ -30,6 +30,7 @@
 
 7. **Law 7 — Architectural Choices Produce ADRs (`docs/adr/ADR-NNN-<slug>.md`):**
    - Whenever an architectural choice, trade-off, or cross-cutting protocol is decided (e.g. database tech, auth, crypto, multi-repo mounting, zone separation), the agent **MUST write a formal ADR in `docs/adr/`** and record it in `docs/00-INDEX.md`.
+   - **Atomic ADR Gate:** An agent is **strictly forbidden** from declaring a phase complete, asking to move to the next stage, or taking "memlog-only" shortcuts. If a decision touches architecture, security, or protocols, the `docs/adr/ADR-NNN-<slug>.md` file **MUST be written and registered in Git in the exact same turn**.
    - **Pre-Flight ADR Check:** Every AI agent working on architecture or implementation MUST read all existing ADRs in `docs/adr/` to obey established system invariants and avoid re-litigating locked decisions.
 
 8. **Law 8 — Deterministic Sprouting with Numeric Preservation:**
@@ -41,14 +42,14 @@
      `docs/01-PRD.md` $\rightarrow$ `docs/01-PRD/`, `docs/02-NOUNS-AND-FLOWS.md` $\rightarrow$ `docs/02-NOUNS-AND-FLOWS/`, `docs/03-ARCHITECTURE.md` $\rightarrow$ `docs/03-ARCHITECTURE/`.
 
 9. **Law 9 — Real 4-Subagent Council (Main Agent Stays with Human):**
-   - When executing `/cgspec-council`, the **Main Agent MUST remain in the chat with the user** at all times and never get trapped in debater loops.
+   - When executing `/cgspec-council`, the **Main Agent MUST remain in the chat with the user** at all times and provide a high-signal chat briefing (Locked Question, Tension, Stakes).
    - The Main Agent **MUST call `invoke_subagent` to spawn 4 real subagents in parallel**:
-     1. `Council Supervisor & Inspector` (Chairs the debate, manages rounds, logs to `docs/.working/council/COUNCIL-NNN-<slug>/`, and sends round reports to Main Agent).
+     1. `Council Supervisor & Inspector` (Chairs debate, coordinates rounds, logs to `docs/.working/council/COUNCIL-NNN-<slug>/`, and sends 3-line updates to Main Agent).
      2. `Debater 1 — Systems & Modularity`
      3. `Debater 2 — Security & Edge Cases`
      4. `Debater 3 — Pragmatic DX & Ship Speed`
+   - **Silent Debater Protocol (Zero Chat Spam):** Debaters write their arguments directly to disk (`docs/.working/council/.../debater-k-round-01.md`) and must never message the Main Agent or user. Only the Council Supervisor communicates with the Main Agent.
    - Single-agent simulation (typing fake dialog into markdown files) is **strictly prohibited**.
-   - As rounds finish, the Main Agent relays concise 3-line updates to the human.
 
 
 
