@@ -249,15 +249,17 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
             f"Naked Cryptographic Acronym in User UI (Law 6 Violation): Found bare internal key-management jargon in user-facing UI: {naked_jargon_found[:4]}. Use plain human language ('Encrypted Note', 'Private Key', 'Shred Note & Key') instead of unexplained engineering acronyms."
         )
 
-    # 13. Multi-Root Workspace Tree Indentation Check (Law 5: Progressive Container Indentation)
-    # Detects workspace header rows (.ws-header-row) followed by mount containers that lack left indentation or border-l guide lines
-    ws_blocks = re.findall(r'<div[^>]*class="[^"]*ws-header-row[^"]*"[^>]*>.*?</div>\s*<div\s+id="([^"]+)"\s+class="([^"]*)"', content, re.S)
-    for ws_id, cls in ws_blocks:
-        has_indent = any(k in cls for k in ("pl-", "ml-", "border-l", "indent", "ws-body"))
-        if not has_indent:
-            warnings.append(
-                f"Flat Workspace Tree Hierarchy (Law 5): Container '{ws_id}' under .ws-header-row lacks progressive indentation ('pl-3', 'ml-2', 'border-l'). Child mounts will appear flush with the workspace header."
-            )
+    # 13. Hierarchical Nesting Indentation Check (Law 5: Progressive Container Indentation)
+    # Applies ONLY when hierarchical tree structures or nested groups (role="tree", .tree-children, .nested-group) are present
+    has_tree = any(k in content for k in ('role="tree"', 'class="tree', 'tree-children', 'dolphin-children', 'nested-group', 'nested-children'))
+    if has_tree:
+        unindented_trees = re.findall(r'<div[^>]*class="[^"]*(?:tree-children|dolphin-children|nested-children)[^"]*"[^>]*>', content)
+        for tag in unindented_trees:
+            if not any(k in tag for k in ("pl-", "ml-", "border-l", "padding-left", "margin-left")):
+                warnings.append(
+                    "Flat Tree Hierarchy (Law 5): Detected nested tree container without visible progressive indentation ('pl-', 'ml-', or 'border-l'). Nested children will appear flush with parent nodes."
+                )
+                break
 
     return errors, warnings
 

@@ -33,11 +33,10 @@ html, body { height: 100%; min-height: 100vh; margin: 0; overflow: hidden; displ
 - **Click-to-Fold Rail:** Clicking the active icon in the primary navigation rail (or double-clicking a splitter) collapses/restores the adjacent panel.
 - **Multi-Root Workspace Explorer:** Prefer collapsible workspace roots with inline hover actions and a filter/pin icon menu (VS Code / Antigravity Explorer pattern) over clunky top-bar scope dropdowns.
 
-### 5. Unbroken Tree Hierarchy (Continuous Guide Lines & Progressive Indentation)
-- **Progressive Container Indentation:** Every structural level (Workspace Root -> Mounted Repository/Folder -> Subdirectory -> File) MUST have progressive left indentation (at least 12px-16px, e.g. `ml-2 pl-3` or `pl-4`) with an explicit vertical guide line (`border-l` or `border-l-2`). Child folders and mounts must never align flush on the exact same left margin as their parent container header.
-- Render continuous vertical (`border-left: 1px solid`) and horizontal (`::before`) connector lines from parent folders to children (KDE Dolphin pattern).
-- Never prefix tree nodes with artificial numbers (`1. Folder`) and never place multi-line subtitle blocks *between* a parent folder and its child tree (place optional descriptions as a compact eyebrow *above* the folder or in a hover tooltip).
-- Support direct row drag-and-drop for ordering instead of noisy `⋮⋮` handles or up/down arrows.
+### 5. Hierarchical Nesting Invariant (When Hierarchies, Trees, or Threaded Groups Exist)
+- **Conditional Applicability:** This invariant applies **only** when an interface design specifically calls for multi-level hierarchical structures (e.g. account/sub-account hierarchies in Trading, nested discussion threads in Social Media, category/subcategory trees in E-Commerce, or file navigation in Developer Workspaces). Interfaces that do not feature hierarchical trees (such as landing pages, single-level trading dashboards, feeds, or data grids) must **never** force artificial tree geometry.
+- **Progressive Container Indentation:** Whenever nested parent-child relationships are rendered, child containers MUST have distinct visual nesting cues (at least `12px–16px` left indentation, e.g. `ml-2 pl-3` or `pl-4`, with an explicit subtle guide line `border-l` or container elevation) so subordinate items are never visually aligned flush with their parent container header.
+- **Zero Artificial Noise:** Never prefix tree nodes with artificial numbering (`1. Folder`) or noisy drag handles (`⋮⋮`) unless direct sorting is actively engaged. Optional metadata (e.g. descriptions, counts) belongs as a compact eyebrow or tooltip, never splitting a parent node from its child group.
 
 ### 6. Unified Domain Taxonomy
 - Group sibling domain entities of the same archetype (e.g. extensions, templates, skills, connectors, pins) into a single unified filterable hub rather than scattering them across 5 separate top-level navigation tabs.
