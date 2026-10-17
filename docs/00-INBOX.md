@@ -1,6 +1,9 @@
 # docs/00-INBOX.md — CGSpec (`cgspec`) Idea Parking Lot & Future Backlog
 
-> **How This Works:** Any idea outside the active `v0.1` build is parked here (**Unsorted Sparks** or **Future Backlog `v0.2+`**). The AI must NEVER invent speculative roadmap items out of thin air; only capture sparks explicitly voiced by the human or deferred during active slices.
+> **How This Works:** Any idea outside the active milestone (`v0.1`) is parked here (**Unsorted Sparks** or **Future Backlog `<Current+1>+`**).
+> - **Milestone Rollover:** When the active version advances (e.g. from `v0.1` to `v0.2`), approved sparks become active vertical slices in `docs/slices/`, and this future backlog heading rolls over to the next release (e.g. `Future Backlog (v0.3+)`).
+> - **Zero Hallucinated Roadmaps:** The AI must NEVER invent speculative future features; only record sparks explicitly stated by the human or deferred during active slices.
+> - **Sprouting Rule (> 500 lines):** Stays a single file until 500 lines. If it exceeds 500 lines or team scales to multi-squad, sprout into `docs/00-INBOX/` (retaining numeric prefix) with `00-INBOX/sparks.md` and `00-INBOX/backlog.md`, archiving closed milestone items to `docs/archive/`.
 
 ---
 

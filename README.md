@@ -39,12 +39,13 @@ CGSpec solves this through a non-linear, dual-spine architecture governed by str
 ### 1. Human Experience Precedes Architecture & Backend (Law 3)
 Software begins with human intent, mental models, and daily ergonomics. Technical implementation ("how": SQL tables, foreign keys, programming languages, ORMs, and servers) is strictly forbidden until the Day-in-the-Life walkthrough, spatial zoning, and interactive prototype are validated and approved.
 
-### 2. The 4-Stage Phased Design Locking Funnel (Law 10)
-High-craft user experience cannot be generated in a single prompt. Every screen advances through 4 locked, versioned stages:
-1. **OOUX & Adaptive Spatial Zoning:** Low-fidelity partitioning across form-factor archetypes (Desktop SaaS, Mobile App, Infinite Canvas, Single-Focus Wizard, Developer TUI).
-2. **Design Tokens & Aesthetic Direction:** Establishing typography hierarchy, atmospheric canvas texture, and a surgical signature brand anchor.
-3. **The 7-State Component Matrix:** Engineering for the full operational lifecycle (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial/Filtered`) with adversarial worst-case edge data.
-4. **Interactive Milestone Baseline Prototype:** Single-file, zero-build executable HTML with live state switching and keyboard shortcuts.
+### 2. The 5-Stage Phased Design Locking Funnel (Law 10)
+High-craft user experience cannot be generated in a single prompt. Every screen advances through 5 locked, versioned stages:
+1. **Macro Spatial Zoning & Zero-Color Wireframe:** Low-fidelity partitioning across screen zones (Header, Navigation Rail, Main Canvas, Context Drawer) with clean ASCII blockouts or wireframes in an Artifact. The human must see and approve where things live on screen before discussing micro-interactions. Zero colors, zero themes yet.
+2. **Tactile Ergonomics & Direct Manipulation:** Defining how hands navigate between zones and how editing operates inside the primary workspace (e.g. inline editing vs split preview, keyboard shortcuts, command palette).
+3. **Design Tokens & Aesthetic Direction:** Establishing typography hierarchy, atmospheric canvas texture, and a surgical signature brand anchor.
+4. **The 7-State Component Matrix:** Engineering for the full operational lifecycle (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial/Filtered`) with adversarial worst-case edge data.
+5. **Interactive Milestone Baseline Prototype:** Single-file, zero-build executable HTML (`prototype-v0.1.html`) with live state switching and keyboard shortcuts.
 
 ### 3. Hierarchical Peer Debate Council (`cgspec-council`)
 To prevent single-model sycophancy and blind spots, cross-cutting architectural and security choices are pressure-tested by a 3-agent peer council:

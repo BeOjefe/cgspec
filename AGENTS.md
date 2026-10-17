@@ -50,11 +50,12 @@
    - **Zero Decorative Emojis:** The Main Agent and Supervisor communicate using calm, clean engineering typography without decorative emojis.
 
 10. **Law 10 — Phased Design Locking Funnel (No Jumping Directly to Code):**
-    - High-craft UI/UX cannot be generated in a single prompt. Design is at the absolute center of CGSpec. Every screen must proceed through 4 locked, versioned stages before final scaffolding:
-      1. **Stage 1: OOUX & Spatial Zoning (Low-Fi):** Define core nouns, object relationships, and spatial canvas zones (Header, Nav, Master Workspace, Detail Drawer). Locked in `docs/.working/prototypes/wireframes.excalidraw` or ASCII blockout.
-      2. **Stage 2: Design Tokens & Visual Direction:** Lock typography pairing (Display vs Sans vs Monospace), canvas atmospheric texture, and signature brand anchor (1 dominant primary). Recorded in `docs/03-EXPERIENCE.md`.
-      3. **Stage 3: Component & State Matrix:** Define all 7 lifecycle states (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial`) with realistic worst-case edge data. Locked in `docs/03-EXPERIENCE.md`.
-      4. **Stage 4: Interactive Prototype Baseline (`prototype-v0.1.html`):** Single-file executable HTML with working state switcher and real keyboard navigation. Never mutate in place; versioned as `prototype-v0.1.html` with ADR experiments as `prototype-ADR-NNN.html`.
+    - High-craft UI/UX cannot be generated in a single prompt. Design is at the absolute center of CGSpec. Every screen must proceed through 5 locked, versioned stages before final scaffolding:
+      1. **Stage 1: Macro Spatial Zoning & Zero-Color Wireframe:** Define where parts and zones live on screen (Top Header Bar, Left Navigation Rail, Center Workspace, Right Contextual Drawer) using clean ASCII layout blockouts or visual wireframes in an Artifact. Zero colors, zero themes, zero micro-behaviors yet. The human must see and approve *where things are placed* before discussing how they behave!
+      2. **Stage 2: Tactile Ergonomics & Direct Manipulation:** Once zones are placed, define how hands navigate between zones and how editing operates inside the primary workspace (e.g. inline editing vs split preview, keyboard shortcuts, command palette).
+      3. **Stage 3: Design Tokens & Visual Direction:** Lock typography pairing (Display vs Sans vs Monospace), canvas atmospheric texture, and signature brand anchor (1 dominant primary). Recorded in `docs/03-EXPERIENCE.md`.
+      4. **Stage 4: Component & State Matrix:** Define all 7 lifecycle states (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial`) with realistic worst-case edge data. Locked in `docs/03-EXPERIENCE.md`.
+      5. **Stage 5: Interactive Prototype Baseline (`prototype-v0.1.html`):** Single-file executable HTML with working state switcher and real keyboard navigation. Never mutate in place; versioned as `prototype-v0.1.html` with ADR experiments as `prototype-ADR-NNN.html`.
     - **One-Question-at-a-Time Interview:** The agent must interview the user on layout, flow, and taste decisions one question at a time (via `ask_question`), locking each decision into `docs/.memlog.md` with tags `lock,ux`.
 
 11. **Law 11 — Disk-First Immediate Capture (Never Leave Truth in Ephemeral Chat):**
