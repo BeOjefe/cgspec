@@ -7,7 +7,7 @@
 ## 1. Current System Phase
 - **Active Phase:** `PHASE 2: ARCHITECTURE & SKILL SPECIFICATION LOCKED`
 - **Active Milestone:** `v0.1 — Core Portable Skill Suite & Non-Linear .memlog.md Engine`
-- **Current Focus:** Reviewing the vendor-neutral `cgspec` documentation in `/home/ojefe/Documents/Project/cgspec/docs/` (compatible with Hermes, Claude Code, Codex, Cursor, and Antigravity) before generating the portable `skills/cgspec-*/SKILL.md` files and `scripts/memlog.py`.
+- **Current Focus:** Reviewing the vendor-neutral `cgspec` documentation in `/home/ojefe/Documents/Project/cgspec/docs/` (compatible with Hermes, Claude Code, Codex, Cursor, and Antigravity) before generating the portable `skills/cgspec-*/SKILL.md` files and `docs/.cgspec/scripts/memlog.py`.
 
 ---
 
@@ -29,7 +29,7 @@
 | Slice ID | Slice Name | Spec Status | Build Status | Verification |
 | :--- | :--- | :--- | :--- | :--- |
 | **Slice 001** | **CGSpec Blueprint & Architecture Docs (`/Project/cgspec/docs/`)** | `[Locked]` | `[Built]` | `[User Review]` |
-| **Slice 002** | **Portable `cgspec` Skills (`skills/cgspec-*/SKILL.md` + `scripts/memlog.py`)** | `[Locked in 03]` | `[Queued Next]` | `[Pending]` |
+| **Slice 002** | **Portable `cgspec` Skills (`skills/cgspec-*/SKILL.md` + `docs/.cgspec/scripts/memlog.py`)** | `[Locked in 03]` | `[Queued Next]` | `[Pending]` |
 | **Slice 003** | **Real-Project Validation on `CortexGate` (`/Project/cortexgate/`)** | `[Queued]` | `[Pending]` | `[Pending]` |
 
 ---

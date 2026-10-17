@@ -4,8 +4,8 @@ CGSpec Doctor (Spec Linter & Integrity Hook)
 Validates repository invariants, spine integrity, ADR registrations, and memory log continuity.
 
 Usage:
-  python3 scripts/doctor.py [project-root]
-  python3 scripts/doctor.py --repo [project-root]
+  python3 docs/.cgspec/scripts/doctor.py [project-root]
+  python3 docs/.cgspec/scripts/doctor.py --repo [project-root]
 """
 
 import sys
@@ -16,10 +16,10 @@ from pathlib import Path
 # Comprehensive regex matching Unicode emojis, symbols, and status icons
 EMOJI_PATTERN = re.compile(
     r"[\U00010000-\U0010ffff]|"  # SMP plane (emojis, pictographs)
-    r"[\u2600-\u27bf]|"          # Misc symbols, dingbats (✅, ⚠️, ❌, etc.)
-    r"[\u2300-\u23ff]|"          # Misc technical (⏳, ⌛, etc.)
-    r"[\u2b50-\u2b55]|"          # Stars and circles (⭐, ⭕, etc.)
-    r"[\u2190-\u21ff]"           # Arrows (👉, etc.)
+    r"[\u2600-\u27bf]|"          # Misc symbols, dingbats
+    r"[\u2300-\u23ff]|"          # Misc technical
+    r"[\u2b50-\u2b55]|"          # Stars and circles
+    r"[\u2190-\u21ff]"           # Arrows
 )
 
 def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
@@ -75,11 +75,13 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
             if spine != "00-INDEX.md" and spine not in index_content:
                 errors.append(f"docs/00-INDEX.md does not tabulate core spine: docs/{spine}")
 
-    # 3. Check Memory Log Continuity & Parity
+    # 3. Check Memory Log Continuity & Parity (supports docs/.memlog.md or docs/.cgspec/memlog.md)
     memlog_file = docs_dir / ".memlog.md"
+    if not memlog_file.exists() and (docs_dir / ".cgspec" / "memlog.md").exists():
+        memlog_file = docs_dir / ".cgspec" / "memlog.md"
     memlog_entries = []
     if not memlog_file.exists():
-        errors.append("Missing docs/.memlog.md")
+        errors.append("Missing docs/.memlog.md (or docs/.cgspec/memlog.md)")
     else:
         content = memlog_file.read_text(encoding="utf-8")
         entry_matches = list(re.finditer(r"###\s*\[?(M-\d+)\]?", content))

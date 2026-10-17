@@ -22,14 +22,14 @@ description: Supervised 3-Agent Peer Debate Council. Host/Inspector runs N round
   - **Role:** `"Council Supervisor & Inspector"`
   - **TypeName:** `"self"`
   - Runs in an isolated background conversation context.
-  - Conducts the multi-perspective debate across the 3 orthogonal lenses directly in the background workspace `{project-root}/docs/.working/council/COUNCIL-NNN-<slug>/`:
+  - Conducts the multi-perspective debate across the 3 orthogonal lenses directly in the background workspace `{project-root}/docs/.cgspec/council/COUNCIL-NNN-<slug>/`:
     1. **Debater 1 Lens (Systems & Modularity):** Ports & Adapters, virtual mount routing, clean contracts, interface boundaries. Writes `debater-1-round-0k.md`.
     2. **Debater 2 Lens (Adversarial Security & Edge Cases):** Race conditions, transaction isolation, permission bypasses, path traversal, memory limits, fail-safe fallbacks. Writes `debater-2-round-0k.md`.
     3. **Debater 3 Lens (Pragmatic DX & Ship Speed):** Minimal onboarding friction, scaffolding velocity, ergonomic API signatures, eliminating speculative complexity. Writes `debater-3-round-0k.md`.
   - Synthesizes each round into `round-0k.md`.
   - Sends a concise 3-line status report to the Main Agent after each round via `send_message`:
     `Council Status [Round k/N]: Clash: <summary> | Concession: <summary> | Consensus Shift: <summary>`
-  - Writes `{project-root}/docs/.working/council/COUNCIL-NNN-<slug>/summary.md`.
+  - Writes `{project-root}/docs/.cgspec/council/COUNCIL-NNN-<slug>/summary.md`.
   - Drafts `{project-root}/docs/adr/ADR-NNN-<slug>.md` with **`Status: Proposed`**.
 
 ---
@@ -40,8 +40,8 @@ description: Supervised 3-Agent Peer Debate Council. Host/Inspector runs N round
    - Formulate one exact technical, architectural, or product decision question.
    - Determine session ID: `COUNCIL-NNN-<slug>` (e.g. `COUNCIL-003-specification-precision-and-scaffold-readiness`).
    - Create the live working directory:
-     `{project-root}/docs/.working/council/COUNCIL-NNN-<slug>/`
-   - Write `{project-root}/docs/.working/council/COUNCIL-NNN-<slug>/00-topic.md` with full context, reviewed spines, and mandates.
+     `{project-root}/docs/.cgspec/council/COUNCIL-NNN-<slug>/`
+   - Write `{project-root}/docs/.cgspec/council/COUNCIL-NNN-<slug>/00-topic.md` with full context, reviewed spines, and mandates.
    - **Post High-Information Briefing in Chat (Clean Markdown, Zero Emojis):**
      ```markdown
      ### Architecture Council Initialized: [COUNCIL-NNN-<slug>]
@@ -72,7 +72,7 @@ description: Supervised 3-Agent Peer Debate Council. Host/Inspector runs N round
            "Role": "Council Supervisor & Inspector",
            "TypeName": "self",
            "Workspace": "inherit",
-           "Prompt": "You are the Council Supervisor for session COUNCIL-NNN-<slug> in {project-root}.\nYour mission is to orchestrate a true multi-perspective architectural debate on the locked question:\n'<QUESTION>'\n\nYOUR FIRST ACTION is to call invoke_subagent to spawn your 3 Debaters in parallel:\n1. Role: 'Debater 1 — Systems & Modularity' (Focus: Ports & Adapters, clean boundaries, interface precision)\n2. Role: 'Debater 2 — Security & Edge Cases' (Focus: Transaction isolation, permission bypasses, failure modes)\n3. Role: 'Debater 3 — Pragmatic DX & Ship Speed' (Focus: Zero over-engineering, minimal onboarding friction, ship speed)\n\nBecause YOU spawn them, their completion messages arrive exclusively in YOUR conversation pane, completely insulating the Main Agent and human chat from clutter.\n\nCoordinate N rounds (default N=3):\n- In Round 1, debaters write initial positions to docs/.working/council/COUNCIL-NNN-<slug>/debater-k-round-01.md.\n- Read debater disk files, synthesize into round-0k.md, and send a 3-line update to your parent (Main Agent) via send_message:\n  'Council Status [Round k/N]: Clash: ... | Concession: ... | Consensus Shift: ...'\n- In subsequent rounds, send rebuttals to debaters with send_message, read their updated disk files, and synthesize.\n- (Fallback: If child subagent spawning is restricted by the orchestrator, conduct the 3 orthogonal analyses on disk directly).\n\nAfter Round N:\n- Terminate child debater subagents.\n- Write docs/.working/council/COUNCIL-NNN-<slug>/summary.md.\n- Draft docs/adr/ADR-NNN-<slug>.md with Status: Proposed.\n- Conclude and send your final executive summary to the Main Agent."
+           "Prompt": "You are the Council Supervisor for session COUNCIL-NNN-<slug> in {project-root}.\nYour mission is to orchestrate a true multi-perspective architectural debate on the locked question:\n'<QUESTION>'\n\nYOUR FIRST ACTION is to call invoke_subagent to spawn your 3 Debaters in parallel:\n1. Role: 'Debater 1 — Systems & Modularity' (Focus: Ports & Adapters, clean boundaries, interface precision)\n2. Role: 'Debater 2 — Security & Edge Cases' (Focus: Transaction isolation, permission bypasses, failure modes)\n3. Role: 'Debater 3 — Pragmatic DX & Ship Speed' (Focus: Zero over-engineering, minimal onboarding friction, ship speed)\n\nBecause YOU spawn them, their completion messages arrive exclusively in YOUR conversation pane, completely insulating the Main Agent and human chat from clutter.\n\nCoordinate N rounds (default N=3):\n- In Round 1, debaters write initial positions to docs/.cgspec/council/COUNCIL-NNN-<slug>/debater-k-round-01.md.\n- Read debater disk files, synthesize into round-0k.md, and send a 3-line update to your parent (Main Agent) via send_message:\n  'Council Status [Round k/N]: Clash: ... | Concession: ... | Consensus Shift: ...'\n- In subsequent rounds, send rebuttals to debaters with send_message, read their updated disk files, and synthesize.\n- (Fallback: If child subagent spawning is restricted by the orchestrator, conduct the 3 orthogonal analyses on disk directly).\n\nAfter Round N:\n- Terminate child debater subagents.\n- Write docs/.cgspec/council/COUNCIL-NNN-<slug>/summary.md.\n- Draft docs/adr/ADR-NNN-<slug>.md with Status: Proposed.\n- Conclude and send your final executive summary to the Main Agent."
          }
        ]
      }
@@ -80,7 +80,7 @@ description: Supervised 3-Agent Peer Debate Council. Host/Inspector runs N round
    - **Zero Debater Chat Spam:** Because only the Supervisor is a child of the Main Agent, zero debater messages ever touch the Main Agent or user chat window.
 
 3. **Live Round Monitoring (Supervisor -> Main Agent -> Human):**
-   - The Council Supervisor runs the rounds in the background, logs `{project-root}/docs/.working/council/COUNCIL-NNN-<slug>/round-0k.md`, and sends a 3-line Inspector update to the Main Agent.
+   - The Council Supervisor runs the rounds in the background, logs `{project-root}/docs/.cgspec/council/COUNCIL-NNN-<slug>/round-0k.md`, and sends a 3-line Inspector update to the Main Agent.
    - The Main Agent relays the 3-line update to the user:
      `Council Status [Round k/N]: Clash: ... | Concession: ... | Consensus Shift: ...`
 

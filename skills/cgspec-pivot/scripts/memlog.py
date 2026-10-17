@@ -1,1 +1,1 @@
-../../../scripts/memlog.py
+../../../docs/.cgspec/scripts/memlog.py

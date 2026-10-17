@@ -49,13 +49,18 @@
    - The **Supervisor** executes the 3 orthogonal lenses (`Systems`, `Security`, `Pragmatic DX`) in the background council workspace on disk (`debater-1-round-0k.md`, `debater-2-round-0k.md`, `debater-3-round-0k.md`), synthesizes each round (`round-0k.md`), and relays ONLY 3-line status updates back to the Main Agent.
    - **Zero Decorative Emojis:** The Main Agent and Supervisor communicate using calm, clean engineering typography without decorative emojis.
 
-10. **Law 10 — Phased Design Locking Funnel (No Jumping Directly to Code):**
-    - High-craft UI/UX cannot be generated in a single prompt. Design is at the absolute center of CGSpec. Every screen must proceed through 5 locked, versioned stages before final scaffolding:
-      1. **Stage 1: Macro Spatial Zoning & Zero-Color Wireframe:** Define where parts and zones live on screen (Top Header Bar, Left Navigation Rail, Center Workspace, Right Contextual Drawer) using clean declarative diagram subgraphs (Mermaid `flowchart TB`, D2, PlantUML) or visual wireframes in an Artifact. Zero colors, zero themes, zero micro-behaviors yet. The human must see and approve *where things are placed* before discussing how they behave!
-      2. **Stage 2: Tactile Ergonomics & Direct Manipulation:** Once zones are placed, define how hands navigate between zones and how editing operates inside the primary workspace (e.g. inline editing vs split preview, keyboard shortcuts, command palette).
-      3. **Stage 3: Design Tokens & Visual Direction:** Lock typography pairing (Display vs Sans vs Monospace), canvas atmospheric texture, and signature brand anchor (1 dominant primary). Recorded in `docs/03-EXPERIENCE.md`.
-      4. **Stage 4: Component & State Matrix:** Define all 7 lifecycle states (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial`) with realistic worst-case edge data. Locked in `docs/03-EXPERIENCE.md`.
-      5. **Stage 5: Interactive Prototype Baseline (`prototype-v0.1.html`):** Single-file executable HTML with working state switcher and real keyboard navigation. Never mutate in place; versioned as `prototype-v0.1.html` with ADR experiments as `prototype-ADR-NNN.html`.
+10. **Law 10 — Phased Design Locking Funnel & Multi-Surface Profiles (No Jumping Directly to Code):**
+    - High-craft UI/UX cannot be generated in a single prompt. Design is at the absolute center of CGSpec, and adapts natively to **4 Surface Profiles**:
+      - **Profile A (Simple / Narrative Website):** Marketing pages, portfolios, documentation, blogs. Uses Vertical Scroll Storyboards (`Hero` -> `Value Proof` -> `Interactive Showcase` -> `Conversion Footer`) and 4 Viewport/Narrative States (`Desktop Wide`, `Mobile Compact`, `Interactive Hover`, `Form Validation`).
+      - **Profile B (Mobile App — iOS / Android):** Native iOS (SwiftUI / HIG) and Android (Jetpack Compose / Material 3), React Native, Flutter. Uses Thumb-Zone Vertical Stack (`Top Context Bar`, `Scrollable Canvas`, `Draggable Bottom Sheet` with `Peek/Half/Full` detents, `Bottom Tab Bar`), `44x44pt` / `48x48dp` touch targets, and 7 Mobile States (including `OS Permission Prompt` and `Keyboard Up`).
+      - **Profile C (Web / Desktop Application Workspace):** Multi-pane SaaS workspaces, IDEs, editors, dashboards. Uses Multi-Pane Viewports (`Header`, `Left Nav Rail`, `Center Canvas`, `Right Drawer`), `Cmd+K` keyboard flows, and 7 Operational States.
+      - **Profile D (CLI / TUI / Headless Service):** Command grammar, flags, `stdout` vs `stderr` separation, and 5 CLI States.
+    - Every screen proceeds through 5 evidence-backed checkpoints (`cgspec-ui-ux`):
+      1. **Phase 1: Macro Spatial Zoning & Zero-Color Wireframe:** Define where parts and zones live on screen using clean declarative diagram subgraphs (Mermaid `flowchart TB`, D2, PlantUML) or visual wireframes in an Artifact. Zero colors, zero themes, zero micro-behaviors yet. The human must see and approve *where things are placed* before discussing how they behave!
+      2. **Phase 2: Tactile Ergonomics & Direct Manipulation:** Once zones are placed, define how hands navigate between zones (scroll/hover for websites, thumb gestures/bottom sheets for mobile, keyboard shortcuts/inline editing for desktop apps).
+      3. **Phase 3: Design Tokens & Visual Direction:** Lock typography pairing (Display vs Sans vs Monospace), canvas atmospheric texture, and signature brand anchor (1 dominant primary). Recorded in `docs/03-EXPERIENCE.md`.
+      4. **Phase 4: Surface-Specific State Matrix:** Define the surface's required lifecycle states (4 narrative states for Simple Websites; 7 mobile states for iOS/Android; 7 operational states for Web Workspaces) with realistic worst-case edge data. Locked in `docs/03-EXPERIENCE.md`.
+      5. **Phase 5: Interactive Prototype Baseline (`prototype-v0.1.html`):** Single-file executable HTML with working state/viewport switcher and real interaction loops stored in `docs/.cgspec/prototypes/`. Never mutate in place; versioned as `prototype-v0.1.html` with ADR experiments as `prototype-ADR-NNN.html` and mid-pivot stashes in `docs/.cgspec/prototypes/stash/`.
     - **One-Question-at-a-Time Interview:** The agent must interview the user on layout, flow, and taste decisions one question at a time (via `ask_question`), locking each decision into `docs/.memlog.md` with tags `lock,ux`.
 
 11. **Law 11 — Disk-First Immediate Capture (Never Leave Truth in Ephemeral Chat):**
@@ -69,14 +74,15 @@
 
 ## 2. Universal Engineering & Communication Rules
 - **Language:** English only.
-- **Zero Decorative Emoji Spam:** Never decorate chat headers, bullet points, or paragraphs with decorative emojis (📍, ⚖️, 👥, 🏛️, 📦, 🟢, 🔴, ⚠️, 🚀, 💡, ✨). Communicate with clean, calm, professional engineering typography (clean Markdown headings `#`, `##`, `###` and standard `-` bullets).
+- **Zero Decorative Emoji Spam:** Never decorate chat headers, bullet points, or paragraphs with decorative Unicode emojis or status pictographs. Communicate with clean, calm, professional engineering typography (clean Markdown headings `#`, `##`, `###` and standard `-` bullets).
+- **Zero Root Workspace Pollution (`docs/.cgspec/`):** Never clutter the user's top-level project root with methodology scripts, scratchpads, or prototype HTML files. All CGSpec machinery (`scripts/doctor.py`, `scripts/memlog.py`, `scripts/ingest.py`, `prototypes/`, `council/`, `brownfield-manifest.json`) is strictly centralized inside the hidden `docs/.cgspec/` directory.
 - **Anti-Jargon & No Naked Product Names:** Never assume the user knows niche apps (*"Typora style"*, *"Bear style"*, *"Linear style"*) or technical design jargon (*"OOUX"*, *"WYSIWYG"*, *"FLIP animation"*). Always explain the physical tactile behavior in clear, everyday English first (*"When you click a line, the raw symbols appear so you can edit; when you move your cursor away, they hide and become formatted text"*), and accompany references with a concrete visual or link in an Artifact.
 - **Zero Hallucinated Roadmaps (v0.1 Focus):** Never invent speculative future features in `docs/00-INBOX.md` or spines for `v0.2+` out of thin air. We only know what we need for `v0.1`. Thinking of v0.1, v0.2, and v0.3 all at once creates artificial bloat. The backlog strictly captures sparks explicitly voiced by the user or genuine off-scope items deferred during active slices.
 - **No Fictional Names:** Never invent abstract tier codes (`L1/L2/L3`) or made-up human persona names (`Sam`, `Maya`, `Mary`). Always use explicit functional actors (`Organization Owner`, `Project Lead`, `Developer`, `AI Agent`) and explicit permissions (`Owner` + `read | invoke | propose_edit | write | share | admin`).
 - **Tooling Defaults:** Use `uv` for Python and `bun`/`pnpm` for TypeScript/JS.
 - **Strict Modularity:** Enforce Ports & Adapters. Never allow UI components to import database or crypto clients directly.
-- **Visual QA Gate:** Verify all UI changes in a real headless browser across all 7 required states (`loading`, `empty`, `error`, `offline`, `partial`, `populated`, `denied`).
-- **Spec Integrity Hook (`cgspec doctor`):** Before completing any turn that modifies specifications or closing a milestone, run `python3 {skill-dir}/scripts/doctor.py .` to deterministically verify that all spines exist, memory log entries are sequential, all accepted ADRs are registered in `00-INDEX.md`, and zero specification drift exists.
+- **Visual QA Gate:** Verify all UI changes in a real headless browser across all required surface states.
+- **Spec Integrity Hook (`cgspec doctor`):** Before completing any turn that modifies specifications or closing a milestone, run `python3 docs/.cgspec/scripts/doctor.py --repo .` to deterministically verify that all spines exist, memory log entries are sequential, all accepted ADRs are registered in `00-INDEX.md`, and zero specification drift exists.
 
 ## 3. Repository Topology: Monorepo vs. Polyrepo Neutrality
 - **Independent & Equal Support:** CGSpec natively supports both **Monorepo** (single unified repository with modular packages) and **Polyrepo** (multiple independent repositories/microservices). Neither is dogmatically forced.
@@ -88,7 +94,7 @@
 
 ## 4. Universal Modularity: 3 Macro Milestone Tiers & Any-Stage Entry Gate
 
-CGSpec is designed to be fully modular and adaptable to **any project size and any project entry point**:
+CGSpec is designed to be fully modular and adaptable to **any project size, surface profile, and project entry point**:
 
 ```
 +----------------------------------------------------------------------------------------------------------------+
@@ -96,13 +102,13 @@ CGSpec is designed to be fully modular and adaptable to **any project size and a
 | - Is it interesting? Problem statement, mission, glossary, anti-goals, day-in-the-life walkthrough.             |
 | - Domain Mental Model: Sophia Prater OOUX nouns, object relationships, and explicit granular permissions.      |
 +----------------------------------------------------------------------------------------------------------------+
-| TIER 2: VALIDATED v0.1 DESIGN & EXPERIENCE (docs/03-EXPERIENCE.md, docs/design/)                              |
-| - Design Brief & Journey Mapping -> Zero-Color Macro Layout Wireframe (Mermaid / D2 / PlantUML subgraphs).     |
-| - Tactile Ergonomics & Direct Manipulation (how hands navigate & edit) -> Positive Design Tokens.             |
-| - Coexisting 7-State Component Matrix -> Interactive Executable Prototype (prototype-v0.1.html).               |
+| TIER 2: VALIDATED v0.1 DESIGN & EXPERIENCE (docs/03-EXPERIENCE.md, docs/design/, docs/.cgspec/prototypes/)     |
+| - Surface Profile Selection (A: Simple Website | B: Mobile iOS/Android | C: Web Workspace | D: CLI/TUI).       |
+| - Zero-Color Macro Layout Wireframe (Mermaid / D2 / PlantUML subgraphs) -> Tactile Ergonomics & Tokens.        |
+| - Surface-Adapted State Matrix -> Interactive Executable Prototype (docs/.cgspec/prototypes/prototype-v0.1).   |
 +----------------------------------------------------------------------------------------------------------------+
 | TIER 3: ENGINEERED v0.1 FOUNDATION & DELIVERY (docs/04-ARCHITECTURE.md, docs/05-DELIVERY.md, docs/adr/)       |
-| - Physical Architecture: Hexagonal Ports & Adapters, physical DDL schemas, foreign keys, contracts, ADRs.      |
+| - Physical Architecture: Hexagonal Ports & Adapters (or static/mobile architecture), schemas, contracts, ADRs. |
 | - Code Conventions & Preferences: What the user likes / dislikes in code, libraries, and formatting.           |
 | - Delivery Slices: Bounded vertical slices (SLICE-001..N), definition of done, AST ingestion gates.           |
 | - Code Management & CI/CD: Git templates (issues/PRs), pre-commit doctor hook, automated testing, docker.      |
@@ -111,9 +117,10 @@ CGSpec is designed to be fully modular and adaptable to **any project size and a
 ```
 
 ### The 4 Any-Stage Entry Modes:
-1. **Mode A — Greenfield Creation (From Scratch):** Traverse Tier 1 (Brainstorming) -> Tier 2 (Experience) -> Tier 3 (Architecture, CI/CD, Delivery).
-2. **Mode B — Headless / Backend / CLI (No Web UI):** Execute Tier 1 (Intent & Nouns) -> skip GUI to define TUI/CLI command syntax & ergonomics -> execute Tier 3 (Architecture, Code, CI/CD).
-3. **Mode C — Brownfield Legacy Adoption (Existing Codebase):** Run `python3 scripts/ingest.py` (deterministic AST route & model parser) to generate a brownfield manifest -> reverse-derive `docs/02-OOUX.md` -> activate `doctor.py` integrity gate -> build bounded vertical slices (`cgspec-slice`) with zero disruption to legacy code.
-4. **Mode D — Mid-Flight Course Correction (Pivot / Migration):** Trigger `cgspec-pivot` to evaluate impact across Tier 1 (Adapter Swap), Tier 2 (Additive Scope Expansion), or Tier 3 (Total Soul Extraction).
+1. **Mode A — Greenfield Creation (From Scratch):** Traverse Tier 1 (Brainstorming) -> Tier 2 (Experience across Profile A, B, or C) -> Tier 3 (Architecture, CI/CD, Delivery).
+2. **Mode B — Headless / Backend / CLI (No GUI):** Execute Tier 1 (Intent & Nouns) -> Profile D (CLI/TUI command syntax & ergonomics) -> execute Tier 3 (Architecture, Code, CI/CD).
+3. **Mode C — Brownfield Legacy Adoption (Existing Codebase):** Run `python3 docs/.cgspec/scripts/ingest.py` (deterministic AST route & model parser) to generate `docs/.cgspec/brownfield-manifest.json` -> reverse-derive `docs/02-OOUX.md` -> activate `doctor.py` integrity gate -> build bounded vertical slices (`cgspec-slice`) with zero disruption to legacy code.
+4. **Mode D — Mid-Flight Course Correction (Pivot / Migration):** Trigger `cgspec-pivot` to evaluate impact across Tier 1 (Adapter Swap), Tier 2 (Additive Scope Expansion + Design Stash Protocol), or Tier 3 (Total Soul Extraction).
+
 
 

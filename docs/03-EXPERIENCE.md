@@ -90,7 +90,7 @@ Every screen or interactive component must explicitly define and implement all 7
 
 ## 6. Interactive Milestone Baseline Prototype
 
-Prior to code scaffolding, the design team/agent generates a single-file, zero-build executable HTML prototype in `docs/.working/prototypes/`:
+Prior to code scaffolding, the design team/agent generates a single-file, zero-build executable HTML prototype in `docs/.cgspec/prototypes/`:
 - Fully self-contained (HTML, CSS/Tailwind CDN, minimal vanilla JS).
 - Built-in 5/7-state switcher bar at the top.
 - Real domain data and interactive controls (search filter, inspection drawer, key generation modal).

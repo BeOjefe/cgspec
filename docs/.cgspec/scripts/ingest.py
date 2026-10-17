@@ -5,9 +5,9 @@ Reverse-engineers legacy codebases, extracts domain models, API routes,
 and database tables deterministically across major programming languages.
 
 Usage:
-  python3 scripts/ingest.py [target-path]
-  python3 scripts/ingest.py [target-path] --subsystem src/billing
-  python3 scripts/ingest.py [target-path] --live-schema db/schema.sql
+  python3 docs/.cgspec/scripts/ingest.py [target-path]
+  python3 docs/.cgspec/scripts/ingest.py [target-path] --subsystem src/billing
+  python3 docs/.cgspec/scripts/ingest.py [target-path] --live-schema db/schema.sql
 """
 
 import os
@@ -334,7 +334,7 @@ def ingest_codebase(target_dir: Path, subsystem: Optional[str] = None, live_sche
         "distilled_nouns": distilled
     }
 
-    out_file = Path(output_path).resolve() if output_path else (target_dir / "docs" / ".working" / "brownfield-manifest.json")
+    out_file = Path(output_path).resolve() if output_path else (target_dir / "docs" / ".cgspec" / "brownfield-manifest.json")
     out_file.parent.mkdir(parents=True, exist_ok=True)
     out_file.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
@@ -354,7 +354,7 @@ def ingest_codebase(target_dir: Path, subsystem: Optional[str] = None, live_sche
 
 - **Status:** Accepted
 - **Date:** {datetime.now(timezone.utc).strftime('%Y-%m-%d')}
-- **Context:** Reverse-engineered via `scripts/ingest.py` (AST Ingestion Engine).
+- **Context:** Reverse-engineered via `docs/.cgspec/scripts/ingest.py` (AST Ingestion Engine).
 
 ---
 
@@ -364,7 +364,7 @@ def ingest_codebase(target_dir: Path, subsystem: Optional[str] = None, live_sche
 - **Discovered Endpoints:** {len(all_endpoints)} routes
 - **Discovered Models & Tables:** {len(all_models)} models, {len(all_tables)} tables
 - **Distilled OOUX Nouns:** {', '.join(n['noun'] for n in distilled[:10])}{'...' if len(distilled) > 10 else ''}
-- **Deterministic Manifest:** `docs/.working/brownfield-manifest.json`
+- **Deterministic Manifest:** `docs/.cgspec/brownfield-manifest.json`
 
 ## 2. Invariants & Decision
 1. **Legacy Baseline Freeze:** Existing routes and tables are codified as the immutable baseline.

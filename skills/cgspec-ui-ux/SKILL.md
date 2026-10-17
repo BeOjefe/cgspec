@@ -11,8 +11,21 @@ description: Dual-Spine UI & UX Compilation Engine. Ingests locked Stage 1 ORCA 
 
 | Domain | Core Focus | What It Solves | Deliverables in Stage 2 |
 | :--- | :--- | :--- | :--- |
-| **UX (User Experience)** | Ergonomics, Navigation & Behavior | *How it works & how hands move:* Direct manipulation mechanics (in-place vs modal), focal screen selection, keyboard hotkeys (`Cmd+K`, `<kbd>`), cognitive pacing, error recovery. | Journey slice contract, tactile interaction specifications, accessibility navigation flow. |
-| **UI (User Interface)** | Spatial Layout, Presentation & Craft | *Where things live & how it looks:* Macro spatial zoning (Header, Rails, Canvas, Drawers), declarative wireframes (Mermaid/D2/PlantUML), typography scale (`tabular-nums`), tonal surface elevation (1px hairlines), exactly 1 surgical brand anchor. | Macro spatial wireframe, design tokens, coexisting 7-state component matrix, single-file HTML prototype (`prototype-v0.1.html`). |
+| **UX (User Experience)** | Ergonomics, Navigation & Behavior | *How it works & how hands move:* Direct manipulation mechanics (in-place vs modal), focal screen selection, keyboard/touch gestures, cognitive pacing, error recovery. | Journey slice contract, tactile interaction specifications, accessibility navigation flow. |
+| **UI (User Interface)** | Spatial Layout, Presentation & Craft | *Where things live & how it looks:* Macro spatial zoning (Sections, Thumb-Zones, or Panels), declarative wireframes (Mermaid/D2/PlantUML), typography scale (`tabular-nums`), tonal surface elevation (1px hairlines), 1 surgical brand anchor. | Macro spatial wireframe, design tokens, proportional state matrix, single-file HTML prototype (`prototype-v0.1.html`). |
+
+---
+
+## Adaptive Surface Profile Gate (Never Impose Desktop SaaS on Mobile or Simple Sites)
+
+Before drawing layouts or modeling states, identify the project's **Target Surface Profile** from `01-INTENT.md` and calibrate spatial zoning, ergonomics, and required states accordingly:
+
+| Surface Profile | Spatial Zoning Geometry | Ergonomics & Physical Input | Proportional State Matrix | Executable Prototype (`prototype-v0.1.html`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Profile A: Simple / Narrative Website** *(Landing page, portfolio, blog, marketing site)* | **Vertical Scroll Storyboard:** Sticky Header -> Hero Hook + Live Proof -> Problem/Solution Contrast -> Bento/Comparison -> FAQ & CTA Footer. *(No 3-pane sidebars!)* | Visual pacing, reading rhythm, above-the-fold clarity, responsive mobile stacking. | **4 Narrative States:** `Desktop Wide`, `Mobile Compact`, `Interactive Hover/Expanded`, `Form Validation/Submitted`. | Full-bleed responsive HTML page with Desktop/Mobile viewport toggle. |
+| **Profile B: Mobile App (iOS / Android)** *(SwiftUI, Kotlin, Flutter, React Native)* | **Thumb-Zone Vertical Stack:** Top Status/App Bar -> Scrollable Feed/Canvas -> Draggable Bottom Sheet (Peek/Half/Full detents) -> Bottom Tab Bar. *(No wide side rails!)* | **Touch & Gestures:** 44x44pt (iOS HIG) / 48x48dp (Android M3) hit targets, one-handed thumb arc, swipe actions, pull-to-refresh, **Virtual Keyboard Avoidance**. | **7 Mobile States:** `Populated`, `Loading Skeleton`, `Empty`, `Error/Retry`, `OS Permission Prompt`, `Offline/Cached`, `Keyboard Up (40% occluded)`. | Interactive `390x844` (iOS) / `412x915` (Android) device frame with sheet/gesture & keyboard switcher. |
+| **Profile C: Web / Desktop Workspace** *(SaaS, dashboard, IDE, data tool)* | **Multi-Pane Viewport:** Top Header Bar -> Left Nav Rail -> Center Workhorse Canvas -> Right Contextual Drawer. | **Mouse + Keyboard-First:** `Cmd+K` command bar, `<kbd>` hotkeys, in-place fluid editing, 32-40px dense rows. | **7 Operational States:** `Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Filtered Zero`. | Full-viewport multi-pane workspace with 7-state switcher bar. |
+| **Profile D: CLI / TUI / Headless** *(Terminal tool, daemon, SDK)* | **Command & Stream Topology:** Subcommand tree, flag matrix, split TUI panes, `stdout` data vs `stderr` diagnostics. | **TTY Ergonomics:** Pipeability, `--json` flag, interactive spinner vs non-TTY quiet mode, exit codes. | **5 CLI States:** `Success (Exit 0)`, `Usage/Help`, `Validation Error (Exit 1)`, `Auth/Network Error`, `Non-TTY Pipe Mode`. | Interactive terminal transcript / TUI simulator in HTML or CLI contract spec. |
 
 ---
 
@@ -21,7 +34,7 @@ description: Dual-Spine UI & UX Compilation Engine. Ingests locked Stage 1 ORCA 
 1. **Ingest Locked Intent (Do Not Re-Interview from Ground Zero):**
    - Stage 1 (`cgspec-forge`) has already established the user persona, core problem statement, Day-in-the-Life walkthrough (`01-INTENT.md`), and the ORCA domain nouns & relationships (`02-OOUX.md`).
    - `cgspec-ui-ux` ingests this locked foundation. It never forces the human to repeat themselves.
-   - Its design task is strictly: **Which journey slice or focal screen from `01-INTENT.md` are we mapping first, and how do hands physically manipulate those nouns on screen?**
+   - Its design task is strictly: **Which journey slice or focal screen from `01-INTENT.md` are we mapping first, which Surface Profile (Simple Site, Mobile iOS/Android, Web App, or CLI) applies, and how do hands physically manipulate those nouns?**
 2. **Maintain State & Visibility:** Maintain an active screen, active phase, and explicit list of unresolved questions.
 3. **Separate Categories:** Distinctly separate verified facts, human preferences, working assumptions, and approved decisions.
 4. **Small Question Batches:** Ask small batches of consequential questions. Never overwhelm the user with long questionnaires.
@@ -54,7 +67,7 @@ Design can only operate cleanly on a **locked scope milestone** (e.g. `v0.1` int
 
 3. **If Expanding v0.1 (Returning to Brainstorming):**
    - **Never delete or discard mid-work design:** Any sketches, wireframes, or prototypes represent valuable cognitive labor.
-   - **Stash the Mid-Work:** Snapshot current design assets into `docs/.working/prototypes/stash/<timestamp>-<name>/`.
+   - **Stash the Mid-Work:** Snapshot current design assets into `docs/.cgspec/prototypes/stash/<timestamp>-<name>/`.
    - **Log the Pause:** Append a record to `docs/.memlog.md` (e.g. `### [M-NNN] Paused Stage 2 Design: Reopening Stage 1 Intent for <New Concept>`).
    - **Re-lock Intent (Stage 1):** Return to `docs/01-INTENT.md` and `docs/02-OOUX.md` to define the new noun, relationships, and user journey. Confirm user approval.
    - **Design Delta Assessment:** Upon returning to Stage 2, inspect the stashed mid-work:
@@ -87,7 +100,7 @@ Design can only operate cleanly on a **locked scope milestone** (e.g. `v0.1` int
 
 ### Phase 5: Model States & Build Evaluated Milestone Prototype
 - **Coexisting State Matrix:** Model states at both screen and component level (`Loading`, `Empty`, `Recoverable Error`, `Offline`, `Filtered`, `Conflict`).
-- **Milestone Baseline Prototype:** Deliver single-file, self-contained HTML (`docs/.working/prototypes/prototype-v0.1.html`) with an interactive state switcher.
+- **Milestone Baseline Prototype:** Deliver single-file, self-contained HTML (`docs/.cgspec/prototypes/prototype-v0.1.html`) with an interactive state switcher.
 - **Browser Verification Gate:** Capture desktop and compact viewports, verify keyboard-only completion, and record results in `docs/03-EXPERIENCE.md`.
 
 ---

@@ -8,7 +8,7 @@
 ---
 
 ## 1. Unsorted Sparks (Just Captured — Triage Later)
-- [ ] **Guided Design Discovery & Visual Reference Curator (`cgspec-ux` refoundation):** Transform UX skill from static prompt generation into a deep, guided dialogue. Post-OOUX ergonomics interrogation (direct manipulation, markdown editing mode), external visual reference hunting (proposing live exemplars like Linear, Cloudflare, Notion, Bear), and non-overwhelming micro-step ergonomic interviews before generating variants. Staged in `docs/.working/rfc-deep-taste-and-design-discovery.md`.
+- [ ] **Guided Design Discovery & Visual Reference Curator (`cgspec-ux` refoundation):** Transform UX skill from static prompt generation into a deep, guided dialogue. Post-OOUX ergonomics interrogation (direct manipulation, markdown editing mode), external visual reference hunting (proposing live exemplars like Linear, Cloudflare, Notion, Bear), and non-overwhelming micro-step ergonomic interviews before generating variants. Staged in `docs/.cgspec/rfc-deep-taste-and-design-discovery.md`.
 - [ ] **alphaXiv MCP Research Bridge:** Connect the alphaXiv Model Context Protocol server (`https://api.alphaxiv.org/mcp/v1`) to enable autonomous discovery and grounding of architectural decisions and trade-offs in peer-reviewed arXiv papers during the Council and Intent phases.
 
 ---

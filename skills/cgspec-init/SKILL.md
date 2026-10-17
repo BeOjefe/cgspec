@@ -23,7 +23,7 @@ Determine whether the project is Greenfield or Brownfield:
 - **Greenfield Setup:** Empty or new repository. Proceed to Step 2.
 - **Brownfield Ingestion (`cgspec ingest`):** Existing codebase with pre-existing code, routes, or database schemas.
   1. **Deterministic AST Extraction:** Run `python3 {skill-dir}/scripts/ingest.py {project-root}` (optionally `--subsystem <path>` for bounded context scoping or `--live-schema <path>` for live SQL dumps).
-  2. **Manifest Generation:** Produces `{project-root}/docs/.working/brownfield-manifest.json` conforming to `docs/.working/brownfield-manifest.schema.json`.
+  2. **Manifest Generation:** Produces `{project-root}/docs/.cgspec/brownfield-manifest.json` conforming to `docs/.cgspec/brownfield-manifest.schema.json`.
   3. **OOUX Distillation:** High-level domain nouns automatically populated into `02-OOUX.md` without raw physical SQL.
   4. **Baseline Lock (`ADR-000`):** Creates `docs/adr/ADR-000-legacy-baseline-adoption.md` codifying existing architectural decisions as the baseline freeze.
 
@@ -34,15 +34,15 @@ Detect or ask (via `ask_question`) the project structure:
 - **Mode C (Service Satellite Repo):** A single microservice repo with its own code and migrations, consuming shared contracts from the central blueprint or MCP gateway.
 
 ### 3. Root Constitution
-1. Write `{project-root}/AGENTS.md` containing the 7 Immutable Laws, the clean 1-line compass, the `scripts/doctor.py` hook, and the verification rules.
+1. Write `{project-root}/AGENTS.md` containing the 7 Immutable Laws, the clean 1-line compass, the `docs/.cgspec/scripts/doctor.py` hook, and the verification rules.
 2. Write `{project-root}/CLAUDE.md` as a 1-line DRY pointer:
    `Read and strictly follow all instructions in [./AGENTS.md](./AGENTS.md).`
 
 ### 4. Directory & Spine Initialization
 1. Create directories:
-   `{project-root}/docs/.working/`, `{project-root}/docs/archive/`, `{project-root}/docs/adr/`, `{project-root}/docs/slices/`, `{project-root}/scripts/`.
+   `{project-root}/docs/.cgspec/`, `{project-root}/docs/archive/`, `{project-root}/docs/adr/`, `{project-root}/docs/slices/`, `{project-root}/scripts/`.
 2. Install `{project-root}/scripts/doctor.py` from `{skill-dir}/scripts/doctor.py`.
-3. Move any legacy or scattered markdown files into `docs/archive/` or `docs/.working/` (never delete history).
+3. Move any legacy or scattered markdown files into `docs/archive/` or `docs/.cgspec/` (never delete history).
 4. Initialize `{project-root}/docs/.memlog.md`:
    ```bash
    uv run {skill-dir}/scripts/memlog.py add {project-root}/docs/.memlog.md \
@@ -61,6 +61,6 @@ Detect or ask (via `ask_question`) the project structure:
 ### 5. Pre-Flight Integrity Verification
 Run the CGSpec Doctor to ensure all spines and memory logs are 100% compliant:
 ```bash
-python3 scripts/doctor.py .
+python3 docs/.cgspec/scripts/doctor.py .
 ```
 Verify zero errors before proceeding to Stage 1.

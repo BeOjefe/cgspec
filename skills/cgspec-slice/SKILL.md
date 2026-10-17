@@ -8,7 +8,7 @@ description: Atomic Vertical Slice Builder. Generates a bounded slice contract f
 ## Execution Steps
 
 1. **Pre-Flight Check & Compass:**
-   - **Doctor Hook:** Run `python3 scripts/doctor.py .` to verify that all core spines exist and ADRs are properly registered before code is scaffolded.
+   - **Doctor Hook:** Run `python3 docs/.cgspec/scripts/doctor.py .` to verify that all core spines exist and ADRs are properly registered before code is scaffolded.
    - **Strict Law 3 Gate:** Verify that Stage 1 (Intent & OOUX Nouns) and Stage 2 (UI/UX, Spatial Zoning, and Interactive Prototype) are locked and approved by the user. Vertical code slices are **strictly prohibited** until UI/UX has been approved.
    - **Mandatory ADR Invariant Audit:** Read all `{project-root}/docs/adr/*.md` to ensure the slice architecture, database schema, and crypto contracts strictly comply with accepted ADRs.
    - Show the 1-line plain-text compass (zero emojis):

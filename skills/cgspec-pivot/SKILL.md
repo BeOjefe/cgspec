@@ -13,7 +13,7 @@ description: 6-Step Course-Correction Impact Audit and 3-Tier Migration Engine (
    - Maintain the clean text compass (zero emojis).
 
 2. **Execute Migration Tier Silently:**
-   - **Mid-Design Scope Pivots (Stage 2 -> Stage 1 Reopening):** If a pivot occurs during active design, execute the Design Stash Protocol (`skills/cgspec-ui-ux/SKILL.md`): snapshot current prototypes to `docs/.working/prototypes/stash/`, log pause in `.memlog.md`, re-lock `01-INTENT.md` & `02-OOUX.md`, then conduct a Design Delta Assessment upon re-entering Stage 2.
+   - **Mid-Design Scope Pivots (Stage 2 -> Stage 1 Reopening):** If a pivot occurs during active design, execute the Design Stash Protocol (`skills/cgspec-ui-ux/SKILL.md`): snapshot current prototypes to `docs/.cgspec/prototypes/stash/`, log pause in `.memlog.md`, re-lock `01-INTENT.md` & `02-OOUX.md`, then conduct a Design Delta Assessment upon re-entering Stage 2.
    - **Tier 1 (Module/Adapter Swap):** Leave `01`, `02`, `03` untouched. Silently log lock to `.memlog.md`, write `ADR-NNN`, update `04-ARCHITECTURE.md`, swap `src/adapters/<module>/`.
    - **Tier 2 (Additive Scope Expansion):** Silently log lock to `.memlog.md`, write `ADR-NNN`, update `02-OOUX.md` + `04-ARCHITECTURE.md`, add forward DB migration and slice.
    - **Tier 3 (Full `v1 -> v2` Architecture Switch):**
@@ -22,5 +22,5 @@ description: 6-Step Course-Correction Impact Audit and 3-Tier Migration Engine (
      3. Silently log architecture replacement in `.memlog.md`, rewrite `04-ARCHITECTURE.md`, and scaffold `v2` slices in `05-DELIVERY.md`.
 
 3. **Post-Pivot Integrity Gate:**
-   - Run `python3 scripts/doctor.py .` to ensure all spines, memory log entries, and ADRs are valid and consistent.
+   - Run `python3 docs/.cgspec/scripts/doctor.py .` to ensure all spines, memory log entries, and ADRs are valid and consistent.
 

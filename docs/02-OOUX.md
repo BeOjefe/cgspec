@@ -15,7 +15,7 @@ erDiagram
     PROJECT_BLUEPRINT ||--o{ INBOX_SPARK : "parks future ideas in"
     PROJECT_BLUEPRINT ||--|{ ADR_RECORD : "locks major decisions in"
     PROJECT_BLUEPRINT ||--|{ VERTICAL_SLICE : "executes work via"
-    DERIVED_SPINE ||--o{ WORKING_ARTIFACT : "explores options in .working/"
+    DERIVED_SPINE ||--o{ WORKING_ARTIFACT : "explores options in .cgspec/"
 
     MEMLOG {
         string entry_id PK "e.g., M-001"
@@ -29,7 +29,7 @@ erDiagram
         string derived_from_memlog_id "Latest M-NNN"
     }
     WORKING_ARTIFACT {
-        string path PK "docs/.working/* (Excalidraw, HTML mocks, manifests)"
+        string path PK "docs/.cgspec/* (Excalidraw, HTML mocks, manifests)"
         boolean ephemeral "True (never loaded into build context)"
     }
     VERTICAL_SLICE {

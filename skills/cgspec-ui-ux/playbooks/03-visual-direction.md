@@ -25,13 +25,15 @@ Guide the human architect and AI agent through Phase 3 and Phase 4 of the Experi
 
 ---
 
-## Density Calibration
+## Density & Surface Calibration
 
-| Mode | Row Height | Body Size | Spacing Unit | Target Use Case |
+| Mode | Hit / Row Height | Body / Display Scale | Spacing Unit | Target Surface & Use Case |
 | :--- | :--- | :--- | :--- | :--- |
-| **Cozy / Editorial** | 44px - 48px | 15px - 16px | 16px - 24px | Long-form writing, document reading, consumer apps |
-| **Balanced / Standard** | 38px - 42px | 14px | 12px - 16px | Standard SaaS dashboards, settings, workspace navigation |
-| **Compact / High-Density** | 32px - 36px | 12px - 13px | 8px - 12px | Developer tools, terminal output, data tables, key vaults |
+| **Narrative / Marketing Website** | 44px - 52px CTAs | 16px - 18px body / 40px - 64px hero | 32px - 80px section rhythm | Landing pages, portfolios, blogs, product launch pages |
+| **Mobile Touch (iOS / Android)** | **44pt (iOS) / 48dp (Android) min** | 15px - 17px (SF Pro / Roboto scale) | 12px - 20px thumb-friendly | Native iOS, Android, React Native, Flutter, mobile web |
+| **Cozy / Editorial Workspace** | 44px - 48px | 15px - 16px | 16px - 24px | Long-form writing, document reading, consumer web apps |
+| **Balanced / Standard SaaS** | 38px - 42px | 14px | 12px - 16px | Standard SaaS dashboards, settings, workspace navigation |
+| **Compact / High-Density** | 32px - 36px | 12px - 13px | 8px - 12px | Desktop developer tools, terminals, data tables, key vaults |
 
 ---
 

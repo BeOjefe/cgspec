@@ -37,26 +37,26 @@ Every slice produces a formal contract before code is scaffolded:
 ## 3. Verification Criteria
 - [ ] Unit & integration tests pass with zero warnings.
 - [ ] Live browser screenshot inspection confirms 7-state UI fidelity.
-- [ ] `python3 scripts/doctor.py .` returns exit code 0.
+- [ ] `python3 docs/.cgspec/scripts/doctor.py .` returns exit code 0.
 ```
 
 ---
 
 ## 3. Delivery Integrity Hooks
 
-### A. The CGSpec Doctor (`scripts/doctor.py`)
+### A. The CGSpec Doctor (`docs/.cgspec/scripts/doctor.py`)
 The automated doctor hook runs pre-flight and post-slice:
 - Verifies existence of all 6 core spines (`00-INDEX.md`, `01-INTENT.md`, `02-OOUX.md`, `03-EXPERIENCE.md`, `04-ARCHITECTURE.md`, `05-DELIVERY.md`).
 - Enforces strict chronological continuity of `docs/.memlog.md` (`M-001` .. `M-NNN`).
 - Verifies bidirectional ADR status parity (status on disk matches table in `00-INDEX.md`).
 - Scans for banned decorative emojis.
 
-### B. The Brownfield Ingestion Engine (`scripts/ingest.py`)
-For existing or legacy repositories, `scripts/ingest.py` performs deterministic AST extraction:
+### B. The Brownfield Ingestion Engine (`docs/.cgspec/scripts/ingest.py`)
+For existing or legacy repositories, `docs/.cgspec/scripts/ingest.py` performs deterministic AST extraction:
 - Python standard library `ast` parsing for FastAPI/Flask/Django routes and Pydantic/SQLAlchemy models.
 - TypeScript/JavaScript pattern extraction for Express/NestJS/Prisma/Drizzle.
 - Go route and struct scanning.
 - Live database schema parsing (`--live-schema <schema.sql>`).
 - Bounded subsystem scoping (`--subsystem <path>`) following the Strangler Fig pattern.
-- Generates `docs/.working/brownfield-manifest.json` conforming to `brownfield-manifest.schema.json`.
+- Generates `docs/.cgspec/brownfield-manifest.json` conforming to `brownfield-manifest.schema.json`.
 - Automatically codifies legacy baseline into `docs/adr/ADR-000-legacy-baseline-adoption.md`.
