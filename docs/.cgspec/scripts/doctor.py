@@ -92,17 +92,19 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
             memlog_entries = ids
             print(f"  [PASS] Memory Log: {len(ids)} sequential entries (latest: {ids[-1]})")
 
-            # Check parity with 00-INDEX.md claims
+            # Auto-synchronize 00-INDEX.md memlog counter from canonical docs/.memlog.md (DRY)
             if index_content:
                 count_match = re.search(r"(\d+)\s+entries\s*\((?:Latest:\s*)?(M-\d+)\)", index_content)
                 if count_match:
                     claimed_count = int(count_match.group(1))
                     claimed_latest = count_match.group(2)
                     if claimed_count != len(ids) or claimed_latest != ids[-1]:
-                        warnings.append(
-                            f"docs/00-INDEX.md header desync: claims {claimed_count} entries ({claimed_latest}) "
-                            f"but docs/.memlog.md actually has {len(ids)} entries ({ids[-1]})"
-                        )
+                        old_span = count_match.group(0)
+                        prefix = "Latest: " if "Latest:" in old_span else ""
+                        new_span = f"{len(ids)} entries ({prefix}{ids[-1]})"
+                        index_content = index_content.replace(old_span, new_span, 1)
+                        (docs_dir / "00-INDEX.md").write_text(index_content, encoding="utf-8")
+                        print(f"  [SYNC] Auto-updated docs/00-INDEX.md memlog counter -> {new_span}")
 
     # 4. Check ADR Consistency & Bidirectional Parity
     adr_dir = docs_dir / "adr"
