@@ -19,8 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 HEADER_TEMPLATE = """# Project Memory Log (.memlog.md)
-> Append-only chronological log. Canonical spines (`00-INDEX.md` .. `05-EXPERIENCE.md`) are derived from this log.
-
+> Append-only chronological log. Canonical spines (`00-INDEX.md` .. `05-DELIVERY.md`) are derived from this log.
 """
 
 ENTRY_REGEX = re.compile(
