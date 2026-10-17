@@ -269,6 +269,23 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
                 )
                 break
 
+    # 14. Check for Phantom DOM Element References in Inline JavaScript (Law of Interactive Integrity)
+    # Extracts document.getElementById('...') calls and flags IDs that do not exist anywhere in the HTML DOM
+    dom_ids = set(re.findall(r'\bid=["\']([^"\']+)["\']', content))
+    phantom_ids = set()
+    for sb in re.findall(r"<script(?![^>]*src=)[^>]*>(.*?)</script>", content, re.S | re.I):
+        for match in re.finditer(r"document\.getElementById\(\s*['\"]([^'\"]+)['\"]\s*\)", sb):
+            target_id = match.group(1)
+            # Skip dynamically computed prefix patterns
+            if any(target_id.startswith(p) for p in ("label-", "desc-", "file-item-", "status-", "mount-")):
+                continue
+            if target_id not in dom_ids:
+                phantom_ids.add(target_id)
+    if phantom_ids:
+        warnings.append(
+            f"Phantom DOM Element Reference(s) in JavaScript: Found document.getElementById() calls for IDs not present in the DOM: {sorted(list(phantom_ids))[:6]}. This causes silent TypeErrors ('Cannot read properties of null') when users click buttons."
+        )
+
     return errors, warnings
 
 
