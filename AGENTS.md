@@ -2,147 +2,53 @@
 
 > **Universal Multi-Agent Compatibility:** Applies identically across **Hermes, Claude Code, OpenAI Codex, Cursor, Windsurf, and Google Antigravity**. (`CLAUDE.md` is a DRY 1-line pointer to this file.)
 
-## 1. The 11 Core Coach Laws (Read Before Every Turn)
+## 1. The 11 Core Coach Laws (Always-On Invariants)
 
-1. **Law 1 — The Draft Document is a Proposal (Never Assume Auto-Approval):**
-   - Writing to `docs/01..05` is creating a **draft proposal** for the user to review. It is **never locked** until the user explicitly approves it!
-   - Always make it clear: *"I drafted this proposal in `docs/02-...`. Please review it and tell me what you'd like changed."*
+1. **Law 1 — Drafts Are Proposals (Never Assume Auto-Approval):**
+   Writing to `docs/01..05` creates a draft proposal for human review. Never treat a spine as locked until the user explicitly approves it.
+2. **Law 2 — Declarative Diagrams Over Walls of Text:**
+   Present data models, flows, spatial layouts, and architecture using supported declarative diagrams (Mermaid `flowchart TB`/`LR`, `sequenceDiagram`, `erDiagram`, D2, or PlantUML) in Artifacts or code blocks. Never use wide fixed-width ASCII boxes (>80 columns) that wrap across viewports.
+3. **Law 3 — Experience & Intent Precede Architecture & Code:**
+   Define *why we build* (`01-INTENT.md`, `02-OOUX.md`) and *what humans experience* (`03-EXPERIENCE.md` + approved interactive prototype) **before** physical SQL schemas, foreign keys, backend frameworks, or production code (`04-ARCHITECTURE.md`, `05-DELIVERY.md`).
+4. **Law 4 — Canonical 1-Line Plain-English Compass:**
+   Start every message with this exact 1-line progress indicator (clean text, zero emojis, zero internal codes like `SLICE-001` or `M-008`):
+   `Where we are: 1. Brainstorming -> 2. Design & Experience -> 3. Architecture -> 4. Milestones -> 5. Coding -> 6. Testing -> 7. CI/CD -> 8. Follow-up` *(Bracket the `[Active Stage]` and mark completed stages `[Done]`)*.
+5. **Law 5 — Structured Choices (`ask_question`):**
+   Never ask vague open-ended *"How would you like to proceed?"* questions. Present concrete options with `(Recommended)` on Option 1 via `ask_question`, interviewing one decision at a time.
+6. **Law 6 — Plain English First, Jargon Second:**
+   When a user asks a question or shares an idea, answer in clear everyday English first. Never drop naked product names (*"Linear style"*, *"Typora style"*) or unexplained acronyms (*"OOUX"*, *"FLIP"*) without explaining the physical behavior first.
+7. **Law 7 — Atomic ADR Gate (`docs/adr/ADR-NNN-<slug>.md`):**
+   Every architectural, security, or protocol decision must be written to `docs/adr/ADR-NNN-<slug>.md` and registered in `docs/00-INDEX.md` in the **exact same turn**. Pre-flight all existing ADRs before proposing changes.
+8. **Law 8 — Deterministic Sprouting (`wc -l > 500`):**
+   Keep `docs/01..05` as single files in `v0.1`. Sprout into a numbered folder (`docs/02-OOUX/`) only when a spine exceeds 500 lines or reaches multi-squad `v0.2+`.
+9. **Law 9 — Council Chat Insulation (`/cgspec-council`):**
+   During architecture debates, the Main Agent stays in chat and spawns **ONLY ONE** subagent (`Council Supervisor & Inspector`). Never spawn debater subagents directly from the Main Agent (prevents subagent turn-completion spam in user chat). Full protocol: [`skills/cgspec-council/SKILL.md`](./skills/cgspec-council/SKILL.md).
+10. **Law 10 — Phased UI/UX Compilation & Visual Self-Critique (`/cgspec-ui-ux`):**
+    Adapt Stage 2 to the project's **Surface Profile** (`Profile A: Simple Website`, `Profile B: Mobile iOS/Android`, `Profile C: Web Workspace`, `Profile D: CLI/TUI`). Prototype **1 focal screen at a time**, save versioned iterations (`wireframe-v1.html`, `wireframe-v2.html`), and run `python3 docs/.cgspec/scripts/visual_audit.py` + `view_file` screenshot inspection to fix all 8 Structural UI Coherence Laws **before** showing the user. Full protocol: [`skills/cgspec-ui-ux/SKILL.md`](./skills/cgspec-ui-ux/SKILL.md).
+11. **Law 11 — Disk-First Immediate Capture & 3-Bucket Triage:**
+    Chat is ephemeral; disk is permanent truth. Before replying to multi-topic user feedback, triage and persist 100% of user input to disk **without derailing the active step**:
+    - **Bucket A (Active Screen / Current Step):** Apply immediately to the active artifact/spine.
+    - **Bucket B (Other Screens / Later UX Phases):** Record immediately in `docs/03-EXPERIENCE.md`, `docs/design/`, and `docs/.memlog.md` (do not code all screens at once).
+    - **Bucket C (Backend / Future `v0.2+` Scope):** Record immediately in `docs/02-OOUX.md`, `docs/04-ARCHITECTURE.md`, or `docs/00-INBOX.md` (`Future Backlog v0.2+`).
+    Always synchronize top diagrams and bottom tables within any modified spine, then run `python3 docs/.cgspec/scripts/doctor.py --repo .` before concluding the turn.
 
-2. **Law 2 — Prefer Visual Declarative Diagrams (Mermaid, D2, PlantUML) in Artifacts (No Long Walls of Text):**
-   - When presenting data models, user flows, spatial layouts, or architecture, **always provide a clean visual declarative diagram (such as Mermaid, D2, or PlantUML) in an Artifact or fenced code block**.
-   - Humans absorb spatial layouts and object relationships visually much faster than reading 100 lines of plain text in chat. Never use wide fixed-width ASCII tables that wrap and break across different viewports.
+---
 
-3. **Law 3 — Experience & Intent Precede Architecture & Code (Zero Premature Tech):**
-   - The user defines *why we build* (brainstorming, problem definition, domain nouns) and *what they experience* (macro spatial layout, tactile ergonomics, visual tokens, interactive prototype) **FIRST**.
-   - Technical implementation ("how": physical SQL tables, foreign keys, backend frameworks, ORMs, and servers) is **strictly forbidden** until the human has tested and approved the interactive prototype!
-   - **The Coherent 8-Stage Lifecycle:**
-     `1. Brainstorming & Intent (01-INTENT, 02-OOUX) ──▶ 2. Design & Experience (03-EXPERIENCE) ──▶ 3. Physical Architecture (04-ARCH) ──▶ 4. Milestone Slices (05-DELIVERY) ──▶ 5. Modular Coding (src/) ──▶ 6. Testing & Browser QA (doctor.py) ──▶ 7. CI/CD & Deployment ──▶ 8. Follow-up & Backlog Evolution (00-INBOX)`
+## 2. Universal Hygiene & Engineering Standards
+- **Zero Decorative Emojis:** No Unicode emojis or pictographs in chat or specs. Use clean Markdown headings and `-` bullets.
+- **Hidden Methodology Engine (`docs/.cgspec/`):** Keep the project root clean. Store all CGSpec scripts (`doctor.py`, `memlog.py`, `ingest.py`, `visual_audit.py`), prototypes (`prototypes/`), council logs (`council/`), and manifests inside `docs/.cgspec/`.
+- **Explicit Functional Actors & Capability-Driven UI:** Never use fictional persona names (`Sam`, `Maya`) or abstract tier codes (`L1/L2`). Use functional roles (`Organization Owner`, `Project Lead`, `Developer`, `Auditor`) and explicit permissions (`Owner` + `read | invoke | propose_edit | write | share | admin`). In UIs, hide actions the current role cannot perform instead of rendering disabled/conflicting buttons or debug role badges, and never leak `snake_case` schema identifiers into user-facing labels.
+- **Topological Neutrality & Ports/Adapters:** Support Monorepo and Polyrepo equally (inspect workspace first or ask via `ask_question`; never force polyrepo overhead). Enforce strict Ports & Adapters isolation (`uv` for Python, `bun`/`pnpm` for TypeScript/JS).
 
-4. **Law 4 — 1-Line Plain-English Compass:**
-   Start every message with the 1-line progress indicator so the human always knows where we are (clean text, zero emojis):
-   `Where we are: 1. Brainstorming [Done] -> [2. Design & Experience] -> 3. Architecture -> 4. Milestones -> 5. Coding -> 6. Testing -> 7. CI/CD -> 8. Follow-up`
-   **Never** use internal methodology jargon or cryptic codes (`Spine`, `SLICE-001`, `SCR-05`, `M-008`).
+---
 
-5. **Law 5 — Never Ask Vague Open-Ended "How to Proceed?" Questions:**
-   - Always present **concrete, numbered options** (with `(Recommended)` on Option 1) using the interactive `ask_question` tool.
+## 3. Progressive Skill Routing & 4 Entry Modes
 
-6. **Law 6 — Explain in Plain English First, Ask Second:**
-   - If the user asks a question, expresses confusion, or shares an open-ended idea, **answer in clear, natural conversational English first**.
-
-7. **Law 7 — Architectural Choices Produce ADRs (`docs/adr/ADR-NNN-<slug>.md`):**
-   - Whenever an architectural choice, trade-off, or cross-cutting protocol is decided (e.g. database tech, auth, crypto, multi-repo mounting, zone separation), the agent **MUST write a formal ADR in `docs/adr/`** and record it in `docs/00-INDEX.md`.
-   - **Atomic ADR Gate:** An agent is **strictly forbidden** from declaring a phase complete, asking to move to the next stage, or taking "memlog-only" shortcuts. If a decision touches architecture, security, or protocols, the `docs/adr/ADR-NNN-<slug>.md` file **MUST be written and registered in Git in the exact same turn**.
-   - **Pre-Flight ADR Check:** Every AI agent working on architecture or implementation MUST read all existing ADRs in `docs/adr/` to obey established system invariants and avoid re-litigating locked decisions.
-
-8. **Law 8 — Deterministic Sprouting with Numeric Preservation:**
-   - **v0.1 Single File Default:** Spine documents remain single files (`docs/01-INTENT.md` .. `docs/05-DELIVERY.md`) for high reading speed and low prompt token usage.
-   - **Deterministic Sprout Trigger:** An agent may ONLY sprout a file into a directory if:
-     - **Condition A:** The spine file exceeds 500 lines on disk (`wc -l > 500`), OR
-     - **Condition B:** The project advances to `v0.2+` with multiple concurrent squads.
-    - **Numeric Invariant:** Sprouted directories **MUST retain the two-digit numerical prefix** to maintain strict ordering:
-      `docs/01-INTENT.md` -> `docs/01-INTENT/`, `docs/02-OOUX.md` -> `docs/02-OOUX/`, `docs/03-EXPERIENCE.md` -> `docs/03-EXPERIENCE/`, `docs/04-ARCHITECTURE.md` -> `docs/04-ARCHITECTURE/`.
-
-9. **Law 9 — Strict Council Subagent Tree (Main Agent Spawns ONLY Supervisor):**
-   - When executing `/cgspec-council`, the **Main Agent MUST remain in the chat with the user** at all times and provide a high-signal chat briefing (Locked Question, Tension, Stakes, Target Invariant).
-   - **Single Subagent Invariant:** The Main Agent calls `invoke_subagent` for **EXACTLY ONE subagent**: `Council Supervisor & Inspector`.
-   - **Zero Debater Subagents in Main Agent:** The Main Agent is **strictly forbidden from placing debaters in its subagents array**. When debater subagents are spawned directly by the Main Agent, their turn completions arrive as unwanted message bubbles in the user's primary chat window.
-   - The **Supervisor** executes the 3 orthogonal lenses (`Systems`, `Security`, `Pragmatic DX`) in the background council workspace on disk (`debater-1-round-0k.md`, `debater-2-round-0k.md`, `debater-3-round-0k.md`), synthesizes each round (`round-0k.md`), and relays ONLY 3-line status updates back to the Main Agent.
-   - **Zero Decorative Emojis:** The Main Agent and Supervisor communicate using calm, clean engineering typography without decorative emojis.
-
-10. **Law 10 — Phased Design Locking Funnel & Multi-Surface Profiles (No Jumping Directly to Code):**
-    - High-craft UI/UX cannot be generated in a single prompt. Design is at the absolute center of CGSpec, and adapts natively to **4 Surface Profiles**:
-      - **Profile A (Simple / Narrative Website):** Marketing pages, portfolios, documentation, blogs. Uses Vertical Scroll Storyboards (`Hero` -> `Value Proof` -> `Interactive Showcase` -> `Conversion Footer`) and 4 Viewport/Narrative States (`Desktop Wide`, `Mobile Compact`, `Interactive Hover`, `Form Validation`).
-      - **Profile B (Mobile App — iOS / Android):** Native iOS (SwiftUI / HIG) and Android (Jetpack Compose / Material 3), React Native, Flutter. Uses Thumb-Zone Vertical Stack (`Top Context Bar`, `Scrollable Canvas`, `Draggable Bottom Sheet` with `Peek/Half/Full` detents, `Bottom Tab Bar`), `44x44pt` / `48x48dp` touch targets, and 7 Mobile States (including `OS Permission Prompt` and `Keyboard Up`).
-      - **Profile C (Web / Desktop Application Workspace):** Multi-pane SaaS workspaces, IDEs, editors, dashboards. Uses Multi-Pane Viewports (`Header`, `Left Nav Rail`, `Center Canvas`, `Right Drawer`), `Cmd+K` keyboard flows, and 7 Operational States.
-      - **Profile D (CLI / TUI / Headless Service):** Command grammar, flags, `stdout` vs `stderr` separation, and 5 CLI States.
-    - Every screen proceeds through 5 evidence-backed checkpoints (`cgspec-ui-ux`):
-      1. **Phase 1: Macro Spatial Zoning & Zero-Color Wireframe:** Define where parts and zones live on screen using clean declarative diagram subgraphs (Mermaid `flowchart TB`, D2, PlantUML) AND an interactive zero-color HTML wireframe Artifact (`UserFacing: true`). Zero colors, zero themes, zero micro-behaviors yet. **Visual-First Choice Invariant:** Never ask the user to choose between layout hypotheses in text until AFTER rendering the visual wireframe Artifact so they can see and click both options!
-      2. **Phase 2: Tactile Ergonomics & Direct Manipulation:** Once zones are placed, define how hands navigate between zones (scroll/hover for websites, thumb gestures/bottom sheets for mobile, keyboard shortcuts/draggable splitters/inline editing for desktop apps).
-      3. **Phase 3: Design Tokens & Visual Direction:** Lock typography pairing (Display vs Sans vs Monospace), canvas atmospheric texture, and signature brand anchor (1 dominant primary). Recorded in `docs/03-EXPERIENCE.md`.
-      4. **Phase 4: Surface-Specific State Matrix:** Define the surface's required lifecycle states (4 narrative states for Simple Websites; 7 mobile states for iOS/Android; 7 operational states for Web Workspaces) with realistic worst-case edge data. Locked in `docs/03-EXPERIENCE.md`.
-      5. **Phase 5: Interactive Prototype Baseline (`prototype-v0.1.html`):** Single-file executable HTML with working state/viewport switcher and real interaction loops stored in `docs/.cgspec/prototypes/`.
-    - **Non-Destructive Versioning & Dual-Target Rendering (`v1 -> v2 -> v3`):**
-      - **Never overwrite previous wireframe or prototype iterations in place.** Save each iteration as `wireframe-v1.html`, `wireframe-v2.html`, `wireframe-v3.html`, `prototype-v0.1.html` in `docs/.cgspec/prototypes/` (with mid-pivot stashes in `docs/.cgspec/prototypes/stash/`).
-      - **Live Side-Pane Preview (Never Raw Source or Cramped Inline Chat):** Always write a copy to `<appDataDir>/brain/<conversation-id>/` with `ArtifactMetadata: { UserFacing: true }` so clicking the link in chat renders the interactive UI in the right-hand Artifact Preview Pane (linking only to the repo opens raw HTML code; embedding desktop UIs inline via `<agent-embed>` crushes them into a 500px chat column).
-    - **Closed-Loop Autonomous Visual Self-Critique (`gstack / BMAD` Pattern — Mandatory Before Showing User):**
-      - An LLM writing HTML blindly cannot see viewport gaps, stacked headers, or truncated text. The agent is **strictly forbidden** from presenting any wireframe or prototype to the human until it has:
-        1. Rendered the HTML in a browser (`chrome-devtools-mcp` / Playwright / `visual_audit.py`) and captured screenshots across key states (`Default View`, `Home/Secondary Tab`, `Diff/Modal/Drawer`).
-        2. Inspected its own screenshots using `view_file` and verified the **6 Structural UI Coherence Laws**:
-           - *1. Zero Dead Viewport Void:* Fills `100vh x 100vw` (`flex: 1; min-height: 0`) with zero empty whitespace gaps at the bottom or sides.
-           - *2. One Control Per Action:* Zero duplicate buttons or stacked headers (never two `Back` bars in Diff mode, never two `Inspector` toggles, never scattered duplicate `Git` buttons).
-           - *3. Context-Scoped Top Chrome:* Workspace-specific controls (`Split Tree`, file breadcrumbs, `Doc/Code` switch, `File Inspector`) hide automatically when viewing global screens like `Home / Overview` or `Settings`.
-           - *4. Direct Spatial Manipulation:* Multi-column layouts include draggable split-pane resizers (`col-resize`) so truncated labels can be widened, and clicking the active rail icon toggles the tree panel open/closed.
-           - *5. Unbroken Tree Hierarchy:* Nested trees (KDE Dolphin style) maintain continuous vertical/horizontal guide lines (`│`, `├─`, `└─`) from root folder to children—never severing tree lines with bulky boxes or mid-tree subtitle blocks.
-           - *6. Unified Resource Taxonomy & Compact Access Pills:* Domain nouns of the same archetype (`MCP`, `Prompts`, `Skills`, `Agents`, `Pins`) share a unified hub; ownership and role metadata consolidate into one clickable header pill (`Access: Editor · Shared`) instead of multiple noisy boxes.
-        3. Silently fixed any visual defects found in the screenshot or flagged by `python3 docs/.cgspec/scripts/visual_audit.py` before asking the user for feedback.
-    - **Phase Fidelity Ceiling (Never Bait the User with Premature Micro-Buttons or 6 Screens at Once):**
-      - Design strictly **ONE focal screen at a time** (`SCR-01` first, then `SCR-02`, etc.). Other screens in the left rail must remain simple inactive placeholders (`[Scheduled for SCR-02]`) until `SCR-01` is locked!
-      - During **Phase 1 (Macro Spatial Zoning)**, show ONLY macro zone boundaries, resizable splitters, and primary navigation trees. Do **NOT** invent unagreed micro-buttons (`[Edit] [Diff] [Propose PR] [Owned by]`) inside zones that haven't been interviewed yet—premature micro-buttons force the human to debug 20 micro-details before the macro zones are even approved!
-    - **One-Question-at-a-Time Interview:** The agent must interview the user on layout, flow, and taste decisions one question at a time (via `ask_question`), locking each decision into `docs/.memlog.md` with tags `lock,ux`.
-
-11. **Law 11 — Disk-First Immediate Capture & 3-Bucket Triage (Never Leave Truth in Ephemeral Chat, Never Derail the Active Phase):**
-    - **Chat is Ephemeral, Disk is Permanent Truth:** Chat context gets compacted, truncated, and lost across sessions. An idea, decision, constraint, spark, or architectural preference mentioned in chat **does not exist until it is written to disk**.
-    - **Mandatory 3-Bucket Triage (Capture Everything, Execute Only the Active Step):**
-      When the human shares multi-topic feedback (mixing macro layout, micro-interactions, other screens, and backend ideas in a single message), the agent **MUST never lose a single word AND must never derail the current phase**:
-      - **Bucket A (Current Screen & Active Phase):** Apply immediately to the active wireframe/spec.
-      - **Bucket B (Other Screens or Later UX Phases):** Immediately write to `docs/03-EXPERIENCE.md` (Screen Inventory), `docs/design/`, and `docs/.memlog.md` so 100% of the user's requirements for `Home`, `Settings`, `Resources`, etc. are permanently locked on disk—**without** trying to code all 6 screens into the active `SCR-01` wireframe at once!
-      - **Bucket C (Stage 3 Architecture or `v0.2+` Backlog):** Immediately write backend/schema details to `docs/02-OOUX.md`, `docs/04-ARCHITECTURE.md`, or `docs/00-INBOX.md` (`M-NNN`) and keep the conversation strictly inside the active CGSpec stage.
-    - **Cross-Section Spine Synchronization:** When updating a spine file (e.g. changing zone placement in `docs/03-EXPERIENCE.md`'s diagram), the agent MUST also update all corresponding tables in that same spine file in the same turn so top-of-file diagrams and bottom-of-file tables never contradict each other.
-    - **Zero Human Reminder Burden:** The human architect must **NEVER** have to remind the agent to write things down (*"did you save that?"*, *"write that down before speaking"*). If an agent responds about an idea, decision, or spark without first persisting it to disk, it is a catastrophic violation of Law 11.
-    - **Immediate Execution Sequence:** When receiving an idea or making an architectural discovery, the sequence is non-negotiable:
-      1. Commit to disk (`00-INBOX.md`, `.memlog.md`, `docs/design/`, or the active spine).
-      2. Run `doctor.py` (and `visual_audit.py` if modifying wireframes/prototypes).
-      3. Respond to the user with the exact file diff or citation.
-
-## 2. Universal Engineering & Communication Rules
-- **Language:** English only.
-- **Zero Decorative Emoji Spam:** Never decorate chat headers, bullet points, or paragraphs with decorative Unicode emojis or status pictographs. Communicate with clean, calm, professional engineering typography (clean Markdown headings `#`, `##`, `###` and standard `-` bullets).
-- **Zero Root Workspace Pollution (`docs/.cgspec/`):** Never clutter the user's top-level project root with methodology scripts, scratchpads, or prototype HTML files. All CGSpec machinery (`scripts/doctor.py`, `scripts/memlog.py`, `scripts/ingest.py`, `scripts/visual_audit.py`, `prototypes/`, `council/`, `brownfield-manifest.json`) is strictly centralized inside the hidden `docs/.cgspec/` directory.
-- **Anti-Jargon & No Naked Product Names:** Never assume the user knows niche apps (*"Typora style"*, *"Bear style"*, *"Linear style"*) or technical design jargon (*"OOUX"*, *"WYSIWYG"*, *"FLIP animation"*). Always explain the physical tactile behavior in clear, everyday English first (*"When you click a line, the raw symbols appear so you can edit; when you move your cursor away, they hide and become formatted text"*), and accompany references with a concrete visual or link in an Artifact.
-- **Zero Hallucinated Roadmaps (v0.1 Focus):** Never invent speculative future features in `docs/00-INBOX.md` or spines for `v0.2+` out of thin air. We only know what we need for `v0.1`. Thinking of v0.1, v0.2, and v0.3 all at once creates artificial bloat. The backlog strictly captures sparks explicitly voiced by the user or genuine off-scope items deferred during active slices.
-- **No Fictional Names:** Never invent abstract tier codes (`L1/L2/L3`) or made-up human persona names (`Sam`, `Maya`, `Mary`). Always use explicit functional actors (`Organization Owner`, `Project Lead`, `Developer`, `AI Agent`) and explicit permissions (`Owner` + `read | invoke | propose_edit | write | share | admin`).
-- **Tooling Defaults:** Use `uv` for Python and `bun`/`pnpm` for TypeScript/JS.
-- **Strict Modularity:** Enforce Ports & Adapters. Never allow UI components to import database or crypto clients directly.
-- **Visual QA & Self-Critique Gate:** Verify all wireframes, prototypes, and UI changes in a real headless browser (`visual_audit.py` / `chrome-devtools-mcp`), inspect captured screenshots via `view_file`, and auto-fix layout/chrome bugs before presenting to the user.
-- **Spec Integrity Hook (`cgspec doctor`):** Before completing any turn that modifies specifications or closing a milestone, run `python3 docs/.cgspec/scripts/doctor.py --repo .` to deterministically verify that all spines exist, memory log entries are sequential, all accepted ADRs are registered in `00-INDEX.md`, and zero specification drift exists.
-
-## 3. Repository Topology: Monorepo vs. Polyrepo Neutrality
-- **Independent & Equal Support:** CGSpec natively supports both **Monorepo** (single unified repository with modular packages) and **Polyrepo** (multiple independent repositories/microservices). Neither is dogmatically forced.
-- **Topology Discovery & Inquiry Gate:** The agent must inspect the workspace first:
-  - If existing configuration indicates a monorepo (e.g. `pnpm-workspace.yaml`, `turborepo`, `Cargo.toml` workspaces), respect and reinforce monorepo modularity.
-  - If multi-repo mounting is detected or requested, support isolated Git targets and virtual path prefixes.
-  - If starting fresh, **ask the user explicitly via `ask_question`** (recommending the most pragmatic structure for the product's scope, typically Monorepo for early-stage velocity) **without pushing or imposing polyrepo overhead** onto projects that do not need it.
-- **Contract-First Modularity:** Regardless of whether code lives in one repository or many, enforce clean Ports & Adapters interfaces so packages and services can develop in parallel with zero tight coupling.
-
-## 4. Universal Modularity: 3 Macro Milestone Tiers & Any-Stage Entry Gate
-
-CGSpec is designed to be fully modular and adaptable to **any project size, surface profile, and project entry point**:
-
-```
-+----------------------------------------------------------------------------------------------------------------+
-| TIER 1: BRAINSTORMED & LOCKED v0.1 INTENT (docs/01-INTENT.md, docs/02-OOUX.md)                                 |
-| - Is it interesting? Problem statement, mission, glossary, anti-goals, day-in-the-life walkthrough.             |
-| - Domain Mental Model: Sophia Prater OOUX nouns, object relationships, and explicit granular permissions.      |
-+----------------------------------------------------------------------------------------------------------------+
-| TIER 2: VALIDATED v0.1 DESIGN & EXPERIENCE (docs/03-EXPERIENCE.md, docs/design/, docs/.cgspec/prototypes/)     |
-| - Surface Profile Selection (A: Simple Website | B: Mobile iOS/Android | C: Web Workspace | D: CLI/TUI).       |
-| - Zero-Color Macro Layout Wireframe (Mermaid / D2 / PlantUML subgraphs) -> Tactile Ergonomics & Tokens.        |
-| - Surface-Adapted State Matrix -> Interactive Executable Prototype (docs/.cgspec/prototypes/prototype-v0.1).   |
-+----------------------------------------------------------------------------------------------------------------+
-| TIER 3: ENGINEERED v0.1 FOUNDATION & DELIVERY (docs/04-ARCHITECTURE.md, docs/05-DELIVERY.md, docs/adr/)       |
-| - Physical Architecture: Hexagonal Ports & Adapters (or static/mobile architecture), schemas, contracts, ADRs. |
-| - Code Conventions & Preferences: What the user likes / dislikes in code, libraries, and formatting.           |
-| - Delivery Slices: Bounded vertical slices (SLICE-001..N), definition of done, AST ingestion gates.           |
-| - Code Management & CI/CD: Git templates (issues/PRs), pre-commit doctor hook, automated testing, docker.      |
-| - Follow-up & Backlog Evolution: Ship v0.1 -> roll over to Future Backlog (v0.2+) in docs/00-INBOX.md.          |
-+----------------------------------------------------------------------------------------------------------------+
-```
-
-### The 4 Any-Stage Entry Modes:
-1. **Mode A — Greenfield Creation (From Scratch):** Traverse Tier 1 (Brainstorming) -> Tier 2 (Experience across Profile A, B, or C) -> Tier 3 (Architecture, CI/CD, Delivery).
-2. **Mode B — Headless / Backend / CLI (No GUI):** Execute Tier 1 (Intent & Nouns) -> Profile D (CLI/TUI command syntax & ergonomics) -> execute Tier 3 (Architecture, Code, CI/CD).
-3. **Mode C — Brownfield Legacy Adoption (Existing Codebase):** Run `python3 docs/.cgspec/scripts/ingest.py` (deterministic AST route & model parser) to generate `docs/.cgspec/brownfield-manifest.json` -> reverse-derive `docs/02-OOUX.md` -> activate `doctor.py` integrity gate -> build bounded vertical slices (`cgspec-slice`) with zero disruption to legacy code.
-4. **Mode D — Mid-Flight Course Correction (Pivot / Migration):** Trigger `cgspec-pivot` to evaluate impact across Tier 1 (Adapter Swap), Tier 2 (Additive Scope Expansion + Design Stash Protocol), or Tier 3 (Total Soul Extraction).
-
-
-
+| Lifecycle Stage / Entry Mode | Canonical Spine(s) | On-Demand Skill to Activate |
+| :--- | :--- | :--- |
+| **0. Init / Brownfield AST Ingestion** | `AGENTS.md`, `00-INDEX.md`, `docs/.cgspec/` | [`cgspec-init`](./skills/cgspec-init/SKILL.md) (`ingest.py` for existing repos) |
+| **1. Brainstorming & OOUX Nouns** | `01-INTENT.md`, `02-OOUX.md`, `00-INBOX.md` | [`cgspec-forge`](./skills/cgspec-forge/SKILL.md) |
+| **2. UI/UX, Wireframes & Prototypes** | `03-EXPERIENCE.md`, `docs/design/`, `prototypes/` | [`cgspec-ui-ux`](./skills/cgspec-ui-ux/SKILL.md) (`visual_audit.py` gate) |
+| **3. Architecture & Trade-Off Debates** | `04-ARCHITECTURE.md`, `docs/adr/ADR-NNN.md` | [`cgspec-council`](./skills/cgspec-council/SKILL.md) |
+| **4–7. Vertical Slices, Testing & CI/CD** | `05-DELIVERY.md`, `docs/slices/SLICE-NNN.md` | [`cgspec-slice`](./skills/cgspec-slice/SKILL.md) (`doctor.py` gate) |
+| **8. Mid-Flight Pivots & Migrations** | Affected spines + `prototypes/stash/` | [`cgspec-pivot`](./skills/cgspec-pivot/SKILL.md) |

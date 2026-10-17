@@ -1,41 +1,34 @@
 ---
 name: cgspec-slice
-description: Atomic Vertical Slice Builder. Generates a bounded slice contract from locked spines (01..05), enforces Ports & Adapters modularity, and runs tests + browser verification.
+description: Stage 4–7 Atomic Vertical Slice Builder. Generates bounded slice contracts from locked spines (01..05), enforces Ports & Adapters modularity, and runs tests + browser verification.
 ---
 
 # cgspec-slice
 
-## Execution Steps
+## 1. Contract (Inputs -> Outputs)
+- **Stage:** `4–7. Milestones, Coding, Testing & CI/CD` (Inherits all global laws from [`AGENTS.md`](../../AGENTS.md)).
+- **Requires:** Approved `01-INTENT.md`, `02-OOUX.md`, `03-EXPERIENCE.md` (with verified prototype), `04-ARCHITECTURE.md`, and `docs/adr/*.md`.
+- **Produces:** Bounded slice contract (`docs/slices/SLICE-NNN-<slug>.md`), modular production code + tests, and updated `docs/05-DELIVERY.md` + `docs/00-INDEX.md`.
 
-1. **Pre-Flight Check & Compass:**
-   - **Doctor Hook:** Run `python3 docs/.cgspec/scripts/doctor.py .` to verify that all core spines exist and ADRs are properly registered before code is scaffolded.
-   - **Strict Law 3 Gate:** Verify that Stage 1 (Intent & OOUX Nouns) and Stage 2 (UI/UX, Spatial Zoning, and Interactive Prototype) are locked and approved by the user. Vertical code slices are **strictly prohibited** until UI/UX has been approved.
-   - **Mandatory ADR Invariant Audit:** Read all `{project-root}/docs/adr/*.md` to ensure the slice architecture, database schema, and crypto contracts strictly comply with accepted ADRs.
-   - Show the 1-line plain-text compass (zero emojis):
-     `Where we are: Stage 1: Intent & Domain Nouns [Done] -> Stage 2: UI/UX & Interactive Prototype [Done] -> Stage 3: Architecture & Physical DDL [Done] -> [Stage 4: Build Slices]`
+---
 
-2. **Propose Concrete Next Actions (Never Vague Open-Ended Questions):**
-   - **Never** ask a vague *"How would you like to proceed?"*.
-   - Always present concrete, numbered options using `ask_question` (or clear numbered choices):
-     - `Option 1 (Recommended): Launch browser preview of prototype.html`
-     - `Option 2: Scaffold the next vertical slice (code & database)`
-     - `Option 3: Adjust or add another feature in requirements first`
+## 2. Stage-Specific Rules
+1. **Strict Experience & ADR Pre-Flight:** Never scaffold production code if `03-EXPERIENCE.md` is unlocked or if any `ADR-NNN` invariant would be violated.
+2. **Contract-First Mock Isolation:** When Slice A depends on an unbuilt external service or Slice B, define the Port interface and mock adapter first so the vertical slice is 100% testable in isolation.
+3. **Zero Direct Infrastructure Imports in UI:** UI components must never import database drivers, filesystem APIs, or crypto primitives directly.
 
-3. **Write Bounded Slice Spec (`{project-root}/docs/slices/SLICE-NNN-<slug>.md`):**
-   - Target nouns & permissions (`read|invoke|propose_edit|write|share|admin`).
-   - Exact files/modules in scope across mounted services.
-   - **Contract-First Interface Decoupling:** If Service A depends on Service B, define the shared schema/payload in `docs/slices/` first so dependent teams build against mock adapters without waiting for backend deployment.
-   - Test & 7-state UI verification criteria.
+---
 
-4. **Implement & Verify:**
-   - Enforce Ports & Adapters isolation (`uv` for Python, `bun`/`pnpm` for TS).
-   - Run unit/integration tests + linter/typecheck.
-   - For UI work: open in a headless browser, inspect screenshots, verify zero console errors.
-   - Log completion:
-     ```bash
-     uv run {skill-dir}/scripts/memlog.py add {project-root}/docs/.memlog.md \
-       --tags "lock,slice" \
-       --summary "Completed SLICE-NNN"
-     ```
-   - Update `{project-root}/docs/00-INDEX.md`.
+## 3. Workflow
+1. **Draft Slice Contract (`docs/slices/SLICE-NNN-<slug>.md`):**
+   - Define target OOUX nouns, actor permissions, exact files in scope, Port/Adapter interfaces, and test/UI state acceptance criteria.
+2. **Implement & Test:**
+   - Build domain logic, adapters, and UI views matching the locked `03-EXPERIENCE.md` tokens and state matrix.
+   - Run unit/integration tests, typechecks, and linter.
+3. **Closed-Loop UI Verification (For Frontend Slices):**
+   - Run `visual_audit.py`, inspect headless browser screenshots via `view_file`, and verify zero console/page errors across required states.
 
+---
+
+## 4. Exit Gate
+Log `SLICE-NNN` completion to `docs/.memlog.md`, update `00-INDEX.md` and `05-DELIVERY.md`, and run `python3 docs/.cgspec/scripts/doctor.py --repo . --strict-emojis`.

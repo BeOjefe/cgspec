@@ -1,66 +1,38 @@
 ---
 name: cgspec-init
-description: Initialize or migrate a monorepo, polyrepo, or existing legacy codebase into CGSpec (AGENTS.md, 1-line CLAUDE.md, docs/.memlog.md, docs/00..05 spines, doctor hook, and Brownfield Ingestion).
+description: Stage 0 Workspace Initializer & Brownfield AST Ingestor. Sets up AGENTS.md, CLAUDE.md, docs/.cgspec/, docs/00..05 spines, and reverse-engineers existing codebases via ingest.py.
 ---
 
 # cgspec-init
 
-## Execution Modes & Philosophy
-
-CGSpec accommodates both **Greenfield projects** (starting from scratch) and **Brownfield codebases** (existing systems, legacy repos, or monorepos needing structured specification).
-
-Universal Invariants:
-- **Law 3 (Experience Precedes Architecture):** Human Experience, UI/UX, and interactive prototypes strictly precede physical database tables, SQL schemas, and backend frameworks.
-- **Topological Neutrality:** Never dogmatically impose a repository structure. Inspect the workspace and support Monorepos, Multi-Service Polyrepos, and Standalone Microservices neutrally.
-- **Zero Decorative Emojis:** Strictly clean engineering typography across all generated docs and communications.
+## 1. Contract (Inputs -> Outputs)
+- **Stage:** `0. Initialization & Brownfield Ingestion` (Inherits all global laws from [`AGENTS.md`](../../AGENTS.md)).
+- **Requires:** New repository (Greenfield) OR existing legacy codebase/monorepo (Brownfield).
+- **Produces:** `AGENTS.md`, `CLAUDE.md` (1-line pointer), `docs/.memlog.md`, `docs/00..05` spines, `docs/.cgspec/scripts/`, and (for Brownfield) `docs/.cgspec/brownfield-manifest.json` + `docs/adr/ADR-000-legacy-baseline-adoption.md`.
 
 ---
 
-## Execution Steps
+## 2. Stage-Specific Rules
+1. **Non-Destructive Legacy Adoption:** Never delete existing project docs or code. Move scattered legacy notes into `docs/archive/`.
+2. **AST-First Brownfield Extraction:** On existing codebases, never guess domain nouns from filenames alone; run `ingest.py` to extract routes, models, and schemas deterministically before populating `02-OOUX.md`.
 
-### 1. Topology & Ingestion Mode Detection
-Determine whether the project is Greenfield or Brownfield:
-- **Greenfield Setup:** Empty or new repository. Proceed to Step 2.
-- **Brownfield Ingestion (`cgspec ingest`):** Existing codebase with pre-existing code, routes, or database schemas.
-  1. **Deterministic AST Extraction:** Run `python3 {skill-dir}/scripts/ingest.py {project-root}` (optionally `--subsystem <path>` for bounded context scoping or `--live-schema <path>` for live SQL dumps).
-  2. **Manifest Generation:** Produces `{project-root}/docs/.cgspec/brownfield-manifest.json` conforming to `docs/.cgspec/brownfield-manifest.schema.json`.
-  3. **OOUX Distillation:** High-level domain nouns automatically populated into `02-OOUX.md` without raw physical SQL.
-  4. **Baseline Lock (`ADR-000`):** Creates `docs/adr/ADR-000-legacy-baseline-adoption.md` codifying existing architectural decisions as the baseline freeze.
+---
 
-### 2. Workspace Topology Configuration
-Detect or ask (via `ask_question`) the project structure:
-- **Mode A (Monorepo):** Single repository containing docs, specs, backend services, frontend, and workers.
-- **Mode B (Multi-Service Polyrepo Hub):** Central blueprint holding shared PRD, cross-cutting nouns, and mounting microservices or frontend repos.
-- **Mode C (Service Satellite Repo):** A single microservice repo with its own code and migrations, consuming shared contracts from the central blueprint or MCP gateway.
-
-### 3. Root Constitution
-1. Write `{project-root}/AGENTS.md` containing the 7 Immutable Laws, the clean 1-line compass, the `docs/.cgspec/scripts/doctor.py` hook, and the verification rules.
-2. Write `{project-root}/CLAUDE.md` as a 1-line DRY pointer:
-   `Read and strictly follow all instructions in [./AGENTS.md](./AGENTS.md).`
-
-### 4. Directory & Spine Initialization
-1. Create directories:
-   `{project-root}/docs/.cgspec/`, `{project-root}/docs/archive/`, `{project-root}/docs/adr/`, `{project-root}/docs/slices/`, `{project-root}/scripts/`.
-2. Install `{project-root}/scripts/doctor.py` from `{skill-dir}/scripts/doctor.py`.
-3. Move any legacy or scattered markdown files into `docs/archive/` or `docs/.cgspec/` (never delete history).
-4. Initialize `{project-root}/docs/.memlog.md`:
+## 3. Workflow
+1. **Detect Mode & Topology:**
+   - Inspect workspace for existing code (`src/`, `app/`, `packages/`) and topology configs (`pnpm-workspace.yaml`, `Cargo.toml`, `pyproject.toml`). If ambiguous, ask via `ask_question` (Monorepo vs Multi-Service Hub vs Single Service).
+2. **Run Brownfield AST Ingestion (Existing Codebases Only):**
    ```bash
-   uv run {skill-dir}/scripts/memlog.py add {project-root}/docs/.memlog.md \
-     --tags "lock,init" \
-     --summary "Initialized CGSpec vault"
+   python3 docs/.cgspec/scripts/ingest.py .
    ```
-5. Generate the 6 core Reformed CGSpec v2 spine files in `{project-root}/docs/`:
-   - `00-INDEX.md`: Phase state, spine matrix, and slice registry table.
-   - `00-INBOX.md`: Parked future sparks and scope buffer.
-   - `01-INTENT.md`: Problem statement, glossary, user profiles, and Day-in-the-Life journey.
-   - `02-OOUX.md`: OOUX domain mental models (`erDiagram`), Owner + 6 permissions (`read|invoke|propose_edit|write|share|admin`), core business flows (zero physical SQL/DDL).
-   - `03-EXPERIENCE.md`: Adaptive spatial zoning, visual design tokens, functional protagonists, screen inventory, and the 7-State Component Matrix.
-   - `04-ARCHITECTURE.md`: Modular boundaries, physical DDL, API contracts, Ports & Adapters, crypto/MCP envelopes.
-   - `05-DELIVERY.md`: Atomic vertical slices, contract-first mocks, verification criteria, and doctor invariant hooks.
+   Distill high-level domain entities from `docs/.cgspec/brownfield-manifest.json` into `docs/02-OOUX.md` (zero raw SQL) and record the existing stack freeze in `docs/adr/ADR-000-legacy-baseline-adoption.md`.
+3. **Install Constitution & Hidden Engine (`docs/.cgspec/`):**
+   - Write root `AGENTS.md` and 1-line `CLAUDE.md` (`Read and strictly follow all instructions in [./AGENTS.md](./AGENTS.md).`).
+   - Create `docs/.cgspec/scripts/` (`doctor.py`, `memlog.py`, `ingest.py`, `visual_audit.py`), `docs/.cgspec/prototypes/`, `docs/.cgspec/council/`, `docs/adr/`, `docs/slices/`, `docs/design/`, and `docs/archive/`.
+4. **Scaffold Reformed v2 Spines (`docs/00..05`):**
+   - Initialize `docs/.memlog.md` (`M-001`), `00-INDEX.md`, `00-INBOX.md`, `01-INTENT.md`, `02-OOUX.md`, `03-EXPERIENCE.md`, `04-ARCHITECTURE.md`, and `05-DELIVERY.md`.
 
-### 5. Pre-Flight Integrity Verification
-Run the CGSpec Doctor to ensure all spines and memory logs are 100% compliant:
-```bash
-python3 docs/.cgspec/scripts/doctor.py .
-```
-Verify zero errors before proceeding to Stage 1.
+---
+
+## 4. Exit Gate
+Run `python3 docs/.cgspec/scripts/doctor.py --repo . --strict-emojis` and confirm `0 errors` before handing off to [`cgspec-forge`](../cgspec-forge/SKILL.md).

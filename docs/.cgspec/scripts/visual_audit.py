@@ -20,31 +20,41 @@ from collections import Counter
 class ControlExtractor(html.parser.HTMLParser):
     def __init__(self):
         super().__init__()
-        self.in_button = False
+        self.active_tag = None
         self.current_text = []
         self.current_onclick = None
+        self.current_class = ""
         self.buttons = []
+        self.visible_buttons = []
+        self.labels_and_headings = []
         self.onclicks = []
 
     def handle_starttag(self, tag, attrs):
-        if tag in ("button", "a"):
-            self.in_button = True
+        if tag in ("button", "a", "label", "h1", "h2", "h3", "h4", "th"):
+            self.active_tag = tag
             self.current_text = []
             attr_dict = dict(attrs)
             self.current_onclick = attr_dict.get("onclick")
+            self.current_class = attr_dict.get("class", "")
 
     def handle_endtag(self, tag):
-        if tag in ("button", "a") and self.in_button:
-            self.in_button = False
-            label = " ".join("".join(self.current_text).split()).strip()
-            if label:
-                self.buttons.append(label)
-            if self.current_onclick:
-                self.onclicks.append((self.current_onclick.strip(), label or "<icon-button>"))
+        if tag == self.active_tag:
+            text = " ".join("".join(self.current_text).split()).strip()
+            if tag in ("button", "a"):
+                if text:
+                    self.buttons.append(text)
+                    if "hidden" not in self.current_class.split():
+                        self.visible_buttons.append(text)
+                if self.current_onclick:
+                    self.onclicks.append((self.current_onclick.strip(), text or "<icon-button>"))
+            elif tag in ("label", "h1", "h2", "h3", "h4", "th") and text:
+                self.labels_and_headings.append((tag, text))
+            self.active_tag = None
             self.current_onclick = None
+            self.current_class = ""
 
     def handle_data(self, data):
-        if self.in_button:
+        if self.active_tag:
             self.current_text.append(data)
 
 
@@ -109,6 +119,32 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
             errors.append(
                 f"Duplicate action handler (Law of One Control Per Action): onclick='{fn}' is wired to {count} separate buttons {labels}. Keep only one canonical trigger."
             )
+
+    # 5. Check for Schema Identifier Leakage (Law 7: snake_case / UPPER_SNAKE_CASE in UI labels & headings)
+    leaked_identifiers = []
+    for tag, text in parser.labels_and_headings:
+        # Look for snake_case or UPPER_SNAKE_CASE tokens inside form labels and headings
+        matches = re.findall(r"\b(?:[a-z]{2,}_[a-z0-9_]+|[A-Z]{2,}_[A-Z0-9_]+)\b", text)
+        for m in matches:
+            leaked_identifiers.append(f"<{tag}> '{text}' -> '{m}'")
+    upper_enum_matches = re.findall(r">\s*([A-Z]{3,}_[A-Z0-9_]+)\s*<", content)
+    for m in set(upper_enum_matches):
+        leaked_identifiers.append(f"enum badge '{m}'")
+    if leaked_identifiers:
+        errors.append(
+            f"Schema Identifier Leakage in Human UI (Law 7): Found raw snake_case / UPPER_SNAKE_CASE database identifiers in user-facing labels or badges: {leaked_identifiers[:6]}. Use natural human language ('Branch' instead of 'git_branch', 'Pending Merge' instead of 'APPROVED_PENDING_GIT')."
+        )
+
+    # 6. Check for Capability-Driven UI Hiding violations (Law 8: simultaneous Edit + Propose Edit or 'Your Access:' debug badge)
+    vis_lower = [re.sub(r"[^a-z ]", "", b.lower()).strip() for b in parser.visible_buttons]
+    if "edit" in vis_lower and ("propose edit" in vis_lower or "propose change" in vis_lower):
+        errors.append(
+            "Capability-Driven UI Violation (Law 8): Both 'Edit' and 'Propose Edit' buttons are visible simultaneously. Show only the single action matching the active user's role (hide controls the user cannot use)."
+        )
+    if "your access:" in content.lower():
+        errors.append(
+            "Capability-Driven UI Violation (Law 8): Found noisy 'Your Access: ...' debug badge in the UI. Instead of telling the user their role in a badge, simply hide actions they lack permission to touch (Dokploy / Linear pattern)."
+        )
 
     return errors, warnings
 
