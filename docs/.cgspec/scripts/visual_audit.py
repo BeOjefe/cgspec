@@ -8,6 +8,7 @@ Enforces the gstack / BMAD Closed-Loop Visual Self-Critique invariants on HTML w
 4. Optional headless browser screenshot capture (--screenshot) at desktop (1440x900) and mobile (375x812) viewports.
 """
 import argparse
+import hashlib
 import html.parser
 import pathlib
 import re
@@ -65,14 +66,26 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
     if not html_path.exists():
         return [f"File not found: {html_path}"], []
 
-    # 1. Check versioned filename invariant
+    # 1. Check versioned filename invariant & sibling version SHA-256 clobbering
     name = html_path.name
     if not re.search(r"([-_]v\d+(\.\d+)?|ADR-\d+)\.html$", name) and name != "prototype.html":
         warnings.append(
             f"Filename '{name}' does not carry an explicit version suffix (e.g. wireframe-v1.html, wireframe-v2.html, prototype-v0.1.html). Never overwrite iterations in place."
         )
 
-    content = html_path.read_text(encoding="utf-8", errors="replace")
+    raw_bytes = html_path.read_bytes()
+    target_sha = hashlib.sha256(raw_bytes).hexdigest()
+    clobbered_siblings = []
+    for sib in sorted(html_path.parent.glob("*.html")):
+        if sib != html_path and re.search(r"[-_]v\d+(\.\d+)?\.html$", sib.name):
+            if hashlib.sha256(sib.read_bytes()).hexdigest() == target_sha:
+                clobbered_siblings.append(sib.name)
+    if clobbered_siblings and ".gemini" not in str(html_path):
+        errors.append(
+            f"Version History Clobber Violation (Law 6): '{name}' has identical SHA-256 content to sibling version file(s) {clobbered_siblings}. Never copy a newer version over prior v1/v2/v3/v4/v5 files in the repository."
+        )
+
+    content = raw_bytes.decode("utf-8", errors="replace")
 
     # 2. Check HTML Unicode Emoji & Pictograph Ban (Zero decorative emojis; require inline <svg>)
     emoji_pattern = re.compile(
