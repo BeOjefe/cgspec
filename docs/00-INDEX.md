@@ -15,11 +15,12 @@
 
 | Pillar Document | Status | Last ADR | Purpose |
 | :--- | :--- | :--- | :--- |
-| [`00-INBOX.md`](file:///home/ojefe/Documents/Project/cgspec/docs/00-INBOX.md) | `🟢 Active` | — | Idea Parking Lot & `v0.2+` Future Features for `cgspec` |
-| [`01-PRD.md`](file:///home/ojefe/Documents/Project/cgspec/docs/01-PRD.md) | `✅ Ready for Review` | [`ADR-001`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-001-why-flowspec-over-speckit-bmad-gstack.md) | Problem Statement, Plain-English Glossary, Autopilot Coach UX, `v0.1` Scope & Non-Goals |
-| [`02-NOUNS-AND-FLOWS.md`](file:///home/ojefe/Documents/Project/cgspec/docs/02-NOUNS-AND-FLOWS.md) | `✅ Ready for Review` | [`ADR-002`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-002-monorepo-vs-polyrepo-and-db-migrations.md) | Core Objects, Non-Linear `.memlog.md` Loop, 3-Tier Pivot Flow, Monorepo vs. Polyrepo & DB Migration Layout |
-| [`03-ARCHITECTURE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-ARCHITECTURE.md) | `✅ Ready for Review` | [`ADR-003`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-003-supervised-peer-council-architecture.md) | Vendor-Neutral Skill Architecture (`AGENTS.md`, `CLAUDE.md`, `skills/cgspec-*/SKILL.md`, `scripts/memlog.py`, CortexGate MCP Bridge) |
-| [`04-DESIGN.md`](file:///home/ojefe/Documents/Project/cgspec/docs/04-DESIGN.md) | `✅ Ready for Review` | — | Universal Templates (including Google Labs `DESIGN.md` + `EXPERIENCE.md` + `.working/` Workbench) |
+| [`00-INBOX.md`](file:///home/ojefe/Documents/Project/cgspec/docs/00-INBOX.md) | `[Active]` | — | Idea Parking Lot & `v0.2+` Future Features for `cgspec` |
+| [`01-PRD.md`](file:///home/ojefe/Documents/Project/cgspec/docs/01-PRD.md) | `[Ready for Review]` | [`ADR-001`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-001-why-flowspec-over-speckit-bmad-gstack.md) | Problem Statement, Plain-English Glossary, Autopilot Coach UX, `v0.1` Scope & Non-Goals |
+| [`02-NOUNS-AND-FLOWS.md`](file:///home/ojefe/Documents/Project/cgspec/docs/02-NOUNS-AND-FLOWS.md) | `[Ready for Review]` | [`ADR-002`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-002-monorepo-vs-polyrepo-and-db-migrations.md) | Core Objects, Non-Linear `.memlog.md` Loop, 3-Tier Pivot Flow, Monorepo vs. Polyrepo & DB Migration Layout |
+| [`03-ARCHITECTURE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-ARCHITECTURE.md) | `[Ready for Review]` | [`ADR-003`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-003-supervised-peer-council-architecture.md) | Vendor-Neutral Skill Architecture (`AGENTS.md`, `CLAUDE.md`, `skills/cgspec-*/SKILL.md`, `scripts/memlog.py`, CortexGate MCP Bridge) |
+| [`04-DESIGN.md`](file:///home/ojefe/Documents/Project/cgspec/docs/04-DESIGN.md) | `[Ready for Review]` | [`ADR-004`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-004-arbitrary-multi-service-topologies-and-virtual-mounting.md) | Universal Templates, Google Labs `design.md` visual tokens & layout grid |
+| [`05-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/05-EXPERIENCE.md) | `[Ready for Review]` | [`ADR-005`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-005-hierarchical-adrs-and-documentation-scaling.md) | Protagonists, Interaction Journeys, and 7-State View Matrix |
 
 ---
 
@@ -27,9 +28,9 @@
 
 | Slice ID | Slice Name | Spec Status | Build Status | Verification |
 | :--- | :--- | :--- | :--- | :--- |
-| **Slice 001** | **CGSpec Blueprint & Architecture Docs (`/Project/cgspec/docs/`)** | `✅ Locked` | `✅ Built` | `🔄 User Review` |
-| **Slice 002** | **Portable `cgspec` Skills (`skills/cgspec-*/SKILL.md` + `scripts/memlog.py`)** | `✅ Locked in 03` | `⏳ Queued Next` | `⏳ Pending` |
-| **Slice 003** | **Real-Project Validation on `CortexGate` (`/Project/cortexgate/`)** | `⏳ Queued` | `⏳ Pending` | `⏳ Pending` |
+| **Slice 001** | **CGSpec Blueprint & Architecture Docs (`/Project/cgspec/docs/`)** | `[Locked]` | `[Built]` | `[User Review]` |
+| **Slice 002** | **Portable `cgspec` Skills (`skills/cgspec-*/SKILL.md` + `scripts/memlog.py`)** | `[Locked in 03]` | `[Queued Next]` | `[Pending]` |
+| **Slice 003** | **Real-Project Validation on `CortexGate` (`/Project/cortexgate/`)** | `[Queued]` | `[Pending]` | `[Pending]` |
 
 ---
 
@@ -37,9 +38,9 @@
 
 | ADR | Title & Invariant | Status |
 | :--- | :--- | :--- |
-| **[`ADR-001`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-001-why-flowspec-over-speckit-bmad-gstack.md)** | **Why CGSpec Over SpecKit, BMAD, and GStack** | `✅ Accepted` |
-| **[`ADR-002`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-002-monorepo-vs-polyrepo-and-db-migrations.md)** | **Adaptive Monorepo vs. Multi-Repo (Polyrepo) & Database Migration Architecture** | `✅ Accepted` |
-| **[`ADR-003`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-003-supervised-peer-council-architecture.md)** | **Supervised 3-Agent Peer Debate Council Architecture** | `✅ Accepted` |
-| **[`ADR-004`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-004-arbitrary-multi-service-topologies-and-virtual-mounting.md)** | **Arbitrary Multi-Service Topologies, Virtual Mounting & Contract-First Interface Decoupling** | `✅ Accepted` |
-| **[`ADR-005`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-005-hierarchical-adrs-and-documentation-scaling.md)** | **Hierarchical ADRs, Documentation Scaling & Multi-Tenant Scoping** | `✅ Accepted` |
+| **[`ADR-001`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-001-first-principles-spec-driven-sdlc-architecture.md)** | **First-Principles Architecture of the CGSpec Specification Engine** | `[Accepted]` |
+| **[`ADR-002`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-002-monorepo-vs-polyrepo-and-db-migrations.md)** | **Adaptive Monorepo vs. Multi-Repo (Polyrepo) & Database Migration Architecture** | `[Accepted]` |
+| **[`ADR-003`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-003-supervised-peer-council-architecture.md)** | **Supervised 3-Agent Peer Debate Council Architecture** | `[Accepted]` |
+| **[`ADR-004`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-004-arbitrary-multi-service-topologies-and-virtual-mounting.md)** | **Arbitrary Multi-Service Topologies, Virtual Mounting & Contract-First Interface Decoupling** | `[Accepted]` |
+| **[`ADR-005`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-005-hierarchical-adrs-and-documentation-scaling.md)** | **Hierarchical ADRs, Documentation Scaling & Multi-Tenant Scoping** | `[Accepted]` |
 

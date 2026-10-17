@@ -6,13 +6,13 @@
 
 ## 1. Problem Statement & Core Mission
 
-Modern engineering teams use multiple AI coding agents (**Hermes, Claude Code, OpenAI Codex, Cursor, Windsurf, and Google Antigravity**). While existing frameworks like **`BMAD-METHOD` (v7)** prove the power of append-only `.memlog.md` decision logs and derived specs (`DESIGN.md`, `EXPERIENCE.md`, `ARCHITECTURE.md`), teams still face three critical gaps:
+Modern engineering teams increasingly rely on autonomous AI coding agents across diverse runtimes (Hermes, Claude Code, OpenAI Codex, Cursor, Windsurf, Google Antigravity). However, AI-native software development routinely breaks down due to three foundational points of failure:
 
-1. **No Team Governance or MCP Sync:** Local Markdown frameworks (`BMAD-METHOD`, `OpenSpec`) are single-player local files—they lack native integration with a centralized MCP governance plane (**CortexGate**) with explicit **Resource Ownership (`Owner`)** and **Granular Authorization (`read | invoke | propose_edit | write | share | admin`)**.
-2. **High Manual Ceremony:** Remembering 15+ separate role commands (`bmad-forge-idea`, `bmad-prd`, `bmad-ux`, `bmad-architecture`, `bmad-spec`, `bmad-ticket`, `bmad-correct-course`...) creates cognitive friction during fast iteration.
-3. **Vendor Lock-In Risk:** Putting rules or artifacts inside a single vendor's proprietary directory (such as `.gemini/` or `.cursor/`) breaks portability when switching between **Hermes, Claude Code, Codex, and Antigravity**.
+1. **Context Drift & Hallucination Cascades:** When agents operate on conversational memory alone, critical constraints, user requirements, and architectural boundaries degrade after long sessions. Teams lack a deterministic, non-linear specification engine where changes in requirements automatically re-derive architecture and experience.
+2. **Missing Multi-Agent Governance & Granular Permissions:** AI agents run with unbounded, dangerous permissions. There is no unified specification standard linking intent to explicit **Resource Ownership (`Owner`)** and **Granular Authorization (`read | invoke | propose_edit | write | share | admin`)**.
+3. **The Premature Coding Trap:** Autonomous agents instinctively jump to writing backend code and physical database schemas before human intent, spatial zoning, and UI/UX flows are established.
 
-**Mission:** **CGSpec (`cgspec`)** combines the scientifically proven mechanics of `BMAD-METHOD` v7 (`.memlog.md` non-linear spine derivation, Google Labs `DESIGN.md` + `EXPERIENCE.md`, Excalidraw/HTML `.working/` explorations, and supervised multi-agent peer review) into a **100% vendor-neutral Open Skill Suite (`skills/cgspec-*/SKILL.md` + `AGENTS.md`)** that runs in **Autopilot Coach Mode** today and connects natively to **CortexGate MCP** tomorrow.
+**Mission:** **CGSpec (`cgspec`)** is a first-principles, vendor-neutral specification engine and governance bridge for AI-native software engineering. It enforces that human experience strictly precedes technical architecture, logs all engineering events in an append-only verifiable ledger (`.memlog.md`), and operates through portable skills (`skills/cgspec-*/SKILL.md`) and AST integrity hooks (`doctor.py`).
 
 ---
 
