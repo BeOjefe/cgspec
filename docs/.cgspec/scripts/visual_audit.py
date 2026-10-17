@@ -240,7 +240,9 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
-def capture_screenshot(html_path: pathlib.Path, out_dir: pathlib.Path) -> list[pathlib.Path]:
+def capture_screenshot(html_path: pathlib.Path, out_dir: pathlib.Path, extra_states: str | None = None) -> list[pathlib.Path]:
+    import concurrent.futures
+
     out_dir.mkdir(parents=True, exist_ok=True)
     captured: list[pathlib.Path] = []
     browser = (
@@ -253,9 +255,30 @@ def capture_screenshot(html_path: pathlib.Path, out_dir: pathlib.Path) -> list[p
         print("  [INFO] No local headless Chromium binary found on PATH; use chrome-devtools-mcp for live capture.")
         return captured
 
-    url = f"file://{html_path.resolve()}"
+    base_url = f"file://{html_path.resolve()}"
+    jobs: list[tuple[str, str, pathlib.Path]] = []
     for label, size in [("desktop-1440x900", "1440,900"), ("laptop-1180x800", "1180,800"), ("compact-375x812", "375,812")]:
-        out_png = out_dir / f"{html_path.stem}-{label}.png"
+        jobs.append((base_url, size, out_dir / f"{html_path.stem}-{label}.png"))
+
+    # Auto-discover ?state=<name> branches in HTML or use --states
+    state_names: list[str] = []
+    if extra_states:
+        state_names = [s.strip() for s in extra_states.split(",") if s.strip()]
+    else:
+        try:
+            html_text = html_path.read_text(encoding="utf-8", errors="ignore")
+            found = re.findall(r"\b(?:st|state)\s*===\s*['\"]([a-zA-Z0-9_-]{2,32})['\"]", html_text)
+            for s in found:
+                if s not in state_names:
+                    state_names.append(s)
+        except Exception:
+            pass
+
+    for st in state_names[:12]:
+        jobs.append((f"{base_url}?state={st}", "1440,900", out_dir / f"{html_path.stem}-state-{st}.png"))
+
+    def _run_job(job: tuple[str, str, pathlib.Path]) -> pathlib.Path | None:
+        url, size, out_png = job
         cmd = [
             browser,
             "--headless",
@@ -265,9 +288,15 @@ def capture_screenshot(html_path: pathlib.Path, out_dir: pathlib.Path) -> list[p
             f"--screenshot={out_png}",
             url,
         ]
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=20)
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=25)
         if res.returncode == 0 and out_png.exists():
-            captured.append(out_png)
+            return out_png
+        return None
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        for res_path in pool.map(_run_job, jobs):
+            if res_path is not None:
+                captured.append(res_path)
     return captured
 
 
@@ -276,6 +305,7 @@ def main() -> int:
     ap.add_argument("html_file", nargs="?", default=None, help="Path to the HTML wireframe or prototype file")
     ap.add_argument("--html", dest="html_flag", default=None, help="Explicit path to the HTML wireframe or prototype file")
     ap.add_argument("--screenshot-dir", help="Optional directory to save headless browser screenshots", default=None)
+    ap.add_argument("--states", help="Optional comma-separated ?state= query values to screenshot (auto-discovered by default)", default=None)
     ap.add_argument("--mode", help="Optional audit mode (wireframe | prototype)", default="wireframe")
     ap.add_argument("--strict-emojis", action="store_true", help="Enforce strict HTML Unicode emoji ban (enabled by default)")
     args = ap.parse_args()
@@ -298,7 +328,7 @@ def main() -> int:
         print("  [PASS] Static DOM & Viewport Invariants: 0 duplicate controls, 0 emojis, full-bleed viewport, versioned filename.")
 
     if args.screenshot_dir:
-        shots = capture_screenshot(target, pathlib.Path(args.screenshot_dir))
+        shots = capture_screenshot(target, pathlib.Path(args.screenshot_dir), extra_states=args.states)
         for s in shots:
             print(f"  [SHOT] Captured screenshot: {s} (Inspect via view_file!)")
 
