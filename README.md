@@ -20,16 +20,16 @@ CGSpec solves this through a non-linear, dual-spine architecture governed by str
   Human Director / Architect
               │
               ▼
-   Stage 1: Problem & Day-in-the-Life User Journey (docs/01-PRD.md)
+   Stage 1: Intent, User Journey & Conceptual OOUX Nouns (docs/01-PRD.md, docs/02-NOUNS-AND-FLOWS.md)
               │
               ▼
-   Stage 2: Adaptive UI/UX & Interactive Prototype Baseline (docs/04-DESIGN.md, docs/05-EXPERIENCE.md)
+   Stage 2: Adaptive UI/UX & Interactive Prototype (docs/04-DESIGN.md, docs/05-EXPERIENCE.md)
               │
               ▼
-   Stage 3: Domain Nouns, Flows & Technical Architecture (docs/02-NOUNS-AND-FLOWS.md, docs/03-ARCHITECTURE.md)
+   Stage 3: Physical Architecture, DDL & System Topology (docs/03-ARCHITECTURE.md)
               │
               ▼
-   Stage 4: Ports & Adapters Monorepo / Polyrepo Scaffolding Slices
+   Stage 4: Ports & Adapters Scaffolding Slices (docs/slices/)
 ```
 
 ---

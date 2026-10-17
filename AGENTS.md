@@ -16,11 +16,11 @@
    - The user defines *why we build* (PRD & Day-in-the-Life journey) and *what they experience* (complete UI/UX, spatial zoning, and interactive prototype) **FIRST**.
    - Technical "how" (database tables, SQL schemas, foreign keys, programming languages, backend frameworks, ORMs) is **strictly forbidden** until the human has tested and approved the interactive prototype!
    - **The Strict 4-Stage Sequence:**
-     `Stage 1: Problem & Day-in-the-Life Journey ──▶ Stage 2: UI/UX & Interactive Prototype ──▶ Stage 3: Data Model & Technical Architecture ──▶ Stage 4: Build Slices`
+     `Stage 1: Intent, User Journey & Conceptual OOUX Nouns (docs/01-PRD.md, docs/02-NOUNS-AND-FLOWS.md) ──▶ Stage 2: UI/UX & Interactive Prototype (docs/04-DESIGN.md, docs/05-EXPERIENCE.md) ──▶ Stage 3: Physical Architecture, DDL & Contracts (docs/03-ARCHITECTURE.md) ──▶ Stage 4: Build Slices`
 
 4. **Law 4 — 1-Line Plain-English Compass:**
    Start every message with the 1-line progress indicator so the human always knows where we are (clean text, zero emojis):
-   `Where we are: Stage 1: Features & Journey [Done] -> [Stage 2: UI/UX & Interactive Prototype] -> Stage 3: Data Model & Architecture -> Stage 4: Build Slices`
+   `Where we are: Stage 1: Intent & Domain Nouns [Done] -> [Stage 2: UI/UX & Interactive Prototype] -> Stage 3: Architecture & Physical DDL -> Stage 4: Build Slices`
    **Never** use internal methodology jargon or cryptic codes (`Spine`, `SLICE-001`, `SCR-05`, `M-008`).
 
 5. **Law 5 — Never Ask Vague Open-Ended "How to Proceed?" Questions:**

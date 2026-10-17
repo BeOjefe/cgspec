@@ -49,15 +49,15 @@ By combining **BMAD v7's `.memlog.md` non-linear derivation** + **`bmad-correct-
 flowchart TD
     IDEA["New Idea, Critique, or Pivot Arrives<br/>(Anytime: Discovery, UX, or Mid-Coding)"] --> GATE{"Autopilot Triage Gate<br/>(AGENTS.md)"}
 
-    GATE -->|"Off-scope for current v0.1 task"| PARK["📥 Park in docs/00-INBOX.md<br/>+ memlog.py --tags direction:parked<br/>(Zero interruption to active slice)"]
+    GATE -->|"Off-scope for current v0.1 task"| PARK["Park in docs/00-INBOX.md<br/>+ memlog.py --tags direction:parked<br/>(Zero interruption to active slice)"]
 
-    GATE -->|"Refines PRD / UX / Arch in current scope"| NONLINEAR["🔄 Non-Linear Spine Update<br/>1. Log lock to docs/.memlog.md<br/>2. Re-derive affected Spine (01..05)<br/>3. Update 00-INDEX.md"]
+    GATE -->|"Refines PRD / UX / Arch in current scope"| NONLINEAR["Non-Linear Spine Update<br/>1. Log lock to docs/.memlog.md<br/>2. Re-derive affected Spine (01..05)<br/>3. Update 00-INDEX.md"]
 
     GATE -->|"Changes existing built code or architecture"| TIER{"6-Step Course-Correction Audit<br/>(cgspec-pivot)"}
 
-    TIER -->|"Tier 1: Module Swap<br/>(e.g., SQLite -> Postgres)"| T1["🟢 Tier 1: Adapter Swap<br/>1. Write ADR-NNN<br/>2. Update 03-ARCHITECTURE.md<br/>3. Swap src/adapters/<module> only"]
-    TIER -->|"Tier 2: Scope Expansion<br/>(e.g., Solo -> Team RBAC)"| T2["🟡 Tier 2: Additive Slice<br/>1. Write ADR-NNN<br/>2. Update 02-NOUNS & 03-ARCH<br/>3. Create additive DB migration & Slice"]
-    TIER -->|"Tier 3: Total Architecture Switch<br/>(v1 -> v2)"| T3["🔴 Tier 3: Soul Extraction<br/>1. Freeze v1-legacy branch<br/>2. Keep 01-PRD & 02-NOUNS<br/>3. Rewrite 03-ARCH & scaffold v2"]
+    TIER -->|"Tier 1: Module Swap<br/>(e.g., SQLite -> Postgres)"| T1["Tier 1: Adapter Swap<br/>1. Write ADR-NNN<br/>2. Update 03-ARCHITECTURE.md<br/>3. Swap src/adapters/<module> only"]
+    TIER -->|"Tier 2: Scope Expansion<br/>(e.g., Solo -> Team RBAC)"| T2["Tier 2: Additive Slice<br/>1. Write ADR-NNN<br/>2. Update 02-NOUNS & 03-ARCH<br/>3. Create additive DB migration & Slice"]
+    TIER -->|"Tier 3: Total Architecture Switch<br/>(v1 -> v2)"| T3["Tier 3: Soul Extraction<br/>1. Freeze v1-legacy branch<br/>2. Keep 01-PRD & 02-NOUNS<br/>3. Rewrite 03-ARCH & scaffold v2"]
 ```
 
 ---

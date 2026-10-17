@@ -22,10 +22,10 @@ Universal Invariants:
 Determine whether the project is Greenfield or Brownfield:
 - **Greenfield Setup:** Empty or new repository. Proceed to Step 2.
 - **Brownfield Ingestion (`cgspec ingest`):** Existing codebase with pre-existing code, routes, or database schemas.
-  1. **AST & Route Harvest:** Inspect existing directory tree (`src/`, `lib/`, `routes/`, `controllers/`, `models/`, `db/migrations/`).
-  2. **Manifest Generation:** Generate `{project-root}/docs/.working/brownfield-manifest.json` mapping existing endpoints, models, and domain boundaries.
-  3. **OOUX Distillation:** Extract high-level business nouns into `02-NOUNS-AND-FLOWS.md` without polluting it with raw physical SQL or ORM decorators.
-  4. **Baseline Lock (`ADR-000`):** Create `docs/adr/ADR-000-legacy-baseline-adoption.md` codifying existing architectural decisions as the baseline freeze.
+  1. **Deterministic AST Extraction:** Run `python3 {skill-dir}/scripts/ingest.py {project-root}` (optionally `--subsystem <path>` for bounded context scoping or `--live-schema <path>` for live SQL dumps).
+  2. **Manifest Generation:** Produces `{project-root}/docs/.working/brownfield-manifest.json` conforming to `docs/.working/brownfield-manifest.schema.json`.
+  3. **OOUX Distillation:** High-level domain nouns automatically populated into `02-NOUNS-AND-FLOWS.md` without raw physical SQL.
+  4. **Baseline Lock (`ADR-000`):** Creates `docs/adr/ADR-000-legacy-baseline-adoption.md` codifying existing architectural decisions as the baseline freeze.
 
 ### 2. Workspace Topology Configuration
 Detect or ask (via `ask_question`) the project structure:

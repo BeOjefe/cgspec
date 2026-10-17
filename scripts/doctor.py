@@ -4,14 +4,25 @@ CGSpec Doctor (Spec Linter & Integrity Hook)
 Validates repository invariants, spine integrity, ADR registrations, and memory log continuity.
 
 Usage:
-  uv run {skill-dir}/scripts/doctor.py [project-root]
+  python3 scripts/doctor.py [project-root]
+  python3 scripts/doctor.py --repo [project-root]
 """
 
 import sys
 import re
+import argparse
 from pathlib import Path
 
-def run_doctor(project_root: Path) -> int:
+# Comprehensive regex matching Unicode emojis, symbols, and status icons
+EMOJI_PATTERN = re.compile(
+    r"[\U00010000-\U0010ffff]|"  # SMP plane (emojis, pictographs)
+    r"[\u2600-\u27bf]|"          # Misc symbols, dingbats (✅, ⚠️, ❌, etc.)
+    r"[\u2300-\u23ff]|"          # Misc technical (⏳, ⌛, etc.)
+    r"[\u2b50-\u2b55]|"          # Stars and circles (⭐, ⭕, etc.)
+    r"[\u2190-\u21ff]"           # Arrows (👉, etc.)
+)
+
+def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
     errors = []
     warnings = []
     
@@ -42,7 +53,16 @@ def run_doctor(project_root: Path) -> int:
             status = "file" if spine_path.exists() else "sprouted dir"
             print(f"  [PASS] Spine docs/{spine} ({status})")
 
-    # 2. Check Memory Log Continuity
+    # 2. Check 00-INDEX.md Registration Completeness
+    index_file = docs_dir / "00-INDEX.md"
+    index_content = ""
+    if index_file.exists():
+        index_content = index_file.read_text(encoding="utf-8")
+        for spine in expected_spines:
+            if spine != "00-INDEX.md" and spine not in index_content:
+                errors.append(f"docs/00-INDEX.md does not tabulate core spine: docs/{spine}")
+
+    # 3. Check Memory Log Continuity & Parity
     memlog_file = docs_dir / ".memlog.md"
     memlog_entries = []
     if not memlog_file.exists():
@@ -57,19 +77,25 @@ def run_doctor(project_root: Path) -> int:
             memlog_entries = ids
             print(f"  [PASS] Memory Log: {len(ids)} sequential entries (latest: {ids[-1]})")
 
-    # 3. Check ADR Consistency (Atomic ADR Gate)
+            # Check parity with 00-INDEX.md claims
+            if index_content:
+                count_match = re.search(r"(\d+)\s+entries\s*\((?:Latest:\s*)?(M-\d+)\)", index_content)
+                if count_match:
+                    claimed_count = int(count_match.group(1))
+                    claimed_latest = count_match.group(2)
+                    if claimed_count != len(ids) or claimed_latest != ids[-1]:
+                        warnings.append(
+                            f"docs/00-INDEX.md header desync: claims {claimed_count} entries ({claimed_latest}) "
+                            f"but docs/.memlog.md actually has {len(ids)} entries ({ids[-1]})"
+                        )
+
+    # 4. Check ADR Consistency & Bidirectional Parity
     adr_dir = docs_dir / "adr"
     if not adr_dir.exists():
         warnings.append("No docs/adr/ directory found")
     else:
         adr_files = list(adr_dir.glob("ADR-*.md"))
         print(f"  [INFO] Found {len(adr_files)} ADR files in docs/adr/")
-        
-        index_content = ""
-        index_file = docs_dir / "00-INDEX.md"
-        if index_file.exists():
-            index_content = index_file.read_text(encoding="utf-8")
-        
         memlog_content = memlog_file.read_text(encoding="utf-8") if memlog_file.exists() else ""
 
         for adr in sorted(adr_files):
@@ -81,34 +107,52 @@ def run_doctor(project_root: Path) -> int:
             
             adr_id = adr_id_match.group(1)
             adr_text = adr.read_text(encoding="utf-8")
-            status_match = re.search(r"-?\s*\*\*Status:\*\*\s*(Proposed|Accepted|Deprecated|Rejected)", adr_text, re.IGNORECASE)
+            status_match = re.search(r"-?\s*\*\*Status:\*\*\s*([A-Za-z]+)", adr_text, re.IGNORECASE)
             
-            st = status_match.group(1).capitalize() if status_match else "Unknown"
+            st_disk = status_match.group(1).capitalize() if status_match else "Unknown"
+
+            if not status_match:
+                warnings.append(f"{adr_name} is missing a formal Status header (e.g. - **Status:** Proposed/Accepted)")
 
             # Check if registered in 00-INDEX.md
             if adr_id not in index_content:
-                if st == "Accepted":
-                    errors.append(f"{adr_id} ({adr_name}) has Status: Accepted but is NOT registered in docs/00-INDEX.md")
+                if st_disk == "Accepted":
+                    errors.append(f"{adr_id} ({adr_name}) has Status: Accepted on disk but is NOT registered in docs/00-INDEX.md")
                 else:
-                    warnings.append(f"{adr_id} ({adr_name}, Status: {st}) is drafted on disk but not yet registered in docs/00-INDEX.md")
+                    warnings.append(f"{adr_id} ({adr_name}, Status: {st_disk}) is drafted on disk but not yet registered in docs/00-INDEX.md")
             else:
-                print(f"  [PASS] {adr_id} registered in 00-INDEX.md (Status: {st})")
-                
-            if not status_match:
-                warnings.append(f"{adr_name} is missing a formal Status header (e.g. - **Status:** Proposed/Accepted)")
-            else:
-                if st == "Accepted" and adr_id not in memlog_content:
-                    warnings.append(f"{adr_id} has Status: Accepted but is not recorded in docs/.memlog.md")
+                # Check status parity in 00-INDEX.md
+                # Look for line mentioning adr_id
+                for line in index_content.splitlines():
+                    if adr_id in line:
+                        if "Accepted" in line and st_disk != "Accepted":
+                            errors.append(
+                                f"{adr_id} Status Desync: docs/00-INDEX.md marks it as Accepted, but {adr_name} on disk has Status: {st_disk}"
+                            )
+                        elif "Proposed" in line and st_disk == "Accepted":
+                            warnings.append(
+                                f"{adr_id} Status Desync: {adr_name} on disk has Status: Accepted, but docs/00-INDEX.md marks it as Proposed"
+                            )
+                        break
 
-    # 4. Check for Decorative Emojis in Spines
-    banned_emojis = ["📍", "⚖️", "👥", "🏛️", "🚀", "💡", "✨"]
+                print(f"  [PASS] {adr_id} registered in 00-INDEX.md (Status: {st_disk})")
+                
+            if st_disk == "Accepted" and adr_id not in memlog_content:
+                warnings.append(f"{adr_id} has Status: Accepted on disk but is not recorded in docs/.memlog.md")
+
+    # 5. Check for Emojis in Spines
     for spine in expected_spines:
         spine_path = docs_dir / spine
         if spine_path.exists():
             text = spine_path.read_text(encoding="utf-8")
-            found = [e for e in banned_emojis if e in text]
-            if found:
-                warnings.append(f"Decorative emoji(s) {found} found in docs/{spine}")
+            matches = list(EMOJI_PATTERN.finditer(text))
+            if matches:
+                sample = list({m.group(0) for m in matches[:5]})
+                msg = f"Emoji violation(s) {sample} found in docs/{spine} ({len(matches)} total)"
+                if strict_emojis:
+                    errors.append(msg)
+                else:
+                    warnings.append(msg)
 
     # Print Summary
     print("-" * 60)
@@ -126,6 +170,17 @@ def run_doctor(project_root: Path) -> int:
     print("\nSUCCESS: All CGSpec invariants and spine integrity checks PASSED.")
     return 0
 
+def main():
+    parser = argparse.ArgumentParser(description="CGSpec Doctor (Spec Linter & Integrity Hook)")
+    parser.add_argument("repo_path", nargs="?", default=None, help="Path to project root (default: current directory)")
+    parser.add_argument("--repo", dest="repo_flag", default=None, help="Explicit path to project root")
+    parser.add_argument("--strict-emojis", action="store_true", help="Treat emoji violations as hard errors")
+    
+    args = parser.parse_args()
+    target_str = args.repo_flag or args.repo_path or "."
+    target = Path(target_str).resolve()
+    
+    sys.exit(run_doctor(target, strict_emojis=args.strict_emojis))
+
 if __name__ == "__main__":
-    target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
-    sys.exit(run_doctor(target))
+    main()

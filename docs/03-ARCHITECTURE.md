@@ -104,11 +104,11 @@ sequenceDiagram
         D2->>D3: Direct peer counter-attack
         D3->>D1: Direct peer synthesis / challenge
         D1 & D2 & D3->>Sup: Submit Round k position & concessions
-        Sup-->>Main: 🔔 LIVE INSPECTOR REPORT (Round k/N): 3-bullet summary of clash & shifts
+        Sup-->>Main: LIVE INSPECTOR REPORT (Round k/N): 3-bullet summary of clash & shifts
         Main-->>User: Displays live Round k progress
     end
 
     Sup->>Sup: 1. Terminate D1, D2, D3<br/>2. Archive raw transcript to docs/archive/debates/ADR-NNN/<br/>3. Log lock to docs/.memlog.md & write docs/adr/ADR-NNN-slug.md
-    Sup-->>Main: ✅ FINAL VERDICT + Path to single ADR-NNN.md
+    Sup-->>Main: FINAL VERDICT + Path to single ADR-NNN.md
     Main-->>User: Presents consolidated decision for approval
 ```
