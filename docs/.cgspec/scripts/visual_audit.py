@@ -188,9 +188,37 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
         )
 
     # 8. Check for Split-Brain Dual Breadcrumb / Path Headers (Law 2: Single Header Ownership)
-    if "bc-leaf" in content and "doc-path-header" in content:
+    if "bc-leaf" in content and ("doc-path-header" in content or "code-path-label" in content):
         errors.append(
-            "Split-Brain Dual Path Header Violation (Law 2): Found both a top-bar breadcrumb ('bc-leaf') AND a second center-pane path header ('doc-path-header'). Maintain a single canonical breadcrumb header above Center+Right."
+            "Split-Brain Dual Path Header Violation (Law 2): Found both a top-bar breadcrumb ('bc-leaf') AND a second center-pane path header ('doc-path-header' / 'code-path-label'). Maintain a single canonical breadcrumb header above Center+Right."
+        )
+
+    # 9. Check for Meta-Wireframe Coaching / Self-Referential Tutorial Text in UI
+    meta_coaching_phrases = [
+        "drag the left border of this panel",
+        "resize it anytime",
+        "every file & folder is live",
+        "every file &amp; folder is live",
+        "fixed top header & icon-only",
+        "fixed top header &amp; icon-only",
+    ]
+    found_meta = [p for p in meta_coaching_phrases if p in content.lower()]
+    if found_meta:
+        errors.append(
+            f"Meta-Wireframe Coaching Text Violation: Found self-referential wireframe tutorial text in the UI {found_meta}. Never render permanent instructional hints ('Drag border to resize...') or meta-commentary inside the product canvas."
+        )
+
+    # 10. Check for Raw Markdown Syntax Leaking in Rendered Preview Headings (static <h1>..<h4> or JS title: '# ...')
+    raw_md_headings = []
+    for tag, text in parser.labels_and_headings:
+        if tag in ("h1", "h2", "h3", "h4") and (text.startswith("# ") or "**" in text):
+            raw_md_headings.append(f"<{tag}>{text[:50]}</{tag}>")
+    js_md_titles = re.findall(r"title\s*:\s*['\"]#\s+[^'\"]{1,60}['\"]", content)
+    for m in js_md_titles:
+        raw_md_headings.append(f"JS {m}")
+    if raw_md_headings:
+        errors.append(
+            f"Raw Markdown Syntax in Preview Violation: Found literal '# ' or '**' inside rendered heading(s) {raw_md_headings[:4]}. Preview mode must render clean typography; show raw Markdown syntax only inside the active Edit mode <textarea>."
         )
 
     return errors, warnings
@@ -210,7 +238,7 @@ def capture_screenshot(html_path: pathlib.Path, out_dir: pathlib.Path) -> list[p
         return captured
 
     url = f"file://{html_path.resolve()}"
-    for label, size in [("desktop-1440x900", "1440,900"), ("compact-375x812", "375,812")]:
+    for label, size in [("desktop-1440x900", "1440,900"), ("laptop-1180x800", "1180,800"), ("compact-375x812", "375,812")]:
         out_png = out_dir / f"{html_path.stem}-{label}.png"
         cmd = [
             browser,
@@ -252,13 +280,17 @@ def main() -> int:
     if args.screenshot_dir:
         shots = capture_screenshot(target, pathlib.Path(args.screenshot_dir))
         for s in shots:
-            print(f"  [SHOT] Captured screenshot: {s} (Inspect via view_file before showing user!)")
+            print(f"  [SHOT] Captured screenshot: {s} (Inspect via view_file!)")
 
     print("-" * 60)
     if errors:
-        print(f"FAILED: {len(errors)} structural UI error(s) detected. Fix before presenting to the user.")
+        print(f"FAILED: {len(errors)} structural UI error(s) detected. Fix before running Phase B Adversarial Critic.")
         return 1
-    print("SUCCESS: Wireframe passed static structural checks. Remember to inspect screenshots via view_file.")
+    print("PHASE A PASSED: Static DOM checks clean.")
+    print("MANDATORY NEXT STEP (Phase B — Independent Adversarial Critic Loop):")
+    print("  1. Inspect all interactive state screenshots yourself via view_file (Preview, Edit, Diff+Back, Folder, Code, Drawer Closed).")
+    print("  2. Spawn the 'Adversarial UX & Spec Critic' subagent (invoke_subagent) with FACTS ONLY (file paths + rubric path).")
+    print("  3. Loop (Fix -> Re-verify -> send_message to Critic) WHILE Critic verdict != PASS. Never present to user before Critic PASS!")
     return 0
 
 

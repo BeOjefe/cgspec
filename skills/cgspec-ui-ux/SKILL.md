@@ -29,7 +29,9 @@ Calibrate geometry, input ergonomics, and required states to the project's **Tar
 ### 2.2 Stage 2 Execution Invariants
 1. **One Focal Screen at a Time (Phase Fidelity Ceiling):** Prototype strictly **1 focal screen** (`SCR-01`) until locked; keep other navigation items as inactive placeholders (`[Scheduled for SCR-02]`). In Phase 2 (Macro Layout), render only zone boundaries, resizable splitters, and navigation trees—never invent uninterviewed micro-buttons.
 2. **Visual-First Choice & Dual-Target Versioning (`v1 -> v2 -> v3`):** Render the interactive HTML wireframe Artifact (`UserFacing: true` in `<appDataDir>/brain/<conversation-id>/wireframe-vN.html` for side-pane preview—never inline `<agent-embed>` for desktop layouts) AND archive to `docs/.cgspec/prototypes/wireframe-vN.html` **before** calling `ask_question` on layout choices. Never overwrite prior iterations.
-3. **Closed-Loop Visual Self-Critique (`gstack / BMAD` Gate):** Never present an HTML wireframe/prototype to the user until you have executed `visual_audit.py`, captured headless browser screenshots across `Default`, `Secondary Tab`, and `Diff/Modal/Drawer` states, inspected those screenshots via `view_file`, and verified all **8 Structural UI Coherence Laws** in [`references/quality-rubric.md`](references/quality-rubric.md).
+3. **2-Phase Verification & Independent Adversarial Critic Loop (`while verdict != PASS`):**
+   - **Phase A (Exhaustive Self-Verification First):** Run `visual_audit.py`, open the HTML in headless Chrome across `1440x900` and `1180x800`, click through every interactive state (`Preview`, `Edit Mode`, `Diff + Toggle Back`, `Folder View`, `Full Repo Code View`, `Drawer Closed`), inspect every screenshot via `view_file`, and fix all violations of the 8 Structural UI Coherence Laws in [`references/quality-rubric.md`](references/quality-rubric.md).
+   - **Phase B (Facts-Only Adversarial Critic Subagent Loop):** Before showing or claiming work done to the user, spawn an independent `Adversarial UX & Spec Critic` subagent (`invoke_subagent`, `TypeName: "self"`) using the **Facts-Only Prompt** in [`references/quality-rubric.md`](references/quality-rubric.md#part-3-phase-b-facts-only-adversarial-critic-subagent-loop-while-verdict--pass). Loop (`Fix defects -> Re-run Phase A -> send_message to Critic`) **while `verdict != PASS`**. Never present to the user until the Critic returns `VERDICT: PASS (0 defects)`.
 4. **Design Stash Protocol (Mid-Design Scope Pivots):** If a user spark requires reopening Stage 1 (`01-INTENT`/`02-OOUX`), snapshot active prototypes to `docs/.cgspec/prototypes/stash/<timestamp>-<name>/`, log the pause in `.memlog.md`, re-lock Stage 1, and perform a Design Delta Assessment upon returning.
 
 ---
@@ -46,7 +48,10 @@ Load only the playbook and references for the active step:
 ---
 
 ## 4. Exit Gate
-Run both checks and confirm `0 errors` + explicit user prototype approval before entering Stage 3 (`04-ARCHITECTURE.md`):
+Before presenting any wireframe/prototype or entering Stage 3 (`04-ARCHITECTURE.md`), confirm:
+1. **Phase A Self-Verification:** `visual_audit.py` + `doctor.py --strict-emojis` (`0 errors`) + multi-state screenshots inspected via `view_file`.
+2. **Phase B Adversarial Critic Loop:** Independent `Adversarial UX & Spec Critic` subagent returned `VERDICT: PASS (0 defects)`.
+3. **Human Lock:** Explicit user approval recorded in `docs/.memlog.md`.
 ```bash
 python3 docs/.cgspec/scripts/visual_audit.py docs/.cgspec/prototypes/prototype-v0.1.html --screenshot-dir /tmp/cgspec-shots
 python3 docs/.cgspec/scripts/doctor.py --repo . --strict-emojis

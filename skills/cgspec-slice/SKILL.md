@@ -25,10 +25,11 @@ description: Stage 4–7 Atomic Vertical Slice Builder. Use when generating boun
 2. **Implement & Test:**
    - Build domain logic, adapters, and UI views matching the locked `03-EXPERIENCE.md` tokens and state matrix.
    - Run unit/integration tests, typechecks, and linter.
-3. **Closed-Loop UI Verification (For Frontend Slices):**
-   - Run `visual_audit.py`, inspect headless browser screenshots via `view_file`, and verify zero console/page errors across required states.
+3. **2-Phase Verification & Adversarial Critic Loop:**
+   - **Phase A (Self-Verification):** Run tests, typechecks, `visual_audit.py`, and inspect headless browser screenshots via `view_file`.
+   - **Phase B (Facts-Only Adversarial Critic Loop):** Spawn an independent `Adversarial Slice & UX Critic` subagent given only cold facts (`SLICE-NNN.md`, changed code/HTML paths, test output, screenshots). Loop (`Fix -> Phase A -> send_message`) **while `verdict != PASS`** before presenting to the user.
 
 ---
 
 ## 4. Exit Gate
-Log `SLICE-NNN` completion to `docs/.memlog.md`, update `00-INDEX.md` and `05-DELIVERY.md`, and run `python3 docs/.cgspec/scripts/doctor.py --repo . --strict-emojis`.
+Confirm Critic `VERDICT: PASS (0 defects)`, log `SLICE-NNN` completion to `docs/.memlog.md`, update `00-INDEX.md` and `05-DELIVERY.md`, and run `python3 docs/.cgspec/scripts/doctor.py --repo . --strict-emojis`.
