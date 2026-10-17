@@ -68,4 +68,4 @@ skills/cgspec-ux/
 - `docs/design/screens/`: Detailed screen specs.
 - `docs/design/decisions/`: Why consequential design choices were made.
 - `docs/.memlog.md`: Chronological notes, preferences, and session history.
-- `docs/.cgspec/prototypes/`: Versioned HTML prototypes (`prototype-v0.1.html`).
+- `.cgspec/prototypes/`: Versioned HTML prototypes (`prototype-v0.1.html`).

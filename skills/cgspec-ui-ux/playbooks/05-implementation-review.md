@@ -1,7 +1,7 @@
 # Playbook 05: Implementation Review & Fidelity Audit
 
 ## Purpose
-Guide the human architect and AI agent through the final verification stage of the Experience Cycle: auditing the implemented production frontend against the approved prototype (`docs/.cgspec/prototypes/prototype-v0.1.html`) and the specification in `docs/03-EXPERIENCE.md`.
+Guide the human architect and AI agent through the final verification stage of the Experience Cycle: auditing the implemented production frontend against the approved prototype (`.cgspec/prototypes/prototype-v0.1.html`) and the specification in `docs/03-EXPERIENCE.md`.
 
 ---
 

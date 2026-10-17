@@ -4,7 +4,7 @@ CGSpec Zero-Token Prototype Bundler (bundle_prototype.py)
 
 Compiles modular per-screen HTML/CSS/JS partials maintained by parallel
 cgspec-builder subagents (<400 lines each) into a single, self-contained HTML
-artifact for the Antigravity preview pane and docs/.cgspec/prototypes/ archive
+artifact for the Antigravity preview pane and .cgspec/prototypes/ archive
 in <50ms using ZERO LLM output tokens.
 
 Supported Directives inside shell.html (or any template HTML):
@@ -48,7 +48,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="CGSpec Zero-Token Modular HTML Prototype Bundler")
     ap.add_argument("--shell", required=True, help="Path to the shell.html entry file containing @include directives")
     ap.add_argument("--out", required=True, help="Output path for the compiled self-contained HTML file")
-    ap.add_argument("--mirror", default=None, help="Optional second output path (e.g., docs/.cgspec/prototypes/wireframe-vN.html)")
+    ap.add_argument("--mirror", default=None, help="Optional second output path (e.g., .cgspec/prototypes/wireframe-vN.html)")
     args = ap.parse_args()
 
     shell_path = pathlib.Path(args.shell).resolve()

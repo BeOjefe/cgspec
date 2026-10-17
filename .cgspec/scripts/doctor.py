@@ -4,8 +4,8 @@ CGSpec Doctor (Spec Linter & Integrity Hook)
 Validates repository invariants, spine integrity, ADR registrations, and memory log continuity.
 
 Usage:
-  python3 docs/.cgspec/scripts/doctor.py [project-root]
-  python3 docs/.cgspec/scripts/doctor.py --repo [project-root]
+  python3 .cgspec/scripts/doctor.py [project-root]
+  python3 .cgspec/scripts/doctor.py --repo [project-root]
 """
 
 import sys
@@ -75,13 +75,13 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
             if spine != "00-INDEX.md" and spine not in index_content:
                 errors.append(f"docs/00-INDEX.md does not tabulate core spine: docs/{spine}")
 
-    # 3. Check Memory Log Continuity & Parity (supports docs/.memlog.md or docs/.cgspec/memlog.md)
+    # 3. Check Memory Log Continuity & Parity (supports docs/.memlog.md or .cgspec/memlog.md)
     memlog_file = docs_dir / ".memlog.md"
     if not memlog_file.exists() and (docs_dir / ".cgspec" / "memlog.md").exists():
         memlog_file = docs_dir / ".cgspec" / "memlog.md"
     memlog_entries = []
     if not memlog_file.exists():
-        errors.append("Missing docs/.memlog.md (or docs/.cgspec/memlog.md)")
+        errors.append("Missing docs/.memlog.md (or .cgspec/memlog.md)")
     else:
         content = memlog_file.read_text(encoding="utf-8")
         entry_matches = list(re.finditer(r"###\s*\[?(M-\d+)\]?", content))

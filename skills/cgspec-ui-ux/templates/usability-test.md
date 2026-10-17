@@ -1,7 +1,7 @@
 # Usability Test Record: [Test Title / Milestone]
 
 ## Target Prototype
-- **File / URL:** `docs/.cgspec/prototypes/[prototype-v0.1.html]`
+- **File / URL:** `.cgspec/prototypes/[prototype-v0.1.html]`
 - **Date / Session:** [Date / Conversation ID]
 - **Target Flow:** [Primary user journey being tested]
 

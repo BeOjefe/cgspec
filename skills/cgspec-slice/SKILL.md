@@ -34,4 +34,4 @@ description: Stage 4–7 Atomic Vertical Slice Builder. Use when generating boun
 ---
 
 ## 4. Exit Gate
-Confirm all $K$ Unit Adversaries + `cgspec-chief-adversary` returned `GLOBAL_VERDICT: PASS (0 defects)`, log `SLICE-NNN` completion to `docs/.memlog.md`, update `00-INDEX.md` and `05-DELIVERY.md`, and run `python3 docs/.cgspec/scripts/doctor.py --repo . --strict-emojis`.
+Confirm all $K$ Unit Adversaries + `cgspec-chief-adversary` returned `GLOBAL_VERDICT: PASS (0 defects)`, log `SLICE-NNN` completion to `docs/.memlog.md`, update `00-INDEX.md` and `05-DELIVERY.md`, and run `python3 .cgspec/scripts/doctor.py --repo . --strict-emojis`.

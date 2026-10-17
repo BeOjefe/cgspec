@@ -35,13 +35,13 @@
     - **Bucket A (Active Screen / Current Step):** Apply immediately to the active artifact/spine.
     - **Bucket B (Other Screens / Later UX Phases):** Record immediately in `docs/03-EXPERIENCE.md`, `docs/design/`, and `docs/.memlog.md` (do not code all screens at once).
     - **Bucket C (Backend / Future `v0.2+` Scope):** Record immediately in `docs/02-OOUX.md`, `docs/04-ARCHITECTURE.md`, or `docs/00-INBOX.md` (`Future Backlog v0.2+`).
-    Always synchronize top diagrams and bottom tables within any modified spine, then run `python3 docs/.cgspec/scripts/doctor.py --repo .` before concluding the turn.
+    Always synchronize top diagrams and bottom tables within any modified spine, then run `python3 .cgspec/scripts/doctor.py --repo .` before concluding the turn.
 
 ---
 
 ## 2. Universal Hygiene & Engineering Standards
 - **Zero Decorative Emojis:** No Unicode emojis or pictographs in chat or specs. Use clean Markdown headings and `-` bullets.
-- **Hidden Methodology Engine (`docs/.cgspec/`):** Keep the project root clean. Store all CGSpec scripts (`doctor.py`, `memlog.py`, `ingest.py`, `visual_audit.py`), prototypes (`prototypes/`), council logs (`council/`), and manifests inside `docs/.cgspec/`.
+- **Hidden Methodology Engine (`.cgspec/`):** Keep the project root clean. Store all CGSpec scripts (`doctor.py`, `memlog.py`, `ingest.py`, `visual_audit.py`), prototypes (`prototypes/`), council logs (`council/`), and manifests inside `.cgspec/`.
 - **Explicit Functional Actors & Capability-Driven UI:** Never use fictional persona names (`Sam`, `Maya`) or abstract tier codes (`L1/L2`). Use functional roles (`Organization Owner`, `Project Lead`, `Developer`, `Auditor`) and explicit permissions (`Owner` + `read | invoke | propose_edit | write | share | admin`). In UIs, hide actions the current role cannot perform instead of rendering disabled/conflicting buttons or debug role badges, and never leak `snake_case` schema identifiers into user-facing labels.
 - **Topological Neutrality & Ports/Adapters:** Support Monorepo and Polyrepo equally (inspect workspace first or ask via `ask_question`; never force polyrepo overhead). Enforce strict Ports & Adapters isolation (`uv` for Python, `bun`/`pnpm` for TypeScript/JS).
 
@@ -51,7 +51,7 @@
 
 | Lifecycle Stage / Entry Mode | Canonical Spine(s) | On-Demand Skill to Activate |
 | :--- | :--- | :--- |
-| **0. Init / Brownfield AST Ingestion** | `AGENTS.md`, `00-INDEX.md`, `docs/.cgspec/` | [`cgspec-init`](./skills/cgspec-init/SKILL.md) (`ingest.py` for existing repos) |
+| **0. Init / Brownfield AST Ingestion** | `AGENTS.md`, `00-INDEX.md`, `.cgspec/` | [`cgspec-init`](./skills/cgspec-init/SKILL.md) (`ingest.py` for existing repos) |
 | **1. Brainstorming & OOUX Nouns** | `01-INTENT.md`, `02-OOUX.md`, `00-INBOX.md` | [`cgspec-forge`](./skills/cgspec-forge/SKILL.md) |
 | **2. UI/UX, Wireframes & Prototypes** | `03-EXPERIENCE.md`, `docs/design/`, `prototypes/` | [`cgspec-ui-ux`](./skills/cgspec-ui-ux/SKILL.md) (`visual_audit.py` gate) |
 | **3. Architecture & Trade-Off Debates** | `04-ARCHITECTURE.md`, `docs/adr/ADR-NNN.md` | [`cgspec-council`](./skills/cgspec-council/SKILL.md) |

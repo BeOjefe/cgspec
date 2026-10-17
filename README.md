@@ -35,7 +35,7 @@ CGSpec solves this through a non-linear, dual-spine architecture governed by str
    Stage 5: Modular Coding & Implementation (src/domain, src/adapters)
               │
               ▼
-   Stage 6: Testing & Verification Gates (tests/, python3 docs/.cgspec/scripts/doctor.py)
+   Stage 6: Testing & Verification Gates (tests/, python3 .cgspec/scripts/doctor.py)
               │
               ▼
    Stage 7: CI/CD & Automated Delivery (.github/workflows/, containerization)
@@ -57,7 +57,7 @@ High-craft user experience cannot be generated in a single prompt. Every screen 
 2. **Tactile Ergonomics & Direct Manipulation:** Defining how hands navigate between zones and how editing/gestures operate inside the primary workspace (e.g. inline editing, bottom sheet detents, keyboard shortcuts).
 3. **Design Tokens & Aesthetic Direction:** Establishing typography hierarchy, atmospheric canvas texture, and a surgical signature brand anchor.
 4. **Proportional Component State Matrix:** Engineering for the full operational lifecycle (4 narrative/viewport states for Simple Websites, 7 mobile/touch states including `Keyboard Up` for iOS/Android, or 7 operational states for Web Workspaces).
-5. **Interactive Milestone Baseline Prototype:** Single-file, zero-build executable HTML (`docs/.cgspec/prototypes/prototype-v0.1.html`) with live state switching.
+5. **Interactive Milestone Baseline Prototype:** Single-file, zero-build executable HTML (`.cgspec/prototypes/prototype-v0.1.html`) with live state switching.
 
 ### 3. Hierarchical Peer Debate Council (`cgspec-council`)
 To prevent single-model sycophancy and blind spots, cross-cutting architectural and security choices are pressure-tested by a 3-agent peer council:
@@ -70,7 +70,7 @@ The Council Supervisor coordinates the debate in an isolated side pane, keeping 
 Every significant technical choice must produce a formal ADR under `docs/adr/ADR-NNN-<slug>.md` and be registered in `docs/00-INDEX.md`. An agent is strictly forbidden from advancing a phase with "memlog-only" shortcuts.
 
 ### 5. Automated Spec Integrity Hook (`cgspec doctor`)
-Specification drift is eliminated deterministically. The built-in doctor utility (`python3 docs/.cgspec/scripts/doctor.py`) validates that all 6 spines exist, memory log entries maintain strict hash continuity (`M-001` .. `M-NNN`), all accepted ADRs are registered, and zero orphan concepts exist before any milestone is closed.
+Specification drift is eliminated deterministically. The built-in doctor utility (`python3 .cgspec/scripts/doctor.py`) validates that all 6 spines exist, memory log entries maintain strict hash continuity (`M-001` .. `M-NNN`), all accepted ADRs are registered, and zero orphan concepts exist before any milestone is closed.
 
 ### 6. Disk-First Immediate Capture (Law 11)
 Chat context is ephemeral and lost across compacting or session boundaries; disk is permanent truth. Whenever an idea, spark, decision, consensus, or user preference emerges during a turn, the agent must commit it to disk (`docs/00-INBOX.md`, `docs/.memlog.md`, or the active spine) in the exact same turn before concluding its execution. The human architect must never bear the burden of asking "did you write that down?".
@@ -88,11 +88,11 @@ CGSpec is designed to be fully modular and adaptable to **any project size, targ
 | - Day-in-the-Life Walkthrough: Realistic end-to-end human scenario from trigger to resolution.                 |
 | - Domain Mental Model: Sophia Prater OOUX nouns, object relationships, and explicit granular permissions.      |
 +----------------------------------------------------------------------------------------------------------------+
-| TIER 2: VALIDATED v0.1 DESIGN & EXPERIENCE (docs/03-EXPERIENCE.md, docs/.cgspec/prototypes/)                   |
+| TIER 2: VALIDATED v0.1 DESIGN & EXPERIENCE (docs/03-EXPERIENCE.md, .cgspec/prototypes/)                   |
 | - Adaptive Surface Profile: Simple Website (Scroll Storyboard), Mobile iOS/Android (Thumb-Zone Stack),         |
 |   Web/Desktop Workspace (Multi-Pane), or CLI/TUI (Command Grammar).                                            |
 | - Zero-Color Macro Layout Wireframe (Mermaid / D2 / PlantUML subgraphs) -> Tactile Ergonomics & Tokens.        |
-| - Proportional State Matrix -> Interactive Executable Prototype (docs/.cgspec/prototypes/prototype-v0.1.html). |
+| - Proportional State Matrix -> Interactive Executable Prototype (.cgspec/prototypes/prototype-v0.1.html). |
 +----------------------------------------------------------------------------------------------------------------+
 | TIER 3: ENGINEERED v0.1 FOUNDATION & DELIVERY (docs/04-ARCHITECTURE.md, docs/05-DELIVERY.md, docs/adr/)       |
 | - Physical Architecture: Hexagonal Ports & Adapters, physical DDL schemas, foreign keys, contracts, ADRs       |
@@ -107,14 +107,14 @@ CGSpec is designed to be fully modular and adaptable to **any project size, targ
 ### The 4 Any-Stage Entry Modes:
 1. **Mode A — Greenfield Creation (Simple Website, Mobile iOS/Android, or Web SaaS):** Traverse Tier 1 (Brainstorming) -> Tier 2 (Surface-Adapted UI/UX) -> Tier 3 (Architecture, CI/CD, Delivery).
 2. **Mode B — Headless / Backend / CLI (No GUI):** Execute Tier 1 (Intent & Nouns) -> skip GUI to define TUI/CLI command syntax & ergonomics -> execute Tier 3 (Architecture, Code, CI/CD).
-3. **Mode C — Brownfield Legacy Adoption (Existing Codebase):** Run `python3 docs/.cgspec/scripts/ingest.py` (deterministic AST route & model parser) to generate `docs/.cgspec/brownfield-manifest.json` -> reverse-derive `docs/02-OOUX.md` -> activate `doctor.py` integrity gate -> build bounded vertical slices (`cgspec-slice`) with zero disruption to legacy code.
+3. **Mode C — Brownfield Legacy Adoption (Existing Codebase):** Run `python3 .cgspec/scripts/ingest.py` (deterministic AST route & model parser) to generate `.cgspec/brownfield-manifest.json` -> reverse-derive `docs/02-OOUX.md` -> activate `doctor.py` integrity gate -> build bounded vertical slices (`cgspec-slice`) with zero disruption to legacy code.
 4. **Mode D — Mid-Flight Course Correction (Pivot / Migration):** Trigger `cgspec-pivot` to evaluate impact across Tier 1 (Adapter Swap), Tier 2 (Additive Scope Expansion), or Tier 3 (Total Soul Extraction).
 
 ---
 
 ## Repository Structure (Zero Root Workspace Pollution)
 
-All internal CGSpec tooling, scripts, prototypes, and council logs are centralized inside the hidden `docs/.cgspec/` engine directory, keeping the project root 100% focused on the user's product:
+All internal CGSpec tooling, scripts, prototypes, and council logs are centralized inside the hidden `.cgspec/` engine directory, keeping the project root 100% focused on the user's product:
 
 ```
 .

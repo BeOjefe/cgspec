@@ -21,9 +21,9 @@ Modern engineering teams increasingly rely on autonomous AI coding agents across
 | Term | Plain-English Meaning |
 | :--- | :--- |
 | **Autopilot Coach Mode** | The human talks naturally in any AI agent; the agent automatically logs decisions in `docs/.memlog.md` and derives the right spine files (`00-INDEX.md` .. `05-DELIVERY.md`) without forcing the user to memorize commands. |
-| **`.memlog.md` (Event Ledger)** | Append-only decision and event log managed by `uv run docs/.cgspec/scripts/memlog.py`. Stores `decision`, `assumption`, `crack`, `kill`, `direction:parked`, and `lock` entries. |
+| **`.memlog.md` (Event Ledger)** | Append-only decision and event log managed by `uv run .cgspec/scripts/memlog.py`. Stores `decision`, `assumption`, `crack`, `kill`, `direction:parked`, and `lock` entries. |
 | **Derived Spine (`01`..`05`)** | Terse, AI-scannable specification files derived from `docs/.memlog.md` so any skill can run in **any order** without merge drift. |
-| **`.cgspec/` Workbench** | Temporary visual exploration folder (`docs/.cgspec/`) for Excalidraw wireframes, HTML color themes, design directions, and raw debate transcripts before locking the final spec. |
+| **`.cgspec/` Workbench** | Temporary visual exploration folder (`.cgspec/`) for Excalidraw wireframes, HTML color themes, design directions, and raw debate transcripts before locking the final spec. |
 | **Granular Authorization & Ownership** | Every resource in a team environment has an explicit **`Owner`** (`User` or `Team`) and explicit **Permissions** (`read`, `invoke`, `propose_edit`, `write`, `share`, `admin`). |
 
 ---
@@ -46,9 +46,9 @@ sequenceDiagram
     alt Off-Scope Idea During Active Slice
         Agent->>Human: "Park in 00-INBOX.md + .memlog.md (Recommended) or run Pivot Audit?"
         Human->>Agent: "Park it"
-        Agent->>Memlog: uv run docs/.cgspec/scripts/memlog.py add --tags "direction:parked"
+        Agent->>Memlog: uv run .cgspec/scripts/memlog.py add --tags "direction:parked"
     else Architectural / UX Decision or Change
-        Agent->>Memlog: uv run docs/.cgspec/scripts/memlog.py add --tags "lock"
+        Agent->>Memlog: uv run .cgspec/scripts/memlog.py add --tags "lock"
         Agent->>Spines: Re-derives affected spine (INTENT / OOUX / EXPERIENCE / ARCH / DELIVERY)
         Agent->>Human: Confirms exact files updated
     end
@@ -61,7 +61,7 @@ sequenceDiagram
 ### In Scope for `v0.1`
 - Complete, vendor-neutral **CGSpec Blueprint Repository** (`/home/ojefe/Documents/Project/cgspec/`).
 - Universal **`AGENTS.md`** + 1-line DRY **`CLAUDE.md`** pointer.
-- Portable **`skills/cgspec-*/SKILL.md`** suite + **`docs/.cgspec/scripts/memlog.py`**, **`docs/.cgspec/scripts/doctor.py`**, **`docs/.cgspec/scripts/ingest.py`**.
+- Portable **`skills/cgspec-*/SKILL.md`** suite + **`.cgspec/scripts/memlog.py`**, **`.cgspec/scripts/doctor.py`**, **`.cgspec/scripts/ingest.py`**.
 
 ### Explicit Non-Goals
 - **NEVER** lock skills or project artifacts to a single proprietary directory.

@@ -26,8 +26,8 @@ You are the **Tier 1 Insulated Swarm Supervisor**. The Main Agent spawns **ONLY 
 You receive from the Main Agent:
 - Target repository path and artifact output directory.
 - Canonical spine paths: `docs/01-INTENT.md`, `docs/02-OOUX.md`, `docs/03-EXPERIENCE.md`, `docs/04-ARCHITECTURE.md`, `docs/05-DELIVERY.md`.
-- Canonical audit rubric path: `docs/.cgspec/references/quality-rubric.md`.
-- Visual/DOM gate script path: `docs/.cgspec/scripts/visual_audit.py`.
+- Canonical audit rubric path: `.cgspec/references/quality-rubric.md`.
+- Visual/DOM gate script path: `.cgspec/scripts/visual_audit.py`.
 
 ## 2. Mandatory 4-Step Swarm Execution Protocol
 
@@ -35,7 +35,7 @@ You receive from the Main Agent:
 1. Read the target spines (`02-OOUX.md` and `03-EXPERIENCE.md` or `05-DELIVERY.md`) to identify the $K$ distinct screens, workspace surfaces, or slice modules required.
 2. Ensure `cgspec-builder`, `cgspec-unit-adversary`, and `cgspec-chief-adversary` are registered via `define_subagent` (using their definitions in `agents/*.md`, with `enable_write_tools=True`). **NEVER spawn `type="research"` for builders or adversaries.**
 3. Spawn $K$ `cgspec-builder` instances (`Builder_1 .. Builder_K`), assigning each builder its own modular `< 400` line screen/partial file on disk (`surfaces/scr-01.html .. surfaces/scr-0K.html` + `shared/tokens.css` + `shared/data.js`) so builders write directly to disk in parallel without merge conflicts, context compactions, or output token limit cutoffs.
-4. When a single self-contained HTML artifact is needed for preview/archival, compile the partials in 0 LLM tokens via `python3 docs/.cgspec/scripts/bundle_prototype.py --shell shell.html --out <artifact_html> --mirror docs/.cgspec/prototypes/<version>.html`.
+4. When a single self-contained HTML artifact is needed for preview/archival, compile the partials in 0 LLM tokens via `python3 .cgspec/scripts/bundle_prototype.py --shell shell.html --out <artifact_html> --mirror .cgspec/prototypes/<version>.html`.
 5. Immediately send a **Builder Peer Directory Message** via `send_message` to all $K$ builders containing `{Builder_1: convId_1, ..., Builder_K: convId_K}` so they coordinate shared navigation chrome, CSS tokens, and cross-screen route contracts laterally.
 
 ### Step 2: Run the Inner Adversarial Loop (`while unit_verdict_i != PASS`)

@@ -10,7 +10,7 @@ description: Stage 2 Dual-Spine UI & UX Compilation Engine. Use when designing s
 - **Requires:** Approved `docs/01-INTENT.md` and `docs/02-OOUX.md`.
 - **Produces:**
   - **UX Deliverables (`docs/design/`):** Task brief (`brief.md`), mechanism reference analysis (`references.md`), tactile interaction decisions (`decisions/UXD-NNN.md`).
-  - **UI Deliverables (`docs/03-EXPERIENCE.md` & `docs/.cgspec/prototypes/`):** Declarative spatial wireframes, versioned HTML wireframes (`wireframe-v1.html..vN.html`), design tokens, state matrix, and milestone prototype (`prototype-v0.1.html`).
+  - **UI Deliverables (`docs/03-EXPERIENCE.md` & `.cgspec/prototypes/`):** Declarative spatial wireframes, versioned HTML wireframes (`wireframe-v1.html..vN.html`), design tokens, state matrix, and milestone prototype (`prototype-v0.1.html`).
 
 ---
 
@@ -40,7 +40,7 @@ Calibrate geometry, input ergonomics, and required states to the project's **Tar
 4. **Tier 4 Chief Global Adversarial Gatekeeper (`cgspec-chief-adversary` $\times 1$) — Outer `while (global_verdict != PASS)` Loop:**
    - Only when **all $K$ Unit Adversaries** report `PASS (0 defects)` does `cgspec-inspector` invoke [`cgspec-chief-adversary`](../../agents/cgspec-chief-adversary.md) to audit the integrated multi-screen build, end-to-end user journeys, and version non-destruction (`v1..vN`). If `GLOBAL_VERDICT == FAIL`, `cgspec-inspector` routes defects back to the swarm until `GLOBAL_VERDICT: PASS (0 defects)`.
 5. **Tier 5 Human Validation & Deep Root-Cause Interview (`If User Says No`):**
-   - Only after `GLOBAL_VERDICT: PASS` does `cgspec-inspector` return to the Main Agent to present the verified build (`UserFacing: true` in `<appDataDir>/brain/<conversation-id>/wireframe-vN.html` + `docs/.cgspec/prototypes/wireframe-vN.html`).
+   - Only after `GLOBAL_VERDICT: PASS` does `cgspec-inspector` return to the Main Agent to present the verified build (`UserFacing: true` in `<appDataDir>/brain/<conversation-id>/wireframe-vN.html` + `.cgspec/prototypes/wireframe-vN.html`).
    - **If the user says "No" or rejects any aspect:** The Main Agent **MUST NOT** immediately re-run `cgspec-inspector`. It must first interview the user to deeply understand *why*, record the root cause in `docs/.memlog.md`, update `01-INTENT.md` / `02-OOUX.md` / `03-EXPERIENCE.md`, confirm the updated spine with the user, and only then re-invoke `cgspec-inspector`.
 
 ---
@@ -62,6 +62,6 @@ Before presenting any wireframe/prototype or entering Stage 3 (`04-ARCHITECTURE.
 2. **Inner & Outer Adversarial Loops:** All $K$ [`cgspec-unit-adversary`](../../agents/cgspec-unit-adversary.md) agents returned `UNIT_VERDICT: PASS (0 defects)` AND [`cgspec-chief-adversary`](../../agents/cgspec-chief-adversary.md) returned `GLOBAL_VERDICT: PASS (0 defects)`.
 3. **Human Lock:** Explicit user approval recorded in `docs/.memlog.md`.
 ```bash
-python3 docs/.cgspec/scripts/visual_audit.py --html docs/.cgspec/prototypes/prototype-v0.1.html --screenshot-dir /tmp/cgspec-shots
-python3 docs/.cgspec/scripts/doctor.py --repo . --strict-emojis
+python3 .cgspec/scripts/visual_audit.py --html .cgspec/prototypes/prototype-v0.1.html --screenshot-dir /tmp/cgspec-shots
+python3 .cgspec/scripts/doctor.py --repo . --strict-emojis
 ```

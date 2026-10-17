@@ -1,1 +1,1 @@
-../../../docs/.cgspec/scripts/ingest.py
+../../../.cgspec/scripts/ingest.py

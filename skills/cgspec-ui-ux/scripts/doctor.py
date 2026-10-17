@@ -1,1 +1,1 @@
-../../../docs/.cgspec/scripts/doctor.py
+../../../.cgspec/scripts/doctor.py

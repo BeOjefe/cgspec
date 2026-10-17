@@ -29,7 +29,7 @@ erDiagram
         string derived_from_memlog_id "Latest M-NNN"
     }
     WORKING_ARTIFACT {
-        string path PK "docs/.cgspec/* (Excalidraw, HTML mocks, manifests)"
+        string path PK ".cgspec/* (Excalidraw, HTML mocks, manifests)"
         boolean ephemeral "True (never loaded into build context)"
     }
     VERTICAL_SLICE {

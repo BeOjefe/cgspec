@@ -1,1 +1,1 @@
-../../../docs/.cgspec/scripts/visual_audit.py
+../../../.cgspec/scripts/visual_audit.py

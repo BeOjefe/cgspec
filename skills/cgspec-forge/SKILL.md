@@ -30,4 +30,4 @@ description: Stage 1 Product Brainstorming & ORCA Object Map Compiler. Use when 
 ---
 
 ## 4. Exit Gate
-Confirm explicit user approval of `docs/01-INTENT.md` and `docs/02-OOUX.md`, run `python3 docs/.cgspec/scripts/doctor.py --repo . --strict-emojis`, and hand off to [`cgspec-ui-ux`](../cgspec-ui-ux/SKILL.md).
+Confirm explicit user approval of `docs/01-INTENT.md` and `docs/02-OOUX.md`, run `python3 .cgspec/scripts/doctor.py --repo . --strict-emojis`, and hand off to [`cgspec-ui-ux`](../cgspec-ui-ux/SKILL.md).
