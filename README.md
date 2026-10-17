@@ -20,16 +20,28 @@ CGSpec solves this through a non-linear, dual-spine architecture governed by str
   Human Director / Architect
               │
               ▼
-   Stage 1: Intent, User Journey & Conceptual OOUX Nouns (docs/01-INTENT.md, docs/02-OOUX.md)
+   Stage 1: Intent & Brainstorming (docs/01-INTENT.md, docs/02-OOUX.md)
               │
               ▼
-   Stage 2: Adaptive UI/UX & Interactive Prototype (docs/03-EXPERIENCE.md)
+   Stage 2: Design & Experience Discovery (docs/03-EXPERIENCE.md, docs/design/)
               │
               ▼
-   Stage 3: Physical Architecture, DDL & System Topology (docs/04-ARCHITECTURE.md)
+   Stage 3: Physical Architecture & System Contracts (docs/04-ARCHITECTURE.md, docs/adr/)
               │
               ▼
-   Stage 4: Delivery Slices, Verification & Ingest Gates (docs/05-DELIVERY.md)
+   Stage 4: Milestone Slices & Delivery Roadmap (docs/05-DELIVERY.md, docs/00-INDEX.md)
+              │
+              ▼
+   Stage 5: Modular Coding & Implementation (src/domain, src/adapters)
+              │
+              ▼
+   Stage 6: Testing & Verification Gates (tests/, python3 scripts/doctor.py)
+              │
+              ▼
+   Stage 7: CI/CD & Automated Delivery (.github/workflows/, containerization)
+              │
+              ▼
+   Stage 8: Follow-up, Rollout & Backlog Evolution (docs/.memlog.md, docs/00-INBOX.md)
 ```
 
 ---

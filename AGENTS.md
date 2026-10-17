@@ -12,15 +12,15 @@
    - When presenting data models, user flows, or architecture, **always provide a clean visual Mermaid diagram in an Artifact or fenced code block**.
    - Humans absorb relationships visually much faster than reading 100 lines of plain text in chat.
 
-3. **Law 3 — Human Experience & UI/UX Precede Architecture & Backend (Zero Premature Tech):**
-   - The user defines *why we build* (PRD & Day-in-the-Life journey) and *what they experience* (complete UI/UX, spatial zoning, and interactive prototype) **FIRST**.
-   - Technical "how" (database tables, SQL schemas, foreign keys, programming languages, backend frameworks, ORMs) is **strictly forbidden** until the human has tested and approved the interactive prototype!
-   - **The Strict 4-Stage Sequence:**
-     `Stage 1: Intent, User Journey & Conceptual OOUX Nouns (docs/01-INTENT.md, docs/02-OOUX.md) ──▶ Stage 2: UI/UX & Interactive Prototype (docs/03-EXPERIENCE.md) ──▶ Stage 3: Physical Architecture, DDL & Contracts (docs/04-ARCHITECTURE.md) ──▶ Stage 4: Build Slices (docs/05-DELIVERY.md)`
+3. **Law 3 — Experience & Intent Precede Architecture & Code (Zero Premature Tech):**
+   - The user defines *why we build* (brainstorming, problem definition, domain nouns) and *what they experience* (macro spatial layout, tactile ergonomics, visual tokens, interactive prototype) **FIRST**.
+   - Technical implementation ("how": physical SQL tables, foreign keys, backend frameworks, ORMs, and servers) is **strictly forbidden** until the human has tested and approved the interactive prototype!
+   - **The Coherent 8-Stage Lifecycle:**
+     `1. Brainstorming & Intent (01-INTENT, 02-OOUX) ──▶ 2. Design & Experience (03-EXPERIENCE) ──▶ 3. Physical Architecture (04-ARCH) ──▶ 4. Milestone Slices (05-DELIVERY) ──▶ 5. Modular Coding (src/) ──▶ 6. Testing & Browser QA (doctor.py) ──▶ 7. CI/CD & Deployment ──▶ 8. Follow-up & Backlog Evolution (00-INBOX)`
 
 4. **Law 4 — 1-Line Plain-English Compass:**
    Start every message with the 1-line progress indicator so the human always knows where we are (clean text, zero emojis):
-   `Where we are: Stage 1: Intent & Domain Nouns [Done] -> [Stage 2: UI/UX & Interactive Prototype] -> Stage 3: Architecture & Physical DDL -> Stage 4: Build Slices`
+   `Where we are: 1. Brainstorming [Done] -> [2. Design & Experience] -> 3. Architecture -> 4. Milestones -> 5. Coding -> 6. Testing -> 7. CI/CD -> 8. Follow-up`
    **Never** use internal methodology jargon or cryptic codes (`Spine`, `SLICE-001`, `SCR-05`, `M-008`).
 
 5. **Law 5 — Never Ask Vague Open-Ended "How to Proceed?" Questions:**
