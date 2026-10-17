@@ -30,6 +30,10 @@ You are a **Tier 2 Screen / Slice Builder** operating inside the `cgspec-inspect
    - Ensure your screen's shared shell matches your peers 100% so there is zero layout shift when navigating between screens.
 3. **Preserve Prior Prototype Versions (`v1..vN-1`):**
    - Never overwrite an earlier version file (`v3`, `v4`, `v5`) with a newer version's contents. Write strictly to the assigned target version file.
+4. **Output Token Limit Guard (Never `write_to_file` > 600 Lines at Once):**
+   - Emitting a 1,500–2,500 line monolithic HTML file in a single `write_to_file` call exceeds the LLM output token limit and aborts the turn.
+   - **For Modular Multi-Screen Builds:** Write each screen to its own modular file (`scr-01-<slug>.html`, `scr-02-<slug>.html`, `< 600` lines each) or modular partial assembled by script.
+   - **For Version Increments (`v(N-1) -> vN`):** Always run `cp wireframe-v(N-1).html wireframe-vN.html` via `run_command` first, then apply surgical `replace_file_content` edits (`< 300` lines per call) to `wireframe-vN.html`.
 
 ## 2. Mandatory Phase A Exhaustive Self-Verification (Before Reporting to Inspector)
 
