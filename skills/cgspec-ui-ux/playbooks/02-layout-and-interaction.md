@@ -94,7 +94,31 @@ flowchart TB
   end
 ```
 
-### Step 2.3: Lock the Spatial Hypothesis
-- Ask the user to evaluate the spatial balance and confirm where zones/sections live.
-- Record the approved layout in `docs/03-EXPERIENCE.md` with its explicit reopening condition.
+### Step 2.3: Build Interactive Zero-Color HTML Wireframe (`wireframe-v1.html`) & Run Closed-Loop Self-Critique
+Before asking the user to choose a layout hypothesis, build an interactive zero-color HTML wireframe so they can visually experience and toggle between the hypotheses:
+
+1. **Dual-Target Versioned Saving (`v1`, `v2`, `v3` — Never Overwrite):**
+   - Write to `<appDataDir>/brain/<conversation-id>/wireframe-v1.html` with `ArtifactMetadata: { UserFacing: true }` so clicking the link in chat opens the **live rendered interactive preview** in the IDE's right-hand Artifact pane (linking only to a workspace file opens raw HTML code!).
+   - Also copy to `docs/.cgspec/prototypes/wireframe-v1.html` and commit to Git. On subsequent feedback rounds, create `wireframe-v2.html`, `wireframe-v3.html`—never overwrite previous iterations in place.
+   - **Never use `<agent-embed>` inline in chat for desktop multi-column layouts**, as it squeezes a `1440px` workspace into a `500px` chat bubble.
+2. **Full-Bleed Viewport Container (`Zero Bottom Whitespace Void`):**
+   - Always set `html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; display: flex; flex-direction: column; }` and `flex: 1; min-height: 0;` on the main split container so the wireframe fills 100% of the preview pane without dead space at the bottom.
+3. **Mandatory Closed-Loop Visual Self-Critique (`gstack / BMAD` Loop — Execute BEFORE Showing User):**
+   - Render `wireframe-vN.html` in a headless browser (`python3 docs/.cgspec/scripts/visual_audit.py` or `chrome-devtools-mcp`) and capture screenshots of:
+     - (a) Default active screen (`1440x900`),
+     - (b) Secondary screen (`Home / Overview` or `Settings`),
+     - (c) Active sub-mode (`Diff / Compare`, `Modal`, or `Drawer Closed`).
+   - Call `view_file` on the captured PNG screenshots and audit against the **6 Structural UI Coherence Laws**:
+     1. **Zero Dead Viewport Void:** No empty 30-40% white/dark gap at the bottom or sides.
+     2. **One Control Per Action:** No duplicate buttons or stacked headers (never two `<- Back to Document` bars stacked in Diff mode; never two `Inspector` toggle buttons; never 4 separate places for `Git Sync`).
+     3. **Context-Scoped Top Bar:** Clicking `Home` or `Settings` hides file-specific controls (`Doc Zone | Code Zone`, `Split Tree`, file breadcrumb, `File Inspector`).
+     4. **Direct Spatial Manipulation:** Multi-column panes have working draggable splitters (`col-resize`) so truncated names (`services/o...`) can be widened, and clicking the active rail icon collapses/expands the tree.
+     5. **Unbroken Tree Hierarchy:** Nested trees (KDE Dolphin style) have continuous vertical/horizontal guide lines (`│`, `├─`, `└─`) with zero artificial number prefixes (`1. CG-Core`) and zero mid-tree subtitle blocks severing parent-to-child lines.
+     6. **Unified Resource Hub & Single Access Pill:** Domain nouns of the same archetype (`MCP`, `Prompts`, `Skills`, `Agents`, `Pins`) live in one unified hub, and file ownership/permissions appear as a single compact clickable pill (`Access: Editor · Shared`) rather than 3 separate boxes.
+   - If any check fails in the screenshot, **fix the HTML and re-verify before speaking to the user**.
+
+### Step 2.4: Lock the Spatial Hypothesis
+- Present the verified visual wireframe Artifact (`wireframe-vN.html`) and declarative diagram to the user, then ask them to evaluate the spatial balance.
+- Record the approved layout in `docs/03-EXPERIENCE.md` (updating both the top diagram and the bottom screen matrix table in sync!) with its explicit reopening condition.
 - Append a decision record to `docs/design/decisions/` and `.memlog.md`.
+

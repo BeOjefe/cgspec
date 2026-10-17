@@ -48,7 +48,22 @@ Before drawing layouts or modeling states, identify the project's **Target Surfa
 12. **Graceful Capability Degradation:** If a capability is unavailable in the environment, state the limitation and provide an executable manual verification procedure.
 13. **Strict Gate Before Scaffolding:** Do not scaffold production backend or frontend code before the relevant user experience is approved.
 14. **Purposeful Decoration:** Never add decorative elements (gradients, drop shadows, textures) without a clear hierarchy, task, or identity rationale.
-15. **Consistent Turn Wrap-Up:** Conclude each turn by updating progress, logging approved decisions to `.memlog.md`, and stating the next concrete action.
+15. **Visual-First Choice Invariant (Never Ask Layout Questions Blind):** Never call `ask_question` on layout hypotheses in plain text before rendering an interactive visual wireframe Artifact (`UserFacing: true`) so the human can see and click both options first.
+16. **Non-Destructive Iteration Versioning (`v1 -> v2 -> v3`):** Never overwrite previous wireframes or prototypes in place. Every iteration must be saved both to `<appDataDir>/brain/<conversation-id>/wireframe-vN.html` (`UserFacing: true` for live side-pane preview—never inline `<agent-embed>` for desktop layouts) AND archived to `docs/.cgspec/prototypes/wireframe-vN.html`.
+17. **Mandatory Closed-Loop Visual Self-Critique (`gstack / BMAD` Pattern — Inspect Your Own Pixels Before Speaking):**
+    - Before presenting ANY wireframe or prototype HTML to the user, the agent MUST open it in a headless browser (`visual_audit.py` or `chrome-devtools-mcp`), capture screenshots across states (`Default`, `Home/Secondary Tab`, `Diff/Modal/Drawer`), inspect those screenshots via `view_file`, and auto-fix any violation of the **6 Structural UI Coherence Laws**:
+      1. *Zero Dead Viewport Void:* `100vh x 100vw` flex container (`flex: 1; min-height: 0`) with zero empty bottom/side whitespace gaps.
+      2. *One Control Per Action:* Zero duplicate buttons or stacked headers (never two `Back` bars in Diff mode, never two `Inspector` toggles, never 4 separate `Git` buttons).
+      3. *Context-Scoped Top Chrome:* File-specific controls (`Split Tree`, file breadcrumbs, `Doc/Code` switch, `File Inspector`) appear ONLY on the `Files` screen—never on `Home` or `Settings`.
+      4. *Direct Spatial Manipulation:* Multi-column layouts include draggable split-pane resizers (`col-resize`) to prevent unresolvable truncation (`services/o...`), and clicking the active rail icon collapses/expands the secondary tree panel.
+      5. *Unbroken Tree Hierarchy:* Nested trees (KDE Dolphin style) maintain continuous vertical/horizontal guide lines (`│`, `├─`, `└─`) without bulky boxes or mid-tree subtitle blocks severing parent-to-child lines.
+      6. *Unified Resource Taxonomy & Compact Access Pills:* Domain nouns of the same archetype (`MCP`, `Prompts`, `Skills`, `Agents`, `Pins`) group into a unified hub; ownership and role metadata consolidate into a single clickable pill (`Access: Editor · Shared`).
+18. **Phase Fidelity Ceiling & One-Screen-at-a-Time Discipline:**
+    - Never build 6 screens (`Home`, `Files`, `PRs`, `Prompts`, `MCP`, `Settings`) simultaneously inside one giant wireframe. Scope active prototyping strictly to the **single active focal screen** (`SCR-01`), rendering other navigation destinations as clean inactive placeholders (`[Scheduled for SCR-02]`) until `SCR-01` is locked.
+    - During **Phase 2 (Macro Spatial Layout)**, never populate uninterviewed zones with invented micro-buttons (`[Edit] [Diff] [Propose PR] [Owned by]`); use clean zone placeholders until Phase 3 (Tactile Interactions) so premature micro-controls do not derail macro layout review.
+19. **3-Bucket Triage Gate (Capture 100% of User Input Without Derailing the Current Step):**
+    - When the user mentions ideas or requirements for *other screens*, *later UX phases*, or *backend schemas* during a layout review, immediately persist them to disk in their proper bucket (`Bucket A`: apply to active screen now; `Bucket B`: log other-screen requirements to `docs/03-EXPERIENCE.md` & `.memlog.md`; `Bucket C`: log backend/future items to `02-OOUX.md`, `04-ARCHITECTURE.md`, or `00-INBOX.md`) and explicitly confirm to the user what was saved on disk vs what is being tested in the current step.
+20. **Consistent Turn Wrap-Up:** Conclude each turn by running `visual_audit.py` and `doctor.py`, synchronizing all diagrams and tables in `docs/03-EXPERIENCE.md`, logging approved decisions to `.memlog.md`, and stating the next concrete action.
 
 ---
 
@@ -86,12 +101,12 @@ Design can only operate cleanly on a **locked scope milestone** (e.g. `v0.1` int
 
 ### Phase 2: Scout References & Explore Spatial Layouts
 - **Mechanism-Driven References:** Share 2-3 real-world exemplars, identifying what specific interaction mechanism is worth borrowing and what should NOT be copied.
-- **Zero-Color Layout Hypotheses:** Generate two meaningfully different structural proposals using declarative diagram subgraphs (Mermaid `flowchart TB`, D2, PlantUML) or compact wireframes in an Artifact. The user must approve *where parts live* before discussing micro-interactions.
-- **Approval Checkpoint:** Approve a layout hypothesis with an explicit reopening condition.
+- **Zero-Color Layout Hypotheses + Interactive Wireframe Artifact (`wireframe-v1.html`):** Generate two meaningfully different structural proposals using declarative diagram subgraphs (Mermaid `flowchart TB`, D2, PlantUML) AND a full-bleed interactive zero-color wireframe HTML Artifact (`UserFacing: true`).
+- **Closed-Loop Self-Critique Before Asking:** Render the wireframe in a headless browser, capture & inspect screenshots via `view_file`, auto-fix any layout/chrome defects, and ONLY THEN ask the user to approve where zones live.
 
 ### Phase 3: Test Tactile Interactions in a Rough Prototype
 - **Interaction Contract:** Specify triggers, visible results, keyboard shortcuts, focus targets, save behaviors, and recovery mechanics in plain English.
-- **Rough Prototyping:** Build only enough interactive behavior to test the uncertain mechanics (e.g. inline editing vs split view) without premature styling.
+- **Rough Prototyping (`wireframe-v2.html`, `wireframe-v3.html`):** Build only enough interactive behavior to test uncertain mechanics (draggable splitters, tree expansion, inline editing vs split diff) without premature styling, preserving every version (`v1`, `v2`, `v3`) in `docs/.cgspec/prototypes/`.
 
 ### Phase 4: Develop Visual Direction & Positive Quality Rules
 - **Translate Human Reactions:** Convert desired pacing (e.g. "quiet editorial notebook") into information density, typographic scale, surface rhythm, and 1 dominant brand anchor.

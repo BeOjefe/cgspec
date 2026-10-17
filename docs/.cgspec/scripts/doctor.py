@@ -169,6 +169,17 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
                 else:
                     warnings.append(msg)
 
+    # 6. Check AGENTS.md Constitution Parity (11 Laws + Closed-Loop Visual Self-Critique)
+    agents_file = project_root / "AGENTS.md"
+    if not agents_file.exists():
+        warnings.append("Missing AGENTS.md at project root")
+    else:
+        agents_text = agents_file.read_text(encoding="utf-8")
+        if "Law 11" not in agents_text:
+            warnings.append("AGENTS.md is outdated (missing Law 11: Disk-First Immediate Capture & 3-Bucket Triage)")
+        else:
+            print("  [PASS] AGENTS.md Constitution Parity (11 Core Coach Laws active)")
+
     # Print Summary
     print("-" * 60)
     if warnings:
