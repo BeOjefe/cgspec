@@ -26,13 +26,21 @@ Calibrate geometry, input ergonomics, and required states to the project's **Tar
 | **Profile C: Web Workspace** *(SaaS, dashboard, IDE)* | **Multi-Pane Viewport:** Header -> Left Multi-Root Explorer Rail -> Center Canvas -> Right Drawer. | `Cmd+K` bar, draggable `col-resize` splitters, click-to-fold rail, `32-40px` dense rows. | **7 States:** `Populated`, `Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Filtered Zero`. | Full-viewport (`100vh`) workspace with state & role switcher. |
 | **Profile D: CLI / TUI** *(Terminal tool, daemon, SDK)* | **Command & Stream Topology:** Subcommand tree, flag matrix, split TUI panes, `stdout` vs `stderr`. | Pipeability, `--json` flag, TTY spinner vs quiet mode, exit codes. | **5 States:** `Success (0)`, `Help`, `Validation Error (1)`, `Auth/Net Error`, `Pipe Mode`. | Interactive terminal transcript / TUI simulator in HTML. |
 
-### 2.2 Stage 2 Execution Invariants
-1. **One Focal Screen at a Time (Phase Fidelity Ceiling):** Prototype strictly **1 focal screen** (`SCR-01`) until locked; keep other navigation items as inactive placeholders (`[Scheduled for SCR-02]`). In Phase 2 (Macro Layout), render only zone boundaries, resizable splitters, and navigation trees—never invent uninterviewed micro-buttons.
-2. **Visual-First Choice & Dual-Target Versioning (`v1 -> v2 -> v3`):** Render the interactive HTML wireframe Artifact (`UserFacing: true` in `<appDataDir>/brain/<conversation-id>/wireframe-vN.html` for side-pane preview—never inline `<agent-embed>` for desktop layouts) AND archive to `docs/.cgspec/prototypes/wireframe-vN.html` **before** calling `ask_question` on layout choices. Never overwrite prior iterations.
-3. **2-Phase Verification & Independent Adversarial Critic Loop (`while verdict != PASS`):**
-   - **Phase A (Exhaustive Self-Verification First):** Run `visual_audit.py`, open the HTML in headless Chrome across `1440x900` and `1180x800`, click through every interactive state (`Preview`, `Edit Mode`, `Diff + Toggle Back`, `Folder View`, `Full Repo Code View`, `Drawer Closed`), inspect every screenshot via `view_file`, and fix all violations of the 8 Structural UI Coherence Laws in [`references/quality-rubric.md`](references/quality-rubric.md).
-   - **Phase B (Facts-Only Adversarial Critic Subagent Loop):** Before showing or claiming work done to the user, spawn an independent `Adversarial UX & Spec Critic` subagent (`invoke_subagent`, `TypeName: "self"`) using the **Facts-Only Prompt** in [`references/quality-rubric.md`](references/quality-rubric.md#part-3-phase-b-facts-only-adversarial-critic-subagent-loop-while-verdict--pass). Loop (`Fix defects -> Re-run Phase A -> send_message to Critic`) **while `verdict != PASS`**. Never present to the user until the Critic returns `VERDICT: PASS (0 defects)`.
-4. **Design Stash Protocol (Mid-Design Scope Pivots):** If a user spark requires reopening Stage 1 (`01-INTENT`/`02-OOUX`), snapshot active prototypes to `docs/.cgspec/prototypes/stash/<timestamp>-<name>/`, log the pause in `.memlog.md`, re-lock Stage 1, and perform a Design Delta Assessment upon returning.
+### 2.2 Stage 2 Execution Invariants (5-Tier Insulated Swarm)
+1. **Main Agent Insulation (`cgspec-inspector` Only):**
+   - **Never spawn multiple builders directly from the Main Agent** (which leaks raw subagent completions into the user's primary chat window) and **never spawn `type="research"` for builders or auditors**.
+   - The Main Agent registers and invokes **ONLY ONE** child subagent: [`cgspec-inspector`](../../agents/cgspec-inspector.md) (`enable_write_tools=True`, `enable_subagent_tools=True`), passing cold factual paths (`01-INTENT.md`, `02-OOUX.md`, `03-EXPERIENCE.md`, `quality-rubric.md`).
+2. **Tier 2 Peer-to-Peer Builders (`cgspec-builder` $\times K$) + Phase A Self-Verification:**
+   - `cgspec-inspector` spawns $K$ [`cgspec-builder`](../../agents/cgspec-builder.md) agents (1 per screen or surface) and distributes a **Builder Peer Directory** via `send_message` so builders coordinate shared header chrome, CSS tokens, and cross-screen navigation links laterally.
+   - Builders write strictly to modular files on disk (never dumping raw HTML into chat messages) and execute **Phase A Exhaustive Self-Verification** (`visual_audit.py` exit `0` + `view_file` inspection of `1440x900`, `1180x800`, and `375x812` PNGs + `01-INTENT`/`02-OOUX` check) before notifying `cgspec-inspector`.
+3. **Tier 3 Peer-to-Peer Unit Adversaries (`cgspec-unit-adversary` $\times K$) — Inner `while (unit_verdict_i != PASS)` Loop:**
+   - `cgspec-inspector` pairs each `Builder_i` with a dedicated [`cgspec-unit-adversary`](../../agents/cgspec-unit-adversary.md) given **cold facts only** (file path, screenshot paths, `01..03` spines, `quality-rubric.md`) and an **Adversary Peer Directory** (`send_message`) to verify cross-screen parity.
+   - Each `(Builder_i, Unit Adversary_i)` pair loops (`Fix -> Phase A Self-Verify -> Re-Audit`) **while `unit_verdict_i != PASS`**.
+4. **Tier 4 Chief Global Adversarial Gatekeeper (`cgspec-chief-adversary` $\times 1$) — Outer `while (global_verdict != PASS)` Loop:**
+   - Only when **all $K$ Unit Adversaries** report `PASS (0 defects)` does `cgspec-inspector` invoke [`cgspec-chief-adversary`](../../agents/cgspec-chief-adversary.md) to audit the integrated multi-screen build, end-to-end user journeys, and version non-destruction (`v1..vN`). If `GLOBAL_VERDICT == FAIL`, `cgspec-inspector` routes defects back to the swarm until `GLOBAL_VERDICT: PASS (0 defects)`.
+5. **Tier 5 Human Validation & Deep Root-Cause Interview (`If User Says No`):**
+   - Only after `GLOBAL_VERDICT: PASS` does `cgspec-inspector` return to the Main Agent to present the verified build (`UserFacing: true` in `<appDataDir>/brain/<conversation-id>/wireframe-vN.html` + `docs/.cgspec/prototypes/wireframe-vN.html`).
+   - **If the user says "No" or rejects any aspect:** The Main Agent **MUST NOT** immediately re-run `cgspec-inspector`. It must first interview the user to deeply understand *why*, record the root cause in `docs/.memlog.md`, update `01-INTENT.md` / `02-OOUX.md` / `03-EXPERIENCE.md`, confirm the updated spine with the user, and only then re-invoke `cgspec-inspector`.
 
 ---
 
@@ -50,9 +58,9 @@ Load only the playbook and references for the active step:
 ## 4. Exit Gate
 Before presenting any wireframe/prototype or entering Stage 3 (`04-ARCHITECTURE.md`), confirm:
 1. **Phase A Self-Verification:** `visual_audit.py` + `doctor.py --strict-emojis` (`0 errors`) + multi-state screenshots inspected via `view_file`.
-2. **Phase B Adversarial Critic Loop:** Independent `Adversarial UX & Spec Critic` subagent returned `VERDICT: PASS (0 defects)`.
+2. **Inner & Outer Adversarial Loops:** All $K$ [`cgspec-unit-adversary`](../../agents/cgspec-unit-adversary.md) agents returned `UNIT_VERDICT: PASS (0 defects)` AND [`cgspec-chief-adversary`](../../agents/cgspec-chief-adversary.md) returned `GLOBAL_VERDICT: PASS (0 defects)`.
 3. **Human Lock:** Explicit user approval recorded in `docs/.memlog.md`.
 ```bash
-python3 docs/.cgspec/scripts/visual_audit.py docs/.cgspec/prototypes/prototype-v0.1.html --screenshot-dir /tmp/cgspec-shots
+python3 docs/.cgspec/scripts/visual_audit.py --html docs/.cgspec/prototypes/prototype-v0.1.html --screenshot-dir /tmp/cgspec-shots
 python3 docs/.cgspec/scripts/doctor.py --repo . --strict-emojis
 ```
