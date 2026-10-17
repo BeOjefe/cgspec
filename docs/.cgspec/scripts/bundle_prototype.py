@@ -76,6 +76,19 @@ def main() -> int:
         shutil.copy2(out_path, mirror_path)
         print(f"[PASS] Mirrored to {mirror_path}")
 
+    # Auto-register Antigravity artifact metadata if output path is inside a brain directory
+    if "/brain/" in str(out_path):
+        import json, datetime
+        meta_file = out_path.with_name(f"{out_path.name}.metadata.json")
+        if not meta_file.exists():
+            meta_data = {
+                "summary": f"CGSpec Compiled Prototype: {out_path.stem}",
+                "updatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "userFacing": True,
+            }
+            meta_file.write_text(json.dumps(meta_data, indent=2), encoding="utf-8")
+            print(f"[PASS] Auto-registered artifact metadata: {meta_file.name}")
+
     return 0
 
 

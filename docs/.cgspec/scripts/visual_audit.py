@@ -333,6 +333,19 @@ def main() -> int:
             print(f"  [SHOT] Captured screenshot: {s} (Inspect via view_file!)")
 
     print("-" * 60)
+    # Auto-register .metadata.json if target is located inside an Antigravity brain artifact directory
+    if "/brain/" in str(target) and not target.with_suffix(".html.metadata.json").exists():
+        import json, datetime
+        meta_file = target.with_name(f"{target.name}.metadata.json")
+        if not meta_file.exists():
+            meta_data = {
+                "summary": f"CGSpec Verified HTML Prototype: {target.stem}",
+                "updatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "userFacing": True,
+            }
+            meta_file.write_text(json.dumps(meta_data, indent=2), encoding="utf-8")
+            print(f"  [META] Auto-registered Antigravity artifact metadata -> {meta_file.name}")
+
     if errors:
         print(f"FAILED: {len(errors)} structural UI error(s) detected. Fix before running Phase B Adversarial Critic.")
         return 1
