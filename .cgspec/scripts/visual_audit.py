@@ -124,6 +124,14 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
             f"Found fixed pixel height class(es) {set(short_height_matches)}. Ensure the root workspace uses 'flex-1 min-h-0' instead of fixed short heights that leave dead space."
         )
 
+    # Check for narrow fixed max-width containers that leave dead margins in multi-column desktop layouts
+    if ("aside" in content or "left-rail" in content or "<nav" in content):
+        narrow_matches = re.findall(r"\bmax-w-(?:[234]xl|md|lg)\b", content)
+        if narrow_matches and ("main" in content or "center" in content or "gh-file-box" in content):
+            warnings.append(
+                f"Found narrow container max-width {set(narrow_matches)}. Fluid Canvas Invariant: primary reading/editing/analytical work surfaces should use fluid/broad containers (e.g. 'w-full flex-1 max-w-7xl') to prevent excessive dead gutters on desktop viewports."
+            )
+
     # 4. Check for draggable split resizers in multi-column desktop wireframes
     if ("aside" in content or "left-rail" in content or "right-inspector" in content) and "col-resize" not in content:
         errors.append(
@@ -141,7 +149,7 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
 
     counts = Counter(norm for norm, _ in normalized_labels)
     for norm, count in counts.items():
-        if count > 1 and norm in ("back to document", "inspector", "propose edit", "propose pr", "git sync"):
+        if count > 1 and norm in ("edit", "back to document", "inspector", "propose edit", "propose pr", "git sync"):
             raw_examples = [orig for n, orig in normalized_labels if n == norm]
             errors.append(
                 f"Duplicate control label (Law of One Control Per Action): '{norm}' appears {count} times ({raw_examples}). Consolidate into a single control."
