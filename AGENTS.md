@@ -39,8 +39,8 @@
    - **Deterministic Sprout Trigger:** An agent may ONLY sprout a file into a directory if:
      - **Condition A:** The spine file exceeds 500 lines on disk (`wc -l > 500`), OR
      - **Condition B:** The project advances to `v0.2+` with multiple concurrent squads.
-   - **Numeric Invariant:** Sprouted directories **MUST retain the two-digit numerical prefix** to maintain strict ordering:
-     `docs/01-INTENT.md` $\rightarrow$ `docs/01-INTENT/`, `docs/02-OOUX.md` $\rightarrow$ `docs/02-OOUX/`, `docs/03-EXPERIENCE.md` $\rightarrow$ `docs/03-EXPERIENCE/`, `docs/04-ARCHITECTURE.md` $\rightarrow$ `docs/04-ARCHITECTURE/`.
+    - **Numeric Invariant:** Sprouted directories **MUST retain the two-digit numerical prefix** to maintain strict ordering:
+      `docs/01-INTENT.md` -> `docs/01-INTENT/`, `docs/02-OOUX.md` -> `docs/02-OOUX/`, `docs/03-EXPERIENCE.md` -> `docs/03-EXPERIENCE/`, `docs/04-ARCHITECTURE.md` -> `docs/04-ARCHITECTURE/`.
 
 9. **Law 9 — Strict Council Subagent Tree (Main Agent Spawns ONLY Supervisor):**
    - When executing `/cgspec-council`, the **Main Agent MUST remain in the chat with the user** at all times and provide a high-signal chat briefing (Locked Question, Tension, Stakes, Target Invariant).
@@ -51,7 +51,7 @@
 
 10. **Law 10 — Phased Design Locking Funnel (No Jumping Directly to Code):**
     - High-craft UI/UX cannot be generated in a single prompt. Design is at the absolute center of CGSpec. Every screen must proceed through 5 locked, versioned stages before final scaffolding:
-      1. **Stage 1: Macro Spatial Zoning & Zero-Color Wireframe:** Define where parts and zones live on screen (Top Header Bar, Left Navigation Rail, Center Workspace, Right Contextual Drawer) using clean ASCII layout blockouts or visual wireframes in an Artifact. Zero colors, zero themes, zero micro-behaviors yet. The human must see and approve *where things are placed* before discussing how they behave!
+      1. **Stage 1: Macro Spatial Zoning & Zero-Color Wireframe:** Define where parts and zones live on screen (Top Header Bar, Left Navigation Rail, Center Workspace, Right Contextual Drawer) using clean declarative diagram subgraphs (Mermaid `flowchart TB`, D2, PlantUML) or visual wireframes in an Artifact. Zero colors, zero themes, zero micro-behaviors yet. The human must see and approve *where things are placed* before discussing how they behave!
       2. **Stage 2: Tactile Ergonomics & Direct Manipulation:** Once zones are placed, define how hands navigate between zones and how editing operates inside the primary workspace (e.g. inline editing vs split preview, keyboard shortcuts, command palette).
       3. **Stage 3: Design Tokens & Visual Direction:** Lock typography pairing (Display vs Sans vs Monospace), canvas atmospheric texture, and signature brand anchor (1 dominant primary). Recorded in `docs/03-EXPERIENCE.md`.
       4. **Stage 4: Component & State Matrix:** Define all 7 lifecycle states (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial`) with realistic worst-case edge data. Locked in `docs/03-EXPERIENCE.md`.

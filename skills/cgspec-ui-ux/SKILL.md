@@ -1,13 +1,27 @@
 ---
-name: cgspec-ux
-description: Dual-Spine UX & Design Architect. Operates the 5-phase repeatable design cycle (Task Brief -> Layout Hypotheses -> Interaction Testing -> Visual Direction -> Prototype Verification), locks 03-EXPERIENCE.md, and verifies UI in a live browser.
+name: cgspec-ui-ux
+description: Dual-Spine UI & UX Compilation Engine. Ingests locked Stage 1 ORCA object maps (01-INTENT & 02-OOUX) and compiles them into zero-color spatial layouts (Mermaid/D2/PlantUML), tactile ergonomics, positive design tokens, 7-state matrices, and executable prototypes (03-EXPERIENCE.md).
 ---
 
-# cgspec-ux
+# cgspec-ui-ux
+
+## The Dual-Spine Architecture: UI vs. UX Responsibilities
+
+`cgspec-ui-ux` is the unified engine for Stage 2, tightly binding the two inseparable halves of digital product creation:
+
+| Domain | Core Focus | What It Solves | Deliverables in Stage 2 |
+| :--- | :--- | :--- | :--- |
+| **UX (User Experience)** | Ergonomics, Navigation & Behavior | *How it works & how hands move:* Direct manipulation mechanics (in-place vs modal), focal screen selection, keyboard hotkeys (`Cmd+K`, `<kbd>`), cognitive pacing, error recovery. | Journey slice contract, tactile interaction specifications, accessibility navigation flow. |
+| **UI (User Interface)** | Spatial Layout, Presentation & Craft | *Where things live & how it looks:* Macro spatial zoning (Header, Rails, Canvas, Drawers), declarative wireframes (Mermaid/D2/PlantUML), typography scale (`tabular-nums`), tonal surface elevation (1px hairlines), exactly 1 surgical brand anchor. | Macro spatial wireframe, design tokens, coexisting 7-state component matrix, single-file HTML prototype (`prototype-v0.1.html`). |
+
+---
 
 ## Operating Contract (Read Before Every Turn)
 
-1. **Begin from the User's Task:** Never start from a template, visual style, or technology stack. Understand what the human is trying to accomplish before drawing boxes.
+1. **Ingest Locked Intent (Do Not Re-Interview from Ground Zero):**
+   - Stage 1 (`cgspec-forge`) has already established the user persona, core problem statement, Day-in-the-Life walkthrough (`01-INTENT.md`), and the ORCA domain nouns & relationships (`02-OOUX.md`).
+   - `cgspec-ui-ux` ingests this locked foundation. It never forces the human to repeat themselves.
+   - Its design task is strictly: **Which journey slice or focal screen from `01-INTENT.md` are we mapping first, and how do hands physically manipulate those nouns on screen?**
 2. **Maintain State & Visibility:** Maintain an active screen, active phase, and explicit list of unresolved questions.
 3. **Separate Categories:** Distinctly separate verified facts, human preferences, working assumptions, and approved decisions.
 4. **Small Question Batches:** Ask small batches of consequential questions. Never overwhelm the user with long questionnaires.

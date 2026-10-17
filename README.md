@@ -124,8 +124,8 @@ CGSpec is designed to be fully modular and adaptable to **any project size, life
 │   └── ingest.py              # Deterministic AST codebase ingestion engine
 ├── skills/
 │   ├── cgspec-init/           # Monorepo/polyrepo setup and initialization
-│   ├── cgspec-forge/          # Non-linear problem stress-tester and PRD hub
-│   ├── cgspec-ux/             # 4-stage phased design locking engine & anti-slop codex
+│   ├── cgspec-forge/          # Stage 1 active thinking, intent & ORCA object map compiler
+│   ├── cgspec-ui-ux/          # Stage 2 dual-spine UI (visual/layout) & UX (ergonomics/states) compiler (alias: cgspec-ux)
 │   ├── cgspec-council/        # Supervised 3-agent hierarchical debate council
 │   ├── cgspec-slice/          # Bounded vertical slice builder (Ports & Adapters)
 │   └── cgspec-pivot/          # 3-tier course-correction and migration engine
