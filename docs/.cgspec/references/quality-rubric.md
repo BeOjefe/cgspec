@@ -33,7 +33,8 @@ html, body { height: 100%; min-height: 100vh; margin: 0; overflow: hidden; displ
 - **Click-to-Fold Rail:** Clicking the active icon in the primary navigation rail (or double-clicking a splitter) collapses/restores the adjacent panel.
 - **Multi-Root Workspace Explorer:** Prefer collapsible workspace roots with inline hover actions and a filter/pin icon menu (VS Code / Antigravity Explorer pattern) over clunky top-bar scope dropdowns.
 
-### 5. Unbroken Tree Hierarchy (Continuous Guide Lines)
+### 5. Unbroken Tree Hierarchy (Continuous Guide Lines & Progressive Indentation)
+- **Progressive Container Indentation:** Every structural level (Workspace Root -> Mounted Repository/Folder -> Subdirectory -> File) MUST have progressive left indentation (at least 12px-16px, e.g. `ml-2 pl-3` or `pl-4`) with an explicit vertical guide line (`border-l` or `border-l-2`). Child folders and mounts must never align flush on the exact same left margin as their parent container header.
 - Render continuous vertical (`border-left: 1px solid`) and horizontal (`::before`) connector lines from parent folders to children (KDE Dolphin pattern).
 - Never prefix tree nodes with artificial numbers (`1. Folder`) and never place multi-line subtitle blocks *between* a parent folder and its child tree (place optional descriptions as a compact eyebrow *above* the folder or in a hover tooltip).
 - Support direct row drag-and-drop for ordering instead of noisy `⋮⋮` handles or up/down arrows.
@@ -41,7 +42,8 @@ html, body { height: 100%; min-height: 100vh; margin: 0; overflow: hidden; displ
 ### 6. Unified Domain Taxonomy
 - Group sibling domain entities of the same archetype (e.g. extensions, templates, skills, connectors, pins) into a single unified filterable hub rather than scattering them across 5 separate top-level navigation tabs.
 
-### 7. Zero Schema Leakage, Zero Emojis, Zero Meta-Tutorial Text & Clean Preview vs Edit Mode
+### 7. Zero Schema Leakage, Plain English Jargon Shield, Zero Emojis & Clean Preview vs Edit Mode
+- **Law 6 Plain-English Jargon Shield (Zero Naked Cryptographic Acronyms):** Never present raw internal cryptographic, database, or architecture acronyms (e.g. `DEK`, `KEK`, `MEK`, `OOUX`, `DDL`, `AST`) in customer-facing badges, tooltips, or buttons. End users do not understand internal key-management jargon. Use plain human language: `"Private Note"`, `"Encrypted Note"`, `"Shred Key & Notes"`, `"Personal Vault"`.
 - **Pure Inline `<svg>` Icons Only:** Never use Unicode emojis or pictographs (`📌`, `🔒`, `📄`, `👁️`, `⚙`, `↻`) in HTML wireframes or prototypes. Every icon must be a clean inline `<svg>`.
 - **Zero Self-Referential Wireframe Commentary:** Never place meta-tutorial boxes inside a wireframe explaining what changed in `v6` (`"1. Fixed Top Header..."`, `"2. Every File & Folder is Live"`). Populate wireframes strictly with realistic domain content.
 - **Rendered Preview vs Interactive Edit Mode:** In Document Preview mode, render clean typography (never show raw `# ` hashes or `**` asterisks in headings/paragraphs). Clicking `Edit` on a `.md` document must switch to an actual interactive editor (`<textarea>` with `Save / Propose Change` and `Cancel`).

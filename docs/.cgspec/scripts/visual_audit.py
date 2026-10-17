@@ -237,6 +237,28 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
                     err_snip = " | ".join(res.stderr.strip().splitlines()[:3])
                     errors.append(f"Inline <script> #{idx} JavaScript Syntax Error (node --check): {err_snip}")
 
+    # 12. Check for Naked Cryptographic / Engineering Acronyms in User UI (Law 6: Plain English First, Jargon Second)
+    # Flags raw DEK, KEK, MEK, OOUX, DDL displayed in badges, buttons, tooltips, or headings without plain English explanation
+    naked_jargon_found = []
+    for m in re.finditer(r">\s*(?:DEK|KEK|MEK|OOUX|DDL)\s*<", content):
+        naked_jargon_found.append(m.group(0))
+    for m in re.finditer(r"<button[^>]*>[^<]*\b(?:DEK|KEK)\b[^<]*</button>", content):
+        naked_jargon_found.append(m.group(0).strip())
+    if naked_jargon_found:
+        errors.append(
+            f"Naked Cryptographic Acronym in User UI (Law 6 Violation): Found bare internal key-management jargon in user-facing UI: {naked_jargon_found[:4]}. Use plain human language ('Encrypted Note', 'Private Key', 'Shred Note & Key') instead of unexplained engineering acronyms."
+        )
+
+    # 13. Multi-Root Workspace Tree Indentation Check (Law 5: Progressive Container Indentation)
+    # Detects workspace header rows (.ws-header-row) followed by mount containers that lack left indentation or border-l guide lines
+    ws_blocks = re.findall(r'<div[^>]*class="[^"]*ws-header-row[^"]*"[^>]*>.*?</div>\s*<div\s+id="([^"]+)"\s+class="([^"]*)"', content, re.S)
+    for ws_id, cls in ws_blocks:
+        has_indent = any(k in cls for k in ("pl-", "ml-", "border-l", "indent", "ws-body"))
+        if not has_indent:
+            warnings.append(
+                f"Flat Workspace Tree Hierarchy (Law 5): Container '{ws_id}' under .ws-header-row lacks progressive indentation ('pl-3', 'ml-2', 'border-l'). Child mounts will appear flush with the workspace header."
+            )
+
     return errors, warnings
 
 
@@ -281,16 +303,20 @@ def capture_screenshot(html_path: pathlib.Path, out_dir: pathlib.Path, extra_sta
         url, size, out_png = job
         cmd = [
             browser,
-            "--headless",
+            "--headless=new",
             "--disable-gpu",
             "--no-sandbox",
+            "--virtual-time-budget=2000",
             f"--window-size={size}",
             f"--screenshot={out_png}",
             url,
         ]
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=25)
-        if res.returncode == 0 and out_png.exists():
-            return out_png
+        try:
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=15)
+            if res.returncode == 0 and out_png.exists():
+                return out_png
+        except subprocess.TimeoutExpired:
+            pass
         return None
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
