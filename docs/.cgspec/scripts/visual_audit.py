@@ -221,6 +221,22 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
             f"Raw Markdown Syntax in Preview Violation: Found literal '# ' or '**' inside rendered heading(s) {raw_md_headings[:4]}. Preview mode must render clean typography; show raw Markdown syntax only inside the active Edit mode <textarea>."
         )
 
+    # 11. Inline <script> JavaScript Syntax Check (via node --check)
+    node_bin = shutil.which("node")
+    if node_bin:
+        import tempfile
+        scripts = re.findall(r"<script(?![^>]*src=)[^>]*>(.*?)</script>", content, re.S | re.I)
+        for idx, js_code in enumerate(scripts, 1):
+            if not js_code.strip():
+                continue
+            with tempfile.NamedTemporaryFile("w", suffix=".js", delete=True, encoding="utf-8") as tf:
+                tf.write(js_code)
+                tf.flush()
+                res = subprocess.run([node_bin, "--check", tf.name], capture_output=True, text=True, timeout=10)
+                if res.returncode != 0:
+                    err_snip = " | ".join(res.stderr.strip().splitlines()[:3])
+                    errors.append(f"Inline <script> #{idx} JavaScript Syntax Error (node --check): {err_snip}")
+
     return errors, warnings
 
 
