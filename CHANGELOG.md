@@ -4,6 +4,17 @@ All notable changes, architectural invariants, and skill evolutions to `cgspec` 
 
 ---
 
+## [v0.1.5] — 2026-10-17
+### Fixed
+- **Law 9 Single-Supervisor Delegation Invariant:** Permanently eliminated debater subagents appearing in the user's main chat window. In Antigravity, any subagent spawned directly by the Main Agent sends its turn completion message back to the primary chat. The Main Agent is now **strictly forbidden from putting debater subagents in its `Subagents` array**. The Main Agent spawns **EXACTLY ONE subagent: `Council Supervisor & Inspector`**. The Supervisor executes the 3 orthogonal lenses (`debater-1`, `debater-2`, `debater-3`) directly in the disk workspace and streams only 3-line status updates to the Main Agent.
+- **Zero Decorative Emoji Policy:** Codified a strict rule in `AGENTS.md` and skills forbidding AI agents from decorating chat text, headers, and bullet points with emojis (`🏛️`, `📌`, `⚖️`, `👥`, `📍`, `✅`). Enforces calm, clean, senior engineering typography.
+
+### Added
+- **Law 10 Phased Design Locking Funnel:** Banned jumping directly from a user prompt to final interactive code. Mandated a 4-stage locked design funnel (Stage 1: OOUX & Spatial Zoning $\to$ Stage 2: Tokens & Aesthetic Direction $\to$ Stage 3: 7-State Component Matrix $\to$ Stage 4: Versioned Prototype Baseline), conducting one-question-at-a-time interviews.
+- **Four Breakthrough Taste Archetypes:** Codified in `skills/cgspec-ux/references/anti-slop-codex.md` (Traycer Luxury, Langfuse Calibrated Blueprint, UX Pilot Architectural Atelier, Cloudflare Daylight Infrastructure).
+
+---
+
 ## [v0.1.4] — 2026-10-16
 ### Fixed
 - **Council Subagent Isolation (Silent Debater Protocol):** Eliminated chat pollution where Debaters 1, 2, and 3 sent direct completion messages to the Main Agent. Debaters now write exclusively to disk (`docs/.working/council/COUNCIL-NNN-<slug>/debater-k-round-0k.md`) and remain completely silent in chat.

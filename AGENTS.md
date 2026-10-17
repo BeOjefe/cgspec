@@ -41,21 +41,24 @@
    - **Numeric Invariant:** Sprouted directories **MUST retain the two-digit numerical prefix** to maintain strict ordering:
      `docs/01-PRD.md` $\rightarrow$ `docs/01-PRD/`, `docs/02-NOUNS-AND-FLOWS.md` $\rightarrow$ `docs/02-NOUNS-AND-FLOWS/`, `docs/03-ARCHITECTURE.md` $\rightarrow$ `docs/03-ARCHITECTURE/`.
 
-9. **Law 9 — Real 4-Subagent Council (Main Agent Stays with Human):**
-   - When executing `/cgspec-council`, the **Main Agent MUST remain in the chat with the user** at all times and provide a high-signal chat briefing (Locked Question, Tension, Stakes).
-   - The Main Agent **MUST call `invoke_subagent` to spawn 4 real subagents in parallel**:
-     1. `Council Supervisor & Inspector` (Chairs debate, coordinates rounds, logs to `docs/.working/council/COUNCIL-NNN-<slug>/`, and sends 3-line updates to Main Agent).
-     2. `Debater 1 — Systems & Modularity`
-     3. `Debater 2 — Security & Edge Cases`
-     4. `Debater 3 — Pragmatic DX & Ship Speed`
-   - **Silent Debater Protocol (Zero Chat Spam):** Debaters write their arguments directly to disk (`docs/.working/council/.../debater-k-round-01.md`) and must never message the Main Agent or user. Only the Council Supervisor communicates with the Main Agent.
-   - Single-agent simulation (typing fake dialog into markdown files) is **strictly prohibited**.
+9. **Law 9 — Strict Council Subagent Tree (Main Agent Spawns ONLY Supervisor):**
+   - When executing `/cgspec-council`, the **Main Agent MUST remain in the chat with the user** at all times and provide a high-signal chat briefing (Locked Question, Tension, Stakes, Target Invariant).
+   - **Single Subagent Invariant:** The Main Agent calls `invoke_subagent` for **EXACTLY ONE subagent**: `Council Supervisor & Inspector`.
+   - **Zero Debater Subagents in Main Agent:** The Main Agent is **strictly forbidden from placing debaters in its subagents array**. When debater subagents are spawned directly by the Main Agent, their turn completions arrive as unwanted message bubbles in the user's primary chat window.
+   - The **Supervisor** executes the 3 orthogonal lenses (`Systems`, `Security`, `Pragmatic DX`) in the background council workspace on disk (`debater-1-round-0k.md`, `debater-2-round-0k.md`, `debater-3-round-0k.md`), synthesizes each round (`round-0k.md`), and relays ONLY 3-line status updates back to the Main Agent.
+   - **Zero Decorative Emojis:** The Main Agent and Supervisor communicate using calm, clean engineering typography without decorative emojis.
 
-
-
+10. **Law 10 — Phased Design Locking Funnel (No Jumping Directly to Code):**
+    - High-craft UI/UX cannot be generated in a single prompt. Design is at the absolute center of CGSpec. Every screen must proceed through 4 locked, versioned stages before final scaffolding:
+      1. **Stage 1: OOUX & Spatial Zoning (Low-Fi):** Define core nouns, object relationships, and spatial canvas zones (Header, Nav, Master Workspace, Detail Drawer). Locked in `docs/.working/prototypes/wireframes.excalidraw` or ASCII blockout.
+      2. **Stage 2: Design Tokens & Visual Direction:** Lock typography pairing (Display vs Sans vs Monospace), canvas atmospheric texture, and signature brand anchor (1 dominant primary). Recorded in `docs/04-DESIGN.md`.
+      3. **Stage 3: Component & State Matrix:** Define all 7 lifecycle states (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial`) with realistic worst-case edge data. Locked in `docs/05-EXPERIENCE.md`.
+      4. **Stage 4: Interactive Prototype Baseline (`prototype-v0.1.html`):** Single-file executable HTML with working state switcher and real keyboard navigation. Never mutate in place; versioned as `prototype-v0.1.html` with ADR experiments as `prototype-ADR-NNN.html`.
+    - **One-Question-at-a-Time Interview:** The agent must interview the user on layout, flow, and taste decisions one question at a time (via `ask_question`), locking each decision into `docs/.memlog.md` with tags `lock,ux`.
 
 ## 2. Universal Engineering & Communication Rules
 - **Language:** English only.
+- **Zero Decorative Emoji Spam:** Never decorate chat headers, bullet points, or paragraphs with decorative emojis (📍, ⚖️, 👥, 🏛️, 📦, 🟢, 🔴, ⚠️, 🚀, 💡, ✨). Communicate with clean, calm, professional engineering typography (clean Markdown headings `#`, `##`, `###` and standard `-` bullets).
 - **Anti-Jargon & No Fictional Names:** Never invent abstract tier codes (`L1/L2/L3`) or made-up human persona names (`Sam`, `Maya`, `Mary`). Always use explicit functional actors (`Organization Owner`, `Project Lead`, `Developer`, `AI Agent`) and explicit permissions (`Owner` + `read | invoke | propose_edit | write | share | admin`).
 - **Tooling Defaults:** Use `uv` for Python and `bun`/`pnpm` for TypeScript/JS.
 - **Strict Modularity:** Enforce Ports & Adapters. Never allow UI components to import database or crypto clients directly.
