@@ -20,16 +20,16 @@ CGSpec solves this through a non-linear, dual-spine architecture governed by str
   Human Director / Architect
               │
               ▼
-   Stage 1: Intent, User Journey & Conceptual OOUX Nouns (docs/01-PRD.md, docs/02-NOUNS-AND-FLOWS.md)
+   Stage 1: Intent, User Journey & Conceptual OOUX Nouns (docs/01-INTENT.md, docs/02-OOUX.md)
               │
               ▼
-   Stage 2: Adaptive UI/UX & Interactive Prototype (docs/04-DESIGN.md, docs/05-EXPERIENCE.md)
+   Stage 2: Adaptive UI/UX & Interactive Prototype (docs/03-EXPERIENCE.md)
               │
               ▼
-   Stage 3: Physical Architecture, DDL & System Topology (docs/03-ARCHITECTURE.md)
+   Stage 3: Physical Architecture, DDL & System Topology (docs/04-ARCHITECTURE.md)
               │
               ▼
-   Stage 4: Ports & Adapters Scaffolding Slices (docs/slices/)
+   Stage 4: Delivery Slices, Verification & Ingest Gates (docs/05-DELIVERY.md)
 ```
 
 ---
@@ -59,6 +59,9 @@ Every significant technical choice must produce a formal ADR under `docs/adr/ADR
 ### 5. Automated Spec Integrity Hook (`cgspec doctor`)
 Specification drift is eliminated deterministically. The built-in doctor utility (`python3 scripts/doctor.py`) validates that all 6 spines exist, memory log entries maintain strict hash continuity (`M-001` .. `M-NNN`), all accepted ADRs are registered, and zero orphan concepts exist before any milestone is closed.
 
+### 6. Disk-First Immediate Capture (Law 11)
+Chat context is ephemeral and lost across compacting or session boundaries; disk is permanent truth. Whenever an idea, spark, decision, consensus, or user preference emerges during a turn, the agent must commit it to disk (`docs/00-INBOX.md`, `docs/.memlog.md`, or the active spine) in the exact same turn before concluding its execution. The human architect must never bear the burden of asking "did you write that down?".
+
 ---
 
 ## Repository Structure
@@ -70,7 +73,8 @@ Specification drift is eliminated deterministically. The built-in doctor utility
 ├── CHANGELOG.md               # Versioned methodology evolutions
 ├── scripts/
 │   ├── memlog.py              # CLI append-only memory logger
-│   └── doctor.py              # Deterministic spec linter & integrity hook
+│   ├── doctor.py              # Deterministic spec linter & integrity hook
+│   └── ingest.py              # Deterministic AST codebase ingestion engine
 ├── skills/
 │   ├── cgspec-init/           # Monorepo/polyrepo setup and initialization
 │   ├── cgspec-forge/          # Non-linear problem stress-tester and PRD hub
@@ -78,14 +82,14 @@ Specification drift is eliminated deterministically. The built-in doctor utility
 │   ├── cgspec-council/        # Supervised 3-agent hierarchical debate council
 │   ├── cgspec-slice/          # Bounded vertical slice builder (Ports & Adapters)
 │   └── cgspec-pivot/          # 3-tier course-correction and migration engine
-└── docs/                      # The 5 Canonical Spines
+└── docs/                      # The 5 Canonical Spines (Reformed CGSpec v2)
     ├── 00-INDEX.md            # Live project state, ADR registry, and slice roadmap
     ├── 00-INBOX.md            # Spark parking lot for out-of-scope ideas (v0.2+)
-    ├── 01-PRD.md              # Problem definition, core features, day-in-the-life
-    ├── 02-NOUNS-AND-FLOWS.md  # Domain objects, lifecycle states, user workflows
-    ├── 03-ARCHITECTURE.md     # Ports & adapters, system topologies, contracts
-    ├── 04-DESIGN.md           # Aesthetic direction, design tokens, typography
-    ├── 05-EXPERIENCE.md       # Screen inventory, 7-state matrix, prototype links
+    ├── 01-INTENT.md           # Problem definition, intent, scope, and day-in-the-life
+    ├── 02-OOUX.md             # Sophia Prater domain mental model, nouns, and 6 permissions
+    ├── 03-EXPERIENCE.md       # Adaptive zoning, design tokens, 7-state matrix, prototype links
+    ├── 04-ARCHITECTURE.md     # Ports & adapters, system topologies, physical DDL schemas
+    ├── 05-DELIVERY.md         # Bounded vertical slices, verification gates, AST ingestion
     ├── .memlog.md             # Append-only chronological decision ledger
     └── adr/                   # Formal Architecture Decision Records (ADR-NNN)
 ```

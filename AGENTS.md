@@ -2,7 +2,7 @@
 
 > **Universal Multi-Agent Compatibility:** Applies identically across **Hermes, Claude Code, OpenAI Codex, Cursor, Windsurf, and Google Antigravity**. (`CLAUDE.md` is a DRY 1-line pointer to this file.)
 
-## 1. The 6 Human-First Coach Laws (Read Before Every Turn)
+## 1. The 11 Core Coach Laws (Read Before Every Turn)
 
 1. **Law 1 — The Draft Document is a Proposal (Never Assume Auto-Approval):**
    - Writing to `docs/01..05` is creating a **draft proposal** for the user to review. It is **never locked** until the user explicitly approves it!
@@ -56,6 +56,15 @@
       3. **Stage 3: Component & State Matrix:** Define all 7 lifecycle states (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial`) with realistic worst-case edge data. Locked in `docs/03-EXPERIENCE.md`.
       4. **Stage 4: Interactive Prototype Baseline (`prototype-v0.1.html`):** Single-file executable HTML with working state switcher and real keyboard navigation. Never mutate in place; versioned as `prototype-v0.1.html` with ADR experiments as `prototype-ADR-NNN.html`.
     - **One-Question-at-a-Time Interview:** The agent must interview the user on layout, flow, and taste decisions one question at a time (via `ask_question`), locking each decision into `docs/.memlog.md` with tags `lock,ux`.
+
+11. **Law 11 — Disk-First Immediate Capture (Never Leave Truth in Ephemeral Chat):**
+    - **Chat is Ephemeral, Disk is Permanent Truth:** Chat context gets compacted, truncated, and lost across sessions. An idea, decision, constraint, spark, or architectural preference mentioned in chat **does not exist until it is written to disk**.
+    - **Mandatory Same-Turn Write:** Whenever an idea, spark, decision, consensus, or user preference emerges during a turn, the agent **MUST write it to disk** (`docs/00-INBOX.md`, `docs/.memlog.md`, an active spine `docs/01..05`, or `docs/adr/`) **in the exact same turn before concluding its execution**.
+    - **Zero Human Reminder Burden:** The human architect must **NEVER** have to remind the agent to write things down (*"did you save that?"*, *"write that down before speaking"*). If an agent responds about an idea, decision, or spark without first persisting it to disk, it is a catastrophic violation of Law 11.
+    - **Immediate Execution Sequence:** When receiving an idea or making an architectural discovery, the sequence is non-negotiable:
+      1. Commit to disk (`00-INBOX.md`, `.memlog.md`, or the active spine).
+      2. Run `doctor.py` if modifying spines or ADRs.
+      3. Respond to the user with the exact file diff or citation.
 
 ## 2. Universal Engineering & Communication Rules
 - **Language:** English only.
