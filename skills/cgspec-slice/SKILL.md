@@ -1,6 +1,6 @@
 ---
 name: cgspec-slice
-description: Stage 4–7 Atomic Vertical Slice Builder. Generates bounded slice contracts from locked spines (01..05), enforces Ports & Adapters modularity, and runs tests + browser verification.
+description: Stage 4–7 Atomic Vertical Slice Builder. Use when generating bounded slice contracts (SLICE-NNN.md) from locked spines (01..05), implementing modular Ports & Adapters production code, or running automated tests and visual verification.
 ---
 
 # cgspec-slice

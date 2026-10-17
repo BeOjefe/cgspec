@@ -17,19 +17,21 @@ body { min-height: 600px; }
 html, body { height: 100%; min-height: 100vh; margin: 0; overflow: hidden; display: flex; flex-direction: column; }
 ```
 
-### 2. One Control Per Action (Zero Duplicate Triggers or Stacked Headers)
+### 2. One Control Per Action & Single Header Ownership
 - **Single Action Trigger:** Every state transition (`toggleDrawer()`, `enterDiffMode()`, `syncRepo()`) must have **one** canonical button. Never wire two visible buttons in the same view to the same action.
+- **Single Breadcrumb / Path Header:** Never render two competing file-path headers (e.g. a global top-bar breadcrumb AND a second center-pane path header below it). In multi-pane workspaces, the Left Activity Rail + Explorer span full height (`100vh`) on the left, and a **Single Top Header Bar** spans above the Center + Right Drawer columns.
+- **Stationary Icon-Only Panel Toggle:** Place the right-drawer/inspector toggle as a `16x16` layout-panel `<svg>` icon button with a `title` tooltip at the far right of the fixed Top Header Bar—never inside a shrinking center header where clicking the button shifts it `320px` away from the cursor, and never as a bulky text button (`History & Info`).
 - **Single Transforming Header:** When entering a comparison, diff, or sub-inspection view, transform the existing header bar in place (`<- Back to View`). Never stack two header bars with two `Back` buttons on top of each other.
 - **Unified History & Proposals:** Keep version history and change proposals in a single unified timeline/queue rather than splitting them across disconnected screens and drawers.
 
 ### 3. Context-Scoped Top & Side Chrome
 - Controls that belong to a specific workspace view (e.g. file-tree view switchers, path breadcrumbs, document mode toggles, contextual file inspectors) must **hide automatically** when the user switches to global views (`Home`, `Hub`, `Settings`).
-- Place tree-filtering switches (e.g. `Docs Only | Full Tree`) directly inside the tree header they filter, never in the global top bar.
+- Place tree-filtering switches (e.g. `Docs Only | Full Tree` or a filter icon button) directly inside the Explorer header they filter, never in the global top bar.
 
 ### 4. Direct Spatial Manipulation (Resizable Panes & Multi-Root Explorer)
 - **Draggable Splitters:** Multi-column desktop layouts must include `4px` interactive splitters (`cursor: col-resize`) between panes so truncated labels can be widened with the mouse.
 - **Click-to-Fold Rail:** Clicking the active icon in the primary navigation rail (or double-clicking a splitter) collapses/restores the adjacent panel.
-- **Multi-Root Workspace Explorer:** Prefer collapsible workspace roots with inline hover actions and a `...` visibility/pin menu (VS Code / Antigravity Explorer pattern) over clunky top-bar scope dropdowns.
+- **Multi-Root Workspace Explorer:** Prefer collapsible workspace roots with inline hover actions and a filter/pin icon menu (VS Code / Antigravity Explorer pattern) over clunky top-bar scope dropdowns.
 
 ### 5. Unbroken Tree Hierarchy (Continuous Guide Lines)
 - Render continuous vertical (`border-left: 1px solid`) and horizontal (`::before`) connector lines from parent folders to children (KDE Dolphin pattern).
@@ -39,7 +41,8 @@ html, body { height: 100%; min-height: 100vh; margin: 0; overflow: hidden; displ
 ### 6. Unified Domain Taxonomy
 - Group sibling domain entities of the same archetype (e.g. extensions, templates, skills, connectors, pins) into a single unified filterable hub rather than scattering them across 5 separate top-level navigation tabs.
 
-### 7. Zero Schema Identifier Leakage in Human UI
+### 7. Zero Schema Identifier Leakage & Zero Unicode Emojis in Human UI
+- **Pure Inline `<svg>` Icons Only:** Never use Unicode emojis or pictographs (`📌`, `🔒`, `📄`, `👁️`, `⚙`, `↻`) in HTML wireframes or prototypes. Every icon must be a clean inline `<svg>`.
 ```html
 <!-- BROKEN — leaking raw snake_case schema fields, PascalCase models, or UPPER_SNAKE_CASE enums -->
 <h3>Configure Mount (ProjectRepoMount)</h3>
@@ -68,10 +71,10 @@ html, body { height: 100%; min-height: 100vh; margin: 0; overflow: hidden; displ
 
 ---
 
-## Part 2: 5-Dimension Experience Scoring Rubric
+## Part 2: 5-Dimension Experience Scoring Rubric & Adversarial Interactive QA
 
-1. **Spatial Hierarchy & Chrome Coherence (25%):** Full-bleed viewport (`100vh`), context-scoped chrome, one control per action, zero stacked headers.
+1. **Spatial Hierarchy & Chrome Coherence (25%):** Full-bleed viewport (`100vh`), single top header ownership, stationary icon-only panel toggles, context-scoped chrome, one control per action, zero stacked headers.
 2. **Tactile Ergonomics & Direct Manipulation (25%):** Draggable `col-resize` splitters, unbroken tree guide lines, multi-root workspace pinning, zero modal friction.
-3. **Human Language & Typographic Craft (20%):** Zero `snake_case` / `UPPER_SNAKE_CASE` schema leakage, capability-driven control hiding, max 3 font families, `tabular-nums` monospace for metrics/hashes, 1 surgical brand anchor.
+3. **Human Language, Pure SVG Craft & Typography (20%):** Zero Unicode emojis (`<svg>` only), zero `snake_case` / `UPPER_SNAKE_CASE` schema leakage, capability-driven control hiding, max 3 font families, `tabular-nums` monospace for metrics/hashes.
 4. **Proportional State Completeness (15%):** All surface-required lifecycle states modeled cleanly (4 states for Simple Websites; 7 mobile states for iOS/Android; 7 operational states for Web Workspaces; 5 states for CLI).
-5. **Keyboard Flow & Closed-Loop Visual QA (15%):** Full keyboard reachability, WCAG AA contrast (`>= 4.5:1`), verified via `visual_audit.py` + `view_file` screenshot inspection across `Default`, `Secondary Tab`, and `Diff/Modal` states.
+5. **Adversarial Interactive Verification & Closed-Loop Visual QA (15%):** Before showing the user, run `visual_audit.py`, open the wireframe in headless Chrome, **click every interactive file/folder/tab/toggle**, verify 1:1 data parity (e.g. clicking a folder in the tree shows the exact same child file count in the folder table, and clicking any file updates the breadcrumb, center body, and right drawer in lockstep), and inspect captured screenshots via `view_file`.

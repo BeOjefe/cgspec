@@ -1,6 +1,6 @@
 ---
 name: cgspec-init
-description: Stage 0 Workspace Initializer & Brownfield AST Ingestor. Sets up AGENTS.md, CLAUDE.md, docs/.cgspec/, docs/00..05 spines, and reverse-engineers existing codebases via ingest.py.
+description: Stage 0 Workspace Initializer & Brownfield AST Ingestor. Use when starting a new CGSpec project, initializing AGENTS.md and docs/00..05 spines, or onboarding an existing legacy codebase/monorepo via ingest.py.
 ---
 
 # cgspec-init

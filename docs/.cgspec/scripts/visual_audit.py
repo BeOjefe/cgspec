@@ -67,14 +67,36 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
 
     # 1. Check versioned filename invariant
     name = html_path.name
-    if not re.search(r"(-v\d+(\.\d+)?|ADR-\d+)\.html$", name) and name != "prototype.html":
+    if not re.search(r"([-_]v\d+(\.\d+)?|ADR-\d+)\.html$", name) and name != "prototype.html":
         warnings.append(
-            f"Filename '{name}' does not carry an explicit hyphenated version suffix (e.g. wireframe-v1.html, wireframe-v2.html, prototype-v0.1.html). Never overwrite iterations in place."
+            f"Filename '{name}' does not carry an explicit version suffix (e.g. wireframe-v1.html, wireframe-v2.html, prototype-v0.1.html). Never overwrite iterations in place."
         )
 
     content = html_path.read_text(encoding="utf-8", errors="replace")
 
-    # 2. Check full-bleed viewport CSS (prevent 40% bottom white void in Artifact iframe & browser)
+    # 2. Check HTML Unicode Emoji & Pictograph Ban (Zero decorative emojis; require inline <svg>)
+    emoji_pattern = re.compile(
+        "["
+        "\U0001F300-\U0001F5FF"
+        "\U0001F600-\U0001F64F"
+        "\U0001F680-\U0001F6FF"
+        "\U0001F700-\U0001F77F"
+        "\U0001F780-\U0001F7FF"
+        "\U0001F800-\U0001F8FF"
+        "\U0001F900-\U0001F9FF"
+        "\U0001FA00-\U0001FA6F"
+        "\U0001FA70-\U0001FAFF"
+        "\u2600-\u26FF"
+        "\u2700-\u27BF"
+        "]"
+    )
+    found_emojis = sorted(set(emoji_pattern.findall(content)))
+    if found_emojis:
+        errors.append(
+            f"Unicode Emoji Ban Violation: Found {len(found_emojis)} decorative emoji/pictograph character(s) in HTML {found_emojis[:10]}. Use crisp inline Lucide/Feather <svg> icons only."
+        )
+
+    # 3. Check full-bleed viewport CSS (prevent 40% bottom white void in Artifact iframe & browser)
     has_full_height = ("100vh" in content or "h-screen" in content)
     has_html_height = bool(re.search(r"html\s*,\s*body\s*\{[^}]*height:\s*100%", content)) or "h-full" in content
     if not has_full_height or not has_html_height:
@@ -89,13 +111,13 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
             f"Found fixed pixel height class(es) {set(short_height_matches)}. Ensure the root workspace uses 'flex-1 min-h-0' instead of fixed short heights that leave dead space."
         )
 
-    # 3. Check for draggable split resizers in multi-column desktop wireframes
+    # 4. Check for draggable split resizers in multi-column desktop wireframes
     if ("aside" in content or "left-rail" in content or "right-inspector" in content) and "col-resize" not in content:
         errors.append(
             "Multi-column layout detected without draggable split-pane resizers ('cursor: col-resize' / 'cursor-col-resize'). Static sidebars truncate labels and block human resize reflexes."
         )
 
-    # 4. Check for duplicate buttons / stacked action headers / duplicate onclick triggers
+    # 5. Check for duplicate buttons / stacked action headers / text-heavy moving drawer toggles
     parser = ControlExtractor()
     parser.feed(content)
     normalized_labels = []
@@ -112,6 +134,13 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
                 f"Duplicate control label (Law of One Control Per Action): '{norm}' appears {count} times ({raw_examples}). Consolidate into a single control."
             )
 
+    # Check for bulky text-based drawer toggle buttons ("History & Info") that shift position when clicked
+    for norm, orig in normalized_labels:
+        if norm in ("history & info", "history and info", "toggle inspector", "open inspector"):
+            errors.append(
+                f"Moving / Text-Heavy Panel Toggle Violation (Law 2 & Law 4): Found text button '{orig}' for panel toggling. Use a stationary 16x16 <svg> panel-right icon button with a tooltip anchored in the fixed top-right header so the button never shifts under the user's cursor."
+            )
+
     onclick_counts = Counter(fn for fn, _ in parser.onclicks if "(" in fn and not fn.startswith(("select", "switch", "set", "openMount")))
     for fn, count in onclick_counts.items():
         if count > 1 and any(k in fn.lower() for k in ("drawer", "diff", "inspector", "back")):
@@ -120,10 +149,9 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
                 f"Duplicate action handler (Law of One Control Per Action): onclick='{fn}' is wired to {count} separate buttons {labels}. Keep only one canonical trigger."
             )
 
-    # 5. Check for Schema Identifier Leakage (Law 7: snake_case / UPPER_SNAKE_CASE in UI labels & headings)
+    # 6. Check for Schema Identifier Leakage (Law 7: snake_case / UPPER_SNAKE_CASE in UI labels & headings)
     leaked_identifiers = []
     for tag, text in parser.labels_and_headings:
-        # Look for snake_case or UPPER_SNAKE_CASE tokens inside form labels and headings
         matches = re.findall(r"\b(?:[a-z]{2,}_[a-z0-9_]+|[A-Z]{2,}_[A-Z0-9_]+)\b", text)
         for m in matches:
             leaked_identifiers.append(f"<{tag}> '{text}' -> '{m}'")
@@ -135,7 +163,7 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
             f"Schema Identifier Leakage in Human UI (Law 7): Found raw snake_case / UPPER_SNAKE_CASE database identifiers in user-facing labels or badges: {leaked_identifiers[:6]}. Use natural human language ('Branch' instead of 'git_branch', 'Pending Merge' instead of 'APPROVED_PENDING_GIT')."
         )
 
-    # 6. Check for Capability-Driven UI Hiding violations (Law 8: simultaneous Edit + Propose Edit or 'Your Access:' debug badge)
+    # 7. Check for Capability-Driven UI Hiding violations (Law 8: simultaneous Edit + Propose Edit or 'Your Access:' debug badge)
     vis_lower = [re.sub(r"[^a-z ]", "", b.lower()).strip() for b in parser.visible_buttons]
     if "edit" in vis_lower and ("propose edit" in vis_lower or "propose change" in vis_lower):
         errors.append(
@@ -144,6 +172,12 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
     if "your access:" in content.lower():
         errors.append(
             "Capability-Driven UI Violation (Law 8): Found noisy 'Your Access: ...' debug badge in the UI. Instead of telling the user their role in a badge, simply hide actions they lack permission to touch (Dokploy / Linear pattern)."
+        )
+
+    # 8. Check for Split-Brain Dual Breadcrumb / Path Headers (Law 2: Single Header Ownership)
+    if "bc-leaf" in content and "doc-path-header" in content:
+        errors.append(
+            "Split-Brain Dual Path Header Violation (Law 2): Found both a top-bar breadcrumb ('bc-leaf') AND a second center-pane path header ('doc-path-header'). Maintain a single canonical breadcrumb header above Center+Right."
         )
 
     return errors, warnings
@@ -184,6 +218,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="CGSpec Visual & Structural Wireframe Auditor")
     ap.add_argument("html_file", help="Path to the HTML wireframe or prototype file")
     ap.add_argument("--screenshot-dir", help="Optional directory to save headless browser screenshots", default=None)
+    ap.add_argument("--mode", help="Optional audit mode (wireframe | prototype)", default="wireframe")
+    ap.add_argument("--strict-emojis", action="store_true", help="Enforce strict HTML Unicode emoji ban (enabled by default)")
     args = ap.parse_args()
 
     target = pathlib.Path(args.html_file).resolve()
@@ -198,7 +234,7 @@ def main() -> int:
         print(f"  [FAIL] {e}")
 
     if not errors and not warnings:
-        print("  [PASS] Static DOM & Viewport Invariants: 0 duplicate controls, full-bleed viewport, versioned filename.")
+        print("  [PASS] Static DOM & Viewport Invariants: 0 duplicate controls, 0 emojis, full-bleed viewport, versioned filename.")
 
     if args.screenshot_dir:
         shots = capture_screenshot(target, pathlib.Path(args.screenshot_dir))

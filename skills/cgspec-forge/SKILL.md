@@ -1,6 +1,6 @@
 ---
 name: cgspec-forge
-description: Stage 1 Product Brainstorming & ORCA Object Map Compiler. Drives problem statement, mission, day-in-the-life walkthrough (01-INTENT.md), and Sophia Prater ORCA domain nouns & relationships (02-OOUX.md).
+description: Stage 1 Product Brainstorming & ORCA Object Map Compiler. Use when defining problem statements, product vision, actors, anti-goals, day-in-the-life flows (01-INTENT.md), or Sophia Prater ORCA domain nouns, permissions, and relationships (02-OOUX.md).
 ---
 
 # cgspec-forge

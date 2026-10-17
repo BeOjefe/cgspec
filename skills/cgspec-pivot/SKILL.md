@@ -1,6 +1,6 @@
 ---
 name: cgspec-pivot
-description: Stage 8 Course-Correction Impact Auditor & 3-Tier Migration Engine (Tier 1 Adapter Swap, Tier 2 Additive Scope Expansion, Tier 3 v1-to-v2 Soul Extraction).
+description: Stage 8 Course-Correction Impact Auditor & 3-Tier Migration Engine. Use when handling mid-project scope changes, swapping technical adapters (Tier 1), adding new domain nouns/screens (Tier 2), or migrating v1-to-v2 architectures (Tier 3).
 ---
 
 # cgspec-pivot

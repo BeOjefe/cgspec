@@ -1,6 +1,6 @@
 ---
 name: cgspec-ui-ux
-description: Stage 2 Dual-Spine UI & UX Compilation Engine. Ingests locked 01-INTENT.md and 02-OOUX.md to compile zero-color spatial wireframes, tactile ergonomics, design tokens, surface-adapted state matrices, and verified HTML prototypes (03-EXPERIENCE.md).
+description: Stage 2 Dual-Spine UI & UX Compilation Engine. Use when designing screens, wireframes, UX flows, tactile ergonomics, design tokens, state matrices, or interactive HTML prototypes (03-EXPERIENCE.md) for websites, mobile apps (iOS/Android), web workspaces, or CLIs.
 ---
 
 # cgspec-ui-ux

@@ -1,6 +1,6 @@
 ---
 name: cgspec-council
-description: Supervised 3-Agent Peer Debate Council. Runs N rounds on one locked architectural question across 3 orthogonal lenses, emits 3-line round reports, and drafts ADR-NNN.md.
+description: Stage 3 Supervised 3-Agent Peer Debate Council. Use when resolving contested architectural, security, data-model, or UX trade-offs through multi-round adversarial debate and drafting ADR-NNN.md records.
 ---
 
 # cgspec-council
