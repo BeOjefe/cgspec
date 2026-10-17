@@ -10,7 +10,9 @@ description: Non-linear idea pressure-tester and spec hub. Challenges assumption
 1. **State Load & 1-Line Compass:**
    - Run `uv run {skill-dir}/scripts/memlog.py status {project-root}/docs/.memlog.md`.
    - **Pre-Flight ADR Check:** Inspect `{project-root}/docs/adr/` to respect existing architectural decisions and avoid contradicting locked system invariants.
-   - Start every message with the 1-line plain-English compass (`📍 Where we are: ...`). Never use cryptic codes (`SLICE-001`, `SCR-05`) without plain-English names.
+   - Start every message with the 1-line plain-English compass (clean text, zero emojis):
+     `Where we are: Stage 1: Features & Journey [Done] -> [Stage 2: UI/UX & Interactive Prototype] -> Stage 3: Data Model & Architecture -> Stage 4: Build Slices`
+   - **Strict Law 3 Invariant:** The user defines *why we build* (PRD & Day-in-the-Life journey) and *what they experience* (complete UI/UX, spatial zoning, and interactive prototype) **FIRST**. Technical "how" (database tables, SQL schemas, foreign keys, programming languages, backend frameworks, ORMs) is **strictly forbidden** until the human has tested and approved the interactive prototype!
 
 2. **Explain First, Ask Second (1–2 Questions Max Per Turn):**
    - If the user asks *"what does that mean?"* or expresses confusion, **explain in plain conversational English first**—never pop up an `ask_question` modal without explaining first.

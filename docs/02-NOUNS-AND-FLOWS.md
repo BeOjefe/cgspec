@@ -47,7 +47,7 @@ By combining **BMAD v7's `.memlog.md` non-linear derivation** + **`bmad-correct-
 
 ```mermaid
 flowchart TD
-    IDEA["💡 New Idea, Critique, or Pivot Arrives<br/>(Anytime: Discovery, UX, or Mid-Coding)"] --> GATE{"Autopilot Triage Gate<br/>(AGENTS.md)"}
+    IDEA["New Idea, Critique, or Pivot Arrives<br/>(Anytime: Discovery, UX, or Mid-Coding)"] --> GATE{"Autopilot Triage Gate<br/>(AGENTS.md)"}
 
     GATE -->|"Off-scope for current v0.1 task"| PARK["📥 Park in docs/00-INBOX.md<br/>+ memlog.py --tags direction:parked<br/>(Zero interruption to active slice)"]
 

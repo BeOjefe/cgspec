@@ -8,10 +8,11 @@ description: Atomic Vertical Slice Builder. Generates a bounded slice contract f
 ## Execution Steps
 
 1. **Pre-Flight Check & Compass:**
-   - Verify that requirements, nouns, and UI screens are agreed upon.
+   - **Doctor Hook:** Run `python3 scripts/doctor.py .` to verify that all core spines exist and ADRs are properly registered before code is scaffolded.
+   - **Strict Law 3 Gate:** Verify that Stage 1 (Intent & PRD) and Stage 2 (UI/UX, Spatial Zoning, and Interactive Prototype) are locked and approved by the user. Vertical code slices are **strictly prohibited** until UI/UX has been approved.
    - **Mandatory ADR Invariant Audit:** Read all `{project-root}/docs/adr/*.md` to ensure the slice architecture, database schema, and crypto contracts strictly comply with accepted ADRs.
-   - Show the 1-line compass (`📍 Where we are: ...`). Never use raw slice codes without plain-English descriptions.
-
+   - Show the 1-line plain-text compass (zero emojis):
+     `Where we are: Stage 1: Features & Journey [Done] -> Stage 2: UI/UX & Interactive Prototype [Done] -> Stage 3: Data Model & Architecture [Done] -> [Stage 4: Build Slices]`
 
 2. **Propose Concrete Next Actions (Never Vague Open-Ended Questions):**
    - **Never** ask a vague *"How would you like to proceed?"*.
@@ -37,3 +38,4 @@ description: Atomic Vertical Slice Builder. Generates a bounded slice contract f
        --summary "Completed SLICE-NNN"
      ```
    - Update `{project-root}/docs/00-INDEX.md`.
+
