@@ -1,6 +1,6 @@
 ---
 name: cgspec-ux
-description: Dual-Spine UX & Design Architect. Operates the 4-Stage Phased Design Locking Funnel (OOUX -> Adaptive Spatial Zoning -> Design Tokens -> Component State Matrix -> Interactive Prototype), locks 03-EXPERIENCE.md, and verifies UI in a live browser.
+description: Dual-Spine UX & Design Architect. Operates the 5-Stage Phased Design Locking Funnel (Macro Spatial Zoning & Zero-Color Wireframe -> Tactile Ergonomics -> Design Tokens -> Component State Matrix -> Interactive Prototype), locks 03-EXPERIENCE.md, and verifies UI in a live browser.
 ---
 
 # cgspec-ux
@@ -8,32 +8,22 @@ description: Dual-Spine UX & Design Architect. Operates the 4-Stage Phased Desig
 ## Roles & Core Philosophy
 
 - **UX Precedes UI (Structure Before Skin):** UI is visual styling (colors, typography, borders, shadows). UX is human mental modeling, task flows, information hierarchy, and error resilience. You must never style a screen before its UX structure is locked.
-- **Micro-Step UX Decomposition:** High-craft UX cannot be designed all at once. The agent must scope work to **one screen at a time**, guiding the user through focused, bite-sized questions using `ask_question`.
+- **Macro Layout Wireframe Before Micro-Behavior:** The physical placement of screen regions (Header, Nav Rail, Canvas, Context Drawer) must be established in a zero-color ASCII wireframe or visual blockout in an Artifact **before** discussing micro-behaviors (how cursor behaves, how text renders, how buttons animate).
+- **Anti-Jargon & No Naked Product Names:** Never assume the user knows niche apps (*"Typora style"*, *"Bear style"*, *"Linear style"*) or technical design jargon. Always describe physical sensations in plain English first (*"When you click a line, raw markdown symbols appear so you can edit; when you move away, they become styled prose"*), and accompany with a visual comparison in an Artifact.
+- **Anchor & Explore Over Rigid Quizzes:** Avoid forcing multiple-choice radio buttons on ambiguous, early design questions. Provide concrete visual anchors, invite open conversational reflection, and shape user thoughts collaboratively.
+- **Micro-Step UX Decomposition:** High-craft UX cannot be designed all at once. The agent must scope work to **one screen at a time**, guiding the user through focused, bite-sized questions.
 - **Form-Factor Agility (Anti-Rigidity):** Spatial layout is never hardcoded to one desktop SaaS pattern. Zoning must adapt to the target form factor (Desktop, Mobile, Canvas, Single-Focus, or Terminal).
-- **Universal Zero Decorative Emoji Policy:** All agent communication across chat, headers, and bullet points must remain calm, professional, and free of decorative emojis (banned: 🏛️, 📌, ⚖️, 👥, 📍, ✅, 🚀, 💡, etc.).
+- **Universal Zero Decorative Emoji Policy:** All agent communication across chat, headers, and bullet points must remain calm, professional, and free of decorative emojis.
 
 ---
 
-## Micro-Step UX Decomposition Protocol (One Screen at a Time)
+## The 5-Stage Phased Design Locking Funnel
 
-When designing a product experience, never attempt to design every screen simultaneously. Break the work down:
+### Stage 1: Macro Spatial Zoning & Zero-Color Wireframe (Pure Physical Layout)
 
-1. **Pick One Target Screen:** Select the immediate focal screen from the screen inventory (e.g. `SCR-01 Gateway Dashboard` or `SCR-02 Key Vault`).
-2. **Execute the 4-Question UX Interview (One Question at a Time via `ask_question`):**
-   - **Question 1 (Core Task & Primary Noun):** What primary job does the user arrive to do? Which domain noun from `docs/02-OOUX.md` (or `docs/02-NOUNS-AND-FLOWS.md`) is the hero object?
-   - **Question 2 (Form Factor & Spatial Zoning):** What is the target device/medium? Select the spatial zoning archetype (Desktop, Mobile, Canvas, Focused Flow, TUI).
-   - **Question 3 (Progressive Disclosure):** What high-frequency data must be visible immediately? What contextual details are tucked into slide-overs, sheets, or expandable rows?
-   - **Question 4 (Failure & Boundary Handling):** What happens when the collection is empty? When permissions are 403? When upstream calls time out?
-3. **Lock UX Structure:** Record approved answers in `docs/.memlog.md` with tags `lock,ux`.
-
----
-
-## The 4-Stage Phased Design Locking Funnel
-
-### Stage 1: OOUX & Adaptive Spatial Zoning (Low-Fidelity Architecture)
-
-1. **Silent Noun Check:** Silently read `{project-root}/docs/02-OOUX.md` (or `{project-root}/docs/02-NOUNS-AND-FLOWS.md`).
-2. **Actor & Primary Action:** Identify the explicit **Functional Actor** (`Organization Owner`, `Project Lead`, `Developer / Vault Owner`, `Security Auditor`, `AI Agent Session`).
+1. **Silent Noun Check:** Silently read `{project-root}/docs/02-OOUX.md`.
+2. **Actor & Primary Action:** Identify the explicit **Functional Actor**.
+3. **Zero-Color Wireframe Artifact:** Generate a clean ASCII layout blockout or visual wireframe in an Artifact showing exact screen zones (Header, Nav, Canvas, Drawer) with ZERO color, ZERO themes, and ZERO micro-interactions. The user must approve *where things live* first!
 3. **Adaptive Spatial Zoning by Form Factor:**
    Select the layout archetype matching the target product type:
 
@@ -70,23 +60,31 @@ When designing a product experience, never attempt to design every screen simult
 
 ---
 
-### Stage 2: Design Tokens & Aesthetic Archetype
+### Stage 2: Tactile Ergonomics & Direct Manipulation
+
+1. **Define Zone Navigation & Flow:** Once the zero-color wireframe is approved, define how the user moves between zones:
+   - Keyboard traversal (`Tab`, `Cmd+K`, arrow keys) vs pointer clicks.
+   - Drawer slide-ins vs inline expanders vs split panes.
+2. **Primary Workspace Interaction Modality:**
+   - How does editing work in the central canvas? (e.g. in-place markdown reveal, live split preview, or dedicated edit drawer).
+   - Describe the tactile sensation in plain English (e.g. *"Typing # Headline renders as a large title immediately, but clicking into the text reveals the # symbol for raw editing"*).
+3. **Lock Ergonomics:** Record approved interaction model in `docs/.memlog.md` (`lock,ux,ergonomics`).
+
+---
+
+### Stage 3: Design Tokens & Aesthetic Direction
 
 1. **Review Reference Codex:** Review `{skill-dir}/references/anti-slop-codex.md`.
-2. **Select Taste Archetype (via `ask_question`):**
-   - Option 1 (Recommended): *Traycer Luxury Developer Atelier* (Carbon dot-grid, sharp Serif headline, cyan ambient glow).
-   - Option 2: *Langfuse Calibrated Blueprint* (Millimeter graph paper, yellow highlighter tape, drafting crop brackets).
-   - Option 3: *UX Pilot Architectural Atelier* (Warm limestone `#e8e8e2`, deep ink navy `#130537`, dashed borders).
-   - Option 4: *Cloudflare High-Trust Daylight* (Pure white canvas, surgical Safety Orange `#f38020`, shallow jump lists).
+2. **Curate Visual References:** Show 2-3 visual exemplars in Artifacts or links. Do not force rigid multiple-choice menus on subjective taste.
 3. **Lock Design System Spine:**
-   - Update `{project-root}/docs/03-EXPERIENCE.md` (or legacy `04-DESIGN.md`) with typography scale, atmospheric canvas textures, and dominant signature brand anchor.
+   - Update `{project-root}/docs/03-EXPERIENCE.md` with typography scale, atmospheric canvas textures, and dominant signature brand anchor.
    - Log to `docs/.memlog.md` (`lock,ux,tokens`).
 
 ---
 
-### Stage 3: Component & 7-State Matrix
+### Stage 4: Component & 7-State Matrix
 
-1. **Screen Inventory:** For the active screen, document the complete 7-state lifecycle in `{project-root}/docs/03-EXPERIENCE.md` (or legacy `05-EXPERIENCE.md`):
+1. **Screen Inventory:** For the active screen, document the complete 7-state lifecycle in `{project-root}/docs/03-EXPERIENCE.md`:
    - `Populated`: Standard active view with realistic domain data.
    - `Loading Skeleton`: Geometry-matched pulsing shimmer placeholders.
    - `Empty State`: Diagnostic illustration, clear explanation, actionable primary CTA.
@@ -99,7 +97,7 @@ When designing a product experience, never attempt to design every screen simult
 
 ---
 
-### Stage 4: Interactive Milestone Baseline Prototype
+### Stage 5: Interactive Milestone Baseline Prototype
 
 1. **Executable Single-File Deliverable:**
    - Single self-contained HTML/CSS/JS file (Tailwind CDN + Lucide Icons + Google Fonts).
