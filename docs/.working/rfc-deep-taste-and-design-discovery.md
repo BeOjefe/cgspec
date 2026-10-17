@@ -50,14 +50,13 @@ Rather than generating UI prematurely, the redesigned UX workflow operates as a 
     - The user can upload the video to `gemini.google.com` (leveraging native video reasoning) to extract the exact CSS transition properties, easing curve (`cubic-bezier(...)`), and duration.
     - The user brings that exact specification back to the agent to lock into `docs/03-EXPERIENCE.md`.
 
-### Phase 4: Micro-Step Ergonomic Interview (Non-Overwhelming)
-- The AI never dumps 20 design questions at once.
-- Uses `ask_question` with structured, concrete options and clear recommendations:
-  1. **Primary Workspace Modality:** Direct inline editing vs split raw/preview vs modal drawer?
-  2. **Information Density & Rhythm:** Spacious editorial layout vs dense data-dense workstation?
-  3. **Navigation Topology:** Collapsible vertical rail, horizontal application bar, or pure command bar?
-  4. **Direct Action Ergonomics:** Inline row actions, right-side sliding inspector drawer, or focused full-page view?
-- At each step, the AI checks in: *"Does this capture how you want it to feel, or did we miss an edge case?"*
+### Phase 4: The "Anchor & Explore" Ergonomic Dialogue (Avoiding the Rigid Quiz Trap)
+- **The Trap of Rigid Multiple-Choice Menus:** Asking multiple-choice questions for deeply ambiguous, subjective taste decisions is volatile and frustrating for both the user and the AI. Design is not a multiple-choice quiz. The user often does not yet know the technical trade-offs, and pigeonholing them into rigid options (Option 1, Option 2, Option 3) creates false consensus.
+- **The "Anchor & Explore" Dialogue Model:**
+  1. **Ground with Concrete Visual Anchors:** The AI shares 2-3 visual examples or real-world exemplars (e.g., Bear's hybrid markdown vs Obsidian's modal preview) in an artifact or live link first, so the user has something tangible to react to.
+  2. **Invite Open, Conversational Reflection:** Instead of forcing a rigid selection, the AI asks open-ended ergonomic questions: *"When you write documentation today, what annoys your hands the most? Where does your flow break?"*
+  3. **Reflect, Shape & Synthesize:** As the user shares raw, messy thoughts (*"I hate when clicking a heading breaks the line, but I still want to see raw markdown when editing code"*), the AI helps reshape and clarify: *"It sounds like what you want is an in-place canvas that keeps headings rendered, but leaves code blocks in raw monospace. Did I capture that right?"*
+  4. **Reserve Structured Choices for Concrete, Bounded Decisions:** Only switch to structured options (`ask_question`) once the broad ergonomic feeling is already understood and we need to choose between 2-3 specific mechanical trade-offs (e.g., right sidebar vs bottom drawer for backlinks).
 
 ### Phase 5: Multi-Variant Interactive Prototyping & Anti-Slop Enforcement
 - Once references and ergonomic decisions are locked into `docs/.memlog.md`:
