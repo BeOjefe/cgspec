@@ -257,13 +257,17 @@ def capture_screenshot(html_path: pathlib.Path, out_dir: pathlib.Path) -> list[p
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="CGSpec Visual & Structural Wireframe Auditor")
-    ap.add_argument("html_file", help="Path to the HTML wireframe or prototype file")
+    ap.add_argument("html_file", nargs="?", default=None, help="Path to the HTML wireframe or prototype file")
+    ap.add_argument("--html", dest="html_flag", default=None, help="Explicit path to the HTML wireframe or prototype file")
     ap.add_argument("--screenshot-dir", help="Optional directory to save headless browser screenshots", default=None)
     ap.add_argument("--mode", help="Optional audit mode (wireframe | prototype)", default="wireframe")
     ap.add_argument("--strict-emojis", action="store_true", help="Enforce strict HTML Unicode emoji ban (enabled by default)")
     args = ap.parse_args()
 
-    target = pathlib.Path(args.html_file).resolve()
+    html_target = args.html_flag or args.html_file
+    if not html_target:
+        ap.error("You must provide an HTML file path either positionally or via --html <file>.")
+    target = pathlib.Path(html_target).resolve()
     print(f"CGSpec Visual Auditor: Inspecting {target}")
     print("-" * 60)
 
