@@ -23,9 +23,10 @@ html, body { height: 100%; min-height: 100vh; margin: 0; overflow: hidden; displ
 - **Zero Cross-Pane Metadata Duplication (DRY Across Visible Panes):** When the Right Inspector is open and displays a file's commit hash, supersession provenance, and open PRs, do not repeat the same commit/supersession subheader bar and PR pills across the Top Header, Left Tree, and Center Document Canvas simultaneously. If a file can have multiple open PRs, show a compact count (`2 PRs`) rather than hardcoding a single PR title pill in the tree/header.
 - **Stationary Icon-Only Panel Toggle:** Place the right-drawer/inspector toggle as a clean `16x16` `<svg>` icon button with a `title` tooltip at the far right of the Top Header Bar (without confusing unexplained colored dots).
 
-### 3. Context-Scoped Top & Side Chrome
-- Controls that belong to a specific workspace view (e.g. file-tree view switchers, path breadcrumbs, document mode toggles, contextual file inspectors) must **hide automatically** when the user switches to global views (`Home`, `Hub`, `Settings`).
-- Place tree-filtering switches (e.g. `Docs Only | Full Tree` or a filter icon button) directly inside the Explorer header they filter, never in the global top bar.
+### 3. Context-Scoped Top & Side Chrome & Bottom-Left Profile/Theme Anchor
+- **One Focal Screen at a Time:** When prototyping `SCR-01`, do not build full multi-screen UIs for `Home`, `Hub`, `Logs`, and `Keys` inside the same wireframe file. Keep non-focal rail icons as lightweight scope placeholders until `SCR-01` is locked.
+- **Bottom-Left Activity Rail Anchor (Profile, Role & Theme `Light | Dark | System`):** In desktop Web Workspaces (VS Code / Linear / Cursor pattern), place the User Profile avatar, Role Preview switcher, and Theme Mode selector (`Light | Dark | System`) in the **bottom-left Activity Rail footer**—never as a wide dropdown inside the Top Document Header where it squeezes the breadcrumb and clips the `Edit` and `Inspector` buttons on laptop viewports (`1180px`).
+- **Explorer-Local Filtering:** Place tree-filtering switches (`Docs | Full Repo` and Filter popover) directly inside the Explorer header they filter, never in the global top bar.
 
 ### 4. Direct Spatial Manipulation (Resizable Panes & Multi-Root Explorer)
 - **Draggable Splitters (Zero Permanent Coaching Text):** Multi-column desktop layouts must include `4px` interactive splitters (`cursor: col-resize`) between panes. Never render permanent instructional text boxes like `"Drag the left border of this panel to resize it anytime"` inside the UI.
