@@ -19,13 +19,13 @@ html, body { height: 100%; min-height: 100vh; margin: 0; overflow: hidden; displ
 
 ### 2. One Control Per Action, Single Header Ownership & Cross-Pane DRY Metadata
 - **Single Action Trigger & Reversible Toggles:** Every state transition (`toggleDrawer()`, `enterDiffMode()`, `syncRepo()`) must have **one** canonical button, and clicking an active diff/compare button again (or clicking a clear `<- Exit Diff` button at the left of the canvas header) must return to the document.
-- **Single Breadcrumb / Path Header (Docs & Code):** Never render two competing file-path headers (e.g. a top-bar breadcrumb AND a second center-pane or dark code-viewer path header below it, and never duplicate path segments like `src / src/file.ts`).
+- **Single Breadcrumb / Screen Title Header:** Never render two competing file-path headers or duplicate screen titles (e.g., never show `Scoped Virtual API Keys` in the Top Header Bar AND `<h2>Scoped Virtual API Keys</h2>` right below it in the Center Canvas).
 - **Zero Cross-Pane Metadata Duplication (DRY Across Visible Panes):** When the Right Inspector is open and displays a file's commit hash, supersession provenance, and open PRs, do not repeat the same commit/supersession subheader bar and PR pills across the Top Header, Left Tree, and Center Document Canvas simultaneously. If a file can have multiple open PRs, show a compact count (`2 PRs`) rather than hardcoding a single PR title pill in the tree/header.
 - **Stationary Icon-Only Panel Toggle:** Place the right-drawer/inspector toggle as a clean `16x16` `<svg>` icon button with a `title` tooltip at the far right of the Top Header Bar (without confusing unexplained colored dots).
 
-### 3. Context-Scoped Top & Side Chrome & Bottom-Left Profile/Theme Anchor
-- **One Focal Screen at a Time:** When prototyping `SCR-01`, do not build full multi-screen UIs for `Home`, `Hub`, `Logs`, and `Keys` inside the same wireframe file. Keep non-focal rail icons as lightweight scope placeholders until `SCR-01` is locked.
-- **Bottom-Left Activity Rail Anchor (Profile, Role & Theme `Light | Dark | System`):** In desktop Web Workspaces (VS Code / Linear / Cursor pattern), place the User Profile avatar, Role Preview switcher, and Theme Mode selector (`Light | Dark | System`) in the **bottom-left Activity Rail footer**—never as a wide dropdown inside the Top Document Header where it squeezes the breadcrumb and clips the `Edit` and `Inspector` buttons on laptop viewports (`1180px`).
+### 3. Context-Scoped Chrome, Bottom-Left Profile/Theme Anchor & Test-Harness Isolation
+- **Bottom-Left Activity Rail Anchor (Real Product Profile & Theme `Light | Dark | System`):** In desktop Web Workspaces, place the real User Profile avatar and Theme Mode selector (`Light | Dark | System`) in the **bottom-left Activity Rail footer**—never inside the Top Document Header.
+- **Strict Test-Harness vs. Real Product UI Separation:** Never disguise a prototype simulation control (`Preview Role: Owner | Contributor | Viewer` or `Simulate State`) as a real product dropdown inside the Top Header or User Profile menu (in production, permissions come from authenticated grants, not a self-service role picker). Isolate any prototype role/state simulator inside a clearly labeled floating **`[Prototype Simulator]`** pill so the user always knows what is real product chrome vs. prototype test harness.
 - **Explorer-Local Filtering:** Place tree-filtering switches (`Docs | Full Repo` and Filter popover) directly inside the Explorer header they filter, never in the global top bar.
 
 ### 4. Direct Spatial Manipulation (Resizable Panes & Multi-Root Explorer)
@@ -56,10 +56,9 @@ html, body { height: 100%; min-height: 100vh; margin: 0; overflow: hidden; displ
 <label>Branch</label>
 ```
 
-### 8. Capability-Driven & Content-Type-Driven UI Hiding
-- Hide actions the current actor role OR active file type cannot support:
-  - When viewing a **read-only Code file** (`.ts`, `.rs`, `.py` in Full Repo mode) or a **Folder Overview**, hide the document `Edit` / `Propose Edit` button automatically (only `.md` documentation files in the Doc Zone are editable).
-  - Never show a `Your Access: Editor` debug badge or both `Edit` and `Propose Edit` simultaneously.
+### 8. 100% `01-INTENT` / `02-OOUX` Capability Parity & Content-Type Hiding
+- **Strict OOUX Permission Fidelity:** Before hiding any navigation item or CTA by role, verify `01-INTENT.md` and `02-OOUX.md` line-by-line. Never hide a screen that an actor legitimately uses (e.g., if `01-INTENT.md` states every Developer/Contributor issues their own scoped `VirtualKey` `cg_live_xxx` bounded by their permissions and owns their `Personal Vault`, the `Keys` screen must remain accessible to them—only Org-admin actions inside Org Settings are hidden).
+- **Content-Type Hiding:** When viewing a **read-only Code file** (`.ts`, `.rs`, `.py` in Full Repo mode) or a **Folder Overview**, hide the document `Edit` / `Propose Edit` button automatically (only `.md` documentation files in the Doc Zone are editable). Never show a `Your Access: Editor` debug badge or both `Edit` and `Propose Edit` simultaneously.
 
 ---
 
@@ -67,7 +66,7 @@ html, body { height: 100%; min-height: 100vh; margin: 0; overflow: hidden; displ
 
 Before spawning the Adversarial Critic subagent, the Builder (Main Agent) must do **everything possible** to verify its own work:
 1. **Static & DOM Gate:** Run `python3 docs/.cgspec/scripts/visual_audit.py <file.html> --screenshot-dir <dir>` and `python3 docs/.cgspec/scripts/doctor.py --repo . --strict-emojis` until `0 errors`.
-2. **Multi-Viewport & Interactive Manipulation:** Capture headless Chrome screenshots across Desktop (`1440x900`), Laptop (`1180x800` — checking that header buttons like `Edit` and panel toggles never clip or overflow when sidebars are open), and Compact (`375x812`), plus every interactive state (`Default Preview`, `Markdown Edit Mode`, `Diff Mode + Toggle Back`, `Folder Overview`, `Full Repo Read-Only Code View`, `Drawer Closed`).
+2. **Multi-Viewport & Interactive Manipulation:** Capture headless Chrome screenshots across Desktop (`1440x900`), Laptop (`1180x800` — checking that header buttons like `Edit` and panel toggles never clip or overflow when sidebars are open), and Compact (`375x812`), plus every interactive state (`Default Preview`, `Markdown Edit Mode`, `Diff Mode + Toggle Back`, `Folder Overview`, `Full Repo Read-Only Code View`, `Drawer Closed`, and every active screen/role).
 3. **Self-Inspection Against Skills & Good Practices:** View every captured PNG via `view_file` and verify all 8 Structural UI Coherence Laws above.
 
 ---
@@ -90,9 +89,10 @@ Factual Inputs:
 
 Audit Checklist (Test & View Every State):
 1. Run visual_audit.py and view every screenshot via view_file (and capture additional states/widths such as 1180x800 if needed).
-2. Check Cross-Pane DRY Metadata: Is any commit hash, supersession string, file path, or PR badge duplicated simultaneously across the Top Header, Tree, Center Canvas, and Right Drawer?
-3. Check Control Reachability & Reversibility: Are the Edit and Right-Panel Toggle buttons clipped at 1180px-1440px when the drawer is open? Does clicking 'Edit' on a .md file actually open an editor (and hide on read-only code files/folders)? Does clicking 'Review Diff' / 'Compare' toggle back when clicked again, with an accessible 'Exit Diff' button?
-4. Check Multi-Item Scaling & Zero Meta-Coaching: What happens when a file has 2+ open PRs (and when 1 PR is merged, do remaining PRs re-evaluate for conflicts)? Are there any self-referential tutorial/coaching boxes ('Drag border to resize...', 'Every file is live') or raw Markdown '# ' / '**' syntax in Preview mode?
+2. Verify 100% 01-INTENT.md & 02-OOUX.md Object & Actor Parity: Read 01-INTENT.md and 02-OOUX.md line-by-line. Are any v0.1 objects, attributes, or CTAs missing or reduced to 3-line stubs? Did role hiding accidentally hide a screen/action that Contributors/Viewers are supposed to have (e.g. managing their own scoped VirtualKey)? Is the Prototype Role/State Simulator cleanly separated from real product UI chrome?
+3. Check Cross-Pane DRY Metadata: Is any screen title, commit hash, supersession string, file path, or PR badge duplicated simultaneously across the Top Header, Tree, Center Canvas, and Right Drawer?
+4. Check Control Reachability & Reversibility: Are the Edit and Right-Panel Toggle buttons clipped at 1180px-1440px when the drawer is open? Does clicking 'Edit' on a .md file actually open an editor (and hide on read-only code files/folders)? Does clicking 'Review Diff' / 'Compare' toggle back when clicked again, with an accessible 'Exit Diff' button?
+5. Check Multi-Item Scaling & Zero Meta-Coaching: What happens when a file has 2+ open PRs (and when 1 PR is merged, do remaining PRs re-evaluate for conflicts)? Are there any self-referential tutorial/coaching boxes ('Drag border to resize...', 'Every file is live') or raw Markdown '# ' / '**' syntax in Preview mode?
 
 Output Format:
 - Status: VERDICT: PASS (only if 0 defects) or VERDICT: FAIL
