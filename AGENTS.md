@@ -66,8 +66,11 @@
 - **Visual QA Gate:** Verify all UI changes in a real headless browser across all 7 required states (`loading`, `empty`, `error`, `offline`, `partial`, `populated`, `denied`).
 - **Spec Integrity Hook (`cgspec doctor`):** Before completing any turn that modifies specifications or closing a milestone, run `python3 {skill-dir}/scripts/doctor.py .` to deterministically verify that all spines exist, memory log entries are sequential, all accepted ADRs are registered in `00-INDEX.md`, and zero specification drift exists.
 
-## 3. Microservices & Arbitrary Polyrepo Topologies (Zero Hardcoded Silos)
-- **Zero Binary Assumptions:** Never assume a system is rigidly limited to just "one frontend and one backend". Modern engineering projects routinely have $N$ microservice repositories (e.g. `services/auth`, `services/order-matching`, `services/payments`, `workers/ingestion`, `workers/notifications`).
-- **Arbitrary Virtual Mounting:** In CortexGate or multi-repo hubs, mount $N$ repositories with customizable virtual path prefixes (`mount_path`), custom titles (`mount_alias`), and isolated Git targets.
-- **Contract-First Parallel Slices:** When Service A depends on Service B, define the shared interface (REST/gRPC/Kafka event schema) in `CG-Core` first. Both services can then build in parallel using mock adapters without blocking each other.
+## 3. Repository Topology: Monorepo vs. Polyrepo Neutrality
+- **Independent & Equal Support:** CGSpec natively supports both **Monorepo** (single unified repository with modular packages) and **Polyrepo** (multiple independent repositories/microservices). Neither is dogmatically forced.
+- **Topology Discovery & Inquiry Gate:** The agent must inspect the workspace first:
+  - If existing configuration indicates a monorepo (e.g. `pnpm-workspace.yaml`, `turborepo`, `Cargo.toml` workspaces), respect and reinforce monorepo modularity.
+  - If multi-repo mounting is detected or requested, support isolated Git targets and virtual path prefixes.
+  - If starting fresh, **ask the user explicitly via `ask_question`** (recommending the most pragmatic structure for the product's scope, typically Monorepo for early-stage velocity) **without pushing or imposing polyrepo overhead** onto projects that do not need it.
+- **Contract-First Modularity:** Regardless of whether code lives in one repository or many, enforce clean Ports & Adapters interfaces so packages and services can develop in parallel with zero tight coupling.
 

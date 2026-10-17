@@ -1,41 +1,104 @@
-# CGSpec (`cgspec`) — Universal AI-Agnostic Spec Engine & CortexGate SDLC Bridge
+# CGSpec (`cgspec`) — The AI-Native Software Engineering Methodology
 
-> **100% AI-Agent Agnostic (`SKILL.md` + `AGENTS.md` + MCP):** Works identically across **Hermes, Claude Code, OpenAI Codex, Cursor, Windsurf, and Google Antigravity**—zero `.gemini` or single-vendor lock-in.  
-> **Built on Science + Open Source (`BMAD-METHOD` v7 + Peer-Reviewed arXiv Research):** Combines non-linear `.memlog.md` spine derivation, Google Labs `DESIGN.md` + `EXPERIENCE.md`, supervised multi-agent peer councils, and native **CortexGate MCP** governance.
+CGSpec is a first-principles specification engine and governance constitution designed specifically for the era of AI-native software development.
 
----
-
-## 1. Why Does `cgspec` Exist If `BMAD-METHOD` (v7) Already Exists?
-
-We inspected the full source code of [`bmad-code-org/BMAD-METHOD` (v7)](https://github.com/bmad-code-org/BMAD-METHOD) and verified what it already solves vs. why **`cgspec`** is needed for a multi-AI, CortexGate-powered engineering organization:
-
-| Dimension | **`BMAD-METHOD` (v7)** | **`CGSpec` (`cgspec`)** |
-| :--- | :--- | :--- |
-| **1. Non-Linear Spec Hub (`.memlog.md`)** | ✅ **Proven in BMAD v7:** Logs decisions to `.memlog.md` (`memlog.py`) and re-derives `spec-<slug>.md` so skills run in any order. | ✅ **Adopted in `cgspec`:** Uses `scripts/memlog.py` (`uv run`) locally **AND** bridges `.memlog.md` events directly to **CortexGate MCP** when connected. |
-| **2. UX Dual Spine (`DESIGN.md` + `EXPERIENCE.md`)** | ✅ **Proven in `bmad-ux`:** Google Labs `DESIGN.md` + `EXPERIENCE.md` + `.working/` (Excalidraw wireframes & HTML mocks) + named protagonists. | ✅ **Adopted in `cgspec-ux`:** Plus adds **Live Browser Screenshot Verification** across required states (`loading`, `empty`, `error`, `populated`, `denied`). |
-| **3. Multi-User Team Governance & Ownership (MCP)** | ❌ **Local Single-Player Files Only:** No MCP server sync, no resource `Owner`, no granular authorization (`read \| invoke \| propose_edit \| write \| share \| admin`). | ✅ **Native CortexGate MCP Bridge:** Every spec, decision lock, and ADR carries explicit `Owner` and granular permission metadata for team-wide sync via CortexGate. |
-| **4. Day-to-Day Ceremony** | 🟡 **15+ Separate Skills:** Requires invoking `bmad-forge-idea`, `bmad-prd`, `bmad-ux`, `bmad-architecture`, `bmad-spec`, `bmad-ticket`, `bmad-correct-course`, `bmad-party-mode`, `bmad-build`, `bmad-walkthrough`. | ✅ **Autopilot Coach Mode (`AGENTS.md` + 6 Core Skills):** Talk naturally in any AI agent (Hermes, Claude, Codex, Antigravity); the agent automatically parks mid-stream ideas and routes updates. |
-| **5. Multi-AI Portability** | ✅ Portable `SKILL.md` files. | ✅ **Strict Zero-Vendor Lock-In:** `AGENTS.md` + 1-line DRY `CLAUDE.md` + portable `skills/*/SKILL.md` + MCP. Never locked to `.gemini/` or a single IDE. |
+Where traditional agile assumes human engineering squads and ad-hoc vibe-coding assumes single-prompt magic, **CGSpec establishes the engineering invariants, architectural spines, and phased design funnels that transform autonomous AI agents into disciplined, high-craft software engineering partners.**
 
 ---
 
-## 2. Scientific Research Backing (Peer-Reviewed arXiv Evidence)
+## The Core Philosophy: Invariants Over Vibes
 
-1. **MetaGPT** *(Hong et al., ICLR 2024, `arXiv:2308.00352`)* — Encoding **Standardized Operating Procedures (SOPs)** as structured intermediate artifacts (PRD, UX Spine, Architecture Spec) before code generation prevents cascading hallucinations in multi-agent workflows.
-2. **Lost in the Middle** *(Liu et al., TACL 2024, `arXiv:2307.03172`)* — Constraint adherence drops **30–50%** when rules are buried inside long conversational logs. Validated solution: log chronological history in `.memlog.md` (`memlog.py`) and **re-derive terse, front-loaded spines** read in fresh contexts.
-3. **Multiagent Debate & Failure Modes** *(Du et al., ICML 2024 `arXiv:2305.14325`; Cemri et al., 2025 `arXiv:2503.13657`)* — Independent multi-agent critique reduces reasoning blind spots **only** when governed by adversarial pressure-testing (`cgspec-forge`) and an independent **Host/Judge Supervisor** (`cgspec-council`) to prevent sycophantic agreement.
-4. **ChatDev** *(Qian et al., ACL 2024, `arXiv:2307.07924`)* — Bounded phase handoffs (`Design -> Slice Build -> Verification Walkthrough`) eliminate silent stubs and assumption drift.
+AI models do not fail because they lack intelligence; they fail because they lack **bounded context, deterministic constraints, and sequential discipline**. Left to unstructured prompting, AI coding produces:
+- Premature backend implementation before human user experience is understood.
+- Visual convergence toward generic, soulless "AI slop" (purple gradients, bouncy cards, zero edge-case handling).
+- Disconnected database schemas that drift from real-world user workflows.
+- Hallucinated consensus and silent architectural debt.
+
+CGSpec solves this through a non-linear, dual-spine architecture governed by strict engineering laws:
+
+```
+  Human Director / Architect
+              │
+              ▼
+   Stage 1: Problem & Day-in-the-Life User Journey (docs/01-PRD.md)
+              │
+              ▼
+   Stage 2: Adaptive UI/UX & Interactive Prototype Baseline (docs/04-DESIGN.md, docs/05-EXPERIENCE.md)
+              │
+              ▼
+   Stage 3: Domain Nouns, Flows & Technical Architecture (docs/02-NOUNS-AND-FLOWS.md, docs/03-ARCHITECTURE.md)
+              │
+              ▼
+   Stage 4: Ports & Adapters Monorepo / Polyrepo Scaffolding Slices
+```
 
 ---
 
-## 3. Repository Navigation
+## Key Pillars of CGSpec
 
-- [`AGENTS.md`](file:///home/ojefe/Documents/Project/cgspec/AGENTS.md) — Universal Autopilot Constitution (for Hermes, Claude Code, Codex, Cursor, Antigravity)
-- [`CLAUDE.md`](file:///home/ojefe/Documents/Project/cgspec/CLAUDE.md) — 1-line DRY pointer to `./AGENTS.md`
-- [`docs/00-INDEX.md`](file:///home/ojefe/Documents/Project/cgspec/docs/00-INDEX.md) — Live State & Slice Roadmap
-- [`docs/00-INBOX.md`](file:///home/ojefe/Documents/Project/cgspec/docs/00-INBOX.md) — Idea Parking Lot & `v0.2+` Backlog
-- [`docs/01-PRD.md`](file:///home/ojefe/Documents/Project/cgspec/docs/01-PRD.md) — Product Requirements, Glossary & Scope
-- [`docs/02-NOUNS-AND-FLOWS.md`](file:///home/ojefe/Documents/Project/cgspec/docs/02-NOUNS-AND-FLOWS.md) — Domain Objects, Non-Linear `.memlog.md` Flow, 3-Tier Pivot Engine & Polyrepo Layout
-- [`docs/03-ARCHITECTURE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-ARCHITECTURE.md) — Vendor-Neutral Skill Architecture (`skills/*/SKILL.md` + `scripts/memlog.py` + CortexGate MCP)
-- [`docs/04-DESIGN.md`](file:///home/ojefe/Documents/Project/cgspec/docs/04-DESIGN.md) — Copy-Paste Templates (including Google Labs `DESIGN.md` + `EXPERIENCE.md`)
-- [`docs/adr/`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/) — Architecture Decision Records
+### 1. Human Experience Precedes Architecture & Backend (Law 3)
+Software begins with human intent, mental models, and daily ergonomics. Technical implementation ("how": SQL tables, foreign keys, programming languages, ORMs, and servers) is strictly forbidden until the Day-in-the-Life walkthrough, spatial zoning, and interactive prototype are validated and approved.
+
+### 2. The 4-Stage Phased Design Locking Funnel (Law 10)
+High-craft user experience cannot be generated in a single prompt. Every screen advances through 4 locked, versioned stages:
+1. **OOUX & Adaptive Spatial Zoning:** Low-fidelity partitioning across form-factor archetypes (Desktop SaaS, Mobile App, Infinite Canvas, Single-Focus Wizard, Developer TUI).
+2. **Design Tokens & Aesthetic Direction:** Establishing typography hierarchy, atmospheric canvas texture, and a surgical signature brand anchor.
+3. **The 7-State Component Matrix:** Engineering for the full operational lifecycle (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial/Filtered`) with adversarial worst-case edge data.
+4. **Interactive Milestone Baseline Prototype:** Single-file, zero-build executable HTML with live state switching and keyboard shortcuts.
+
+### 3. Hierarchical Peer Debate Council (`cgspec-council`)
+To prevent single-model sycophancy and blind spots, cross-cutting architectural and security choices are pressure-tested by a 3-agent peer council:
+- **Systems & Modularity Lens:** Enforcing clean boundaries, Ports & Adapters, and loose coupling.
+- **Adversarial Security & Edge Cases Lens:** Stress-testing race conditions, permission bypasses, memory limits, and fail-safe defaults.
+- **Pragmatic DX & Ship Speed Lens:** Fiercely eliminating speculative over-engineering and onboarding friction.
+The Council Supervisor coordinates the debate in an isolated side pane, keeping the human's primary chat 100% clean and free of debater spam.
+
+### 4. Atomic Architecture Decision Records (Law 7)
+Every significant technical choice must produce a formal ADR under `docs/adr/ADR-NNN-<slug>.md` and be registered in `docs/00-INDEX.md`. An agent is strictly forbidden from advancing a phase with "memlog-only" shortcuts.
+
+### 5. Automated Spec Integrity Hook (`cgspec doctor`)
+Specification drift is eliminated deterministically. The built-in doctor utility (`python3 scripts/doctor.py`) validates that all 6 spines exist, memory log entries maintain strict hash continuity (`M-001` .. `M-NNN`), all accepted ADRs are registered, and zero orphan concepts exist before any milestone is closed.
+
+---
+
+## Repository Structure
+
+```
+.
+├── AGENTS.md                  # Universal Autopilot Constitution (Applies across all AI agents)
+├── CLAUDE.md                  # DRY 1-line pointer to AGENTS.md
+├── CHANGELOG.md               # Versioned methodology evolutions
+├── scripts/
+│   ├── memlog.py              # CLI append-only memory logger
+│   └── doctor.py              # Deterministic spec linter & integrity hook
+├── skills/
+│   ├── cgspec-init/           # Monorepo/polyrepo setup and initialization
+│   ├── cgspec-forge/          # Non-linear problem stress-tester and PRD hub
+│   ├── cgspec-ux/             # 4-stage phased design locking engine & anti-slop codex
+│   ├── cgspec-council/        # Supervised 3-agent hierarchical debate council
+│   ├── cgspec-slice/          # Bounded vertical slice builder (Ports & Adapters)
+│   └── cgspec-pivot/          # 3-tier course-correction and migration engine
+└── docs/                      # The 5 Canonical Spines
+    ├── 00-INDEX.md            # Live project state, ADR registry, and slice roadmap
+    ├── 00-INBOX.md            # Spark parking lot for out-of-scope ideas (v0.2+)
+    ├── 01-PRD.md              # Problem definition, core features, day-in-the-life
+    ├── 02-NOUNS-AND-FLOWS.md  # Domain objects, lifecycle states, user workflows
+    ├── 03-ARCHITECTURE.md     # Ports & adapters, system topologies, contracts
+    ├── 04-DESIGN.md           # Aesthetic direction, design tokens, typography
+    ├── 05-EXPERIENCE.md       # Screen inventory, 7-state matrix, prototype links
+    ├── .memlog.md             # Append-only chronological decision ledger
+    └── adr/                   # Formal Architecture Decision Records (ADR-NNN)
+```
+
+---
+
+## Universal Multi-Agent Compatibility
+
+CGSpec is 100% vendor-agnostic. It works identically across:
+- **Anthropic Claude Code**
+- **OpenAI Codex & ChatGPT**
+- **Cursor & Windsurf**
+- **Google Antigravity & Gemini CLI**
+- **Hermes / Open-Source Local Agents**
+
+Zero proprietary lock-in. All instructions, constraints, and skills live directly inside your Git repository as clean, portable Markdown and Python scripts.
