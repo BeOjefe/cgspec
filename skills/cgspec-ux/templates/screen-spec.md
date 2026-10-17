@@ -6,7 +6,9 @@
 - **Usage Frequency:** [Daily / Hourly / Occasional]
 - **Core User Goal:** [1-sentence goal]
 
-## 2. Macro Spatial Wireframe (Mermaid)
+## 2. Macro Spatial Wireframe (Mermaid / D2 / PlantUML)
+> Note: Use the declarative diagramming DSL supported by your workspace or platform (Mermaid `flowchart TB`, D2, or PlantUML). Avoid wide fixed-width ASCII tables that wrap on smaller screens.
+
 ```mermaid
 flowchart TB
   subgraph Viewport ["Application Viewport"]

@@ -59,7 +59,7 @@ Design can only operate cleanly on a **locked scope milestone** (e.g. `v0.1` int
 
 ### Phase 2: Scout References & Explore Spatial Layouts
 - **Mechanism-Driven References:** Share 2-3 real-world exemplars, identifying what specific interaction mechanism is worth borrowing and what should NOT be copied.
-- **Zero-Color Layout Hypotheses:** Generate two meaningfully different structural proposals using clean Mermaid subgraphs (`flowchart TB`) or compact wireframes in an Artifact. The user must approve *where parts live* before discussing micro-interactions.
+- **Zero-Color Layout Hypotheses:** Generate two meaningfully different structural proposals using declarative diagram subgraphs (Mermaid `flowchart TB`, D2, PlantUML) or compact wireframes in an Artifact. The user must approve *where parts live* before discussing micro-interactions.
 - **Approval Checkpoint:** Approve a layout hypothesis with an explicit reopening condition.
 
 ### Phase 3: Test Tactile Interactions in a Rough Prototype
@@ -82,7 +82,7 @@ Design can only operate cleanly on a **locked scope milestone** (e.g. `v0.1` int
 
 ### Playbooks (`playbooks/`)
 - [`playbooks/01-discovery.md`](playbooks/01-discovery.md): Task brief, persona, journey mapping, focal screen selection.
-- [`playbooks/02-layout-and-interaction.md`](playbooks/02-layout-and-interaction.md): Reference scouting, zero-color Mermaid wireframes, spatial zoning.
+- [`playbooks/02-layout-and-interaction.md`](playbooks/02-layout-and-interaction.md): Reference scouting, zero-color declarative wireframes (Mermaid/D2/PlantUML), spatial zoning.
 - [`playbooks/03-visual-direction.md`](playbooks/03-visual-direction.md): Tactile density, typography pairings, surgical brand anchor, positive standards.
 - [`playbooks/04-prototyping-and-testing.md`](playbooks/04-prototyping-and-testing.md): Coexisting state matrix, zero-build single-file HTML prototype (`prototype-v0.1.html`).
 - [`playbooks/05-implementation-review.md`](playbooks/05-implementation-review.md): Production fidelity audit and deviation logging.

@@ -11,7 +11,7 @@ Guide the human architect and AI agent through Phase 2 of the Experience Cycle: 
    - The user must review and approve *where primary screen zones live* (Header, Navigation Rail, Main Canvas, Context Drawer) before discussing micro-behaviors (cursor movements, syntax rules, color tokens).
 2. **Strict Rendering Rule for Wireframes:**
    - **NEVER use wide ASCII character art boxes** (>80 columns). On different screen viewports, wide ASCII tables wrap and produce unreadable, broken text.
-   - **ALWAYS use Mermaid `flowchart TB` or `flowchart LR` with nested `subgraph` blocks** in an Artifact to visualize spatial wireframes cleanly across all devices.
+   - **ALWAYS use declarative diagramming DSLs** (such as Mermaid `flowchart TB`/`LR` with nested `subgraph` blocks, D2, or PlantUML) supported by the project's rendering environment to visualize spatial wireframes cleanly across all devices.
 3. **Mechanism-Driven References:**
    - Reference specific real-world products for concrete mechanisms (e.g. "Cloudflare's shallow jump-list triad", "Obsidian's collapsible backlink rail", "VS Code's sticky header breadcrumbs").
    - Proactively suggest 2-3 apps or websites that solve similar spatial or navigation problems, explaining what to borrow and what NOT to copy.
@@ -33,7 +33,7 @@ Guide the human architect and AI agent through Phase 2 of the Experience Cycle: 
 3. Save to `docs/design/references.md` (or update `docs/03-EXPERIENCE.md`).
 
 ### Step 2.2: Propose Two Zero-Color Macro Layout Wireframes
-Render both proposals in a dedicated Artifact using supported Mermaid diagrams:
+Render both proposals in a dedicated Artifact using a supported declarative diagram (e.g. Mermaid, D2, or PlantUML):
 
 ```mermaid
 flowchart TB

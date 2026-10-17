@@ -53,7 +53,7 @@ Software begins with human intent, mental models, and daily ergonomics. Technica
 
 ### 2. The 5-Stage Phased Design Locking Funnel (Law 10)
 High-craft user experience cannot be generated in a single prompt. Every screen advances through 5 locked, versioned stages:
-1. **Macro Spatial Zoning & Zero-Color Wireframe:** Low-fidelity partitioning across screen zones (Header, Navigation Rail, Main Canvas, Context Drawer) with clean Mermaid subgraphs (`flowchart TB`) or wireframes in an Artifact. The human must see and approve where things live on screen before discussing micro-interactions. Zero colors, zero themes yet.
+1. **Macro Spatial Zoning & Zero-Color Wireframe:** Low-fidelity partitioning across screen zones (Header, Navigation Rail, Main Canvas, Context Drawer) with clean declarative diagram subgraphs (Mermaid `flowchart TB`, D2, PlantUML) or wireframes in an Artifact. The human must see and approve where things live on screen before discussing micro-interactions. Zero colors, zero themes yet.
 2. **Tactile Ergonomics & Direct Manipulation:** Defining how hands navigate between zones and how editing operates inside the primary workspace (e.g. inline editing vs split preview, keyboard shortcuts, command palette).
 3. **Design Tokens & Aesthetic Direction:** Establishing typography hierarchy, atmospheric canvas texture, and a surgical signature brand anchor.
 4. **The 7-State Component Matrix:** Engineering for the full operational lifecycle (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial/Filtered`) with adversarial worst-case edge data.
@@ -89,7 +89,7 @@ CGSpec is designed to be fully modular and adaptable to **any project size, life
 | - Domain Mental Model: Sophia Prater OOUX nouns, object relationships, and explicit granular permissions.      |
 +----------------------------------------------------------------------------------------------------------------+
 | TIER 2: VALIDATED v0.1 DESIGN & EXPERIENCE (docs/03-EXPERIENCE.md, docs/design/)                              |
-| - Design Brief & Journey Mapping -> Zero-Color Macro Layout Wireframe (Mermaid subgraphs, where parts live).    |
+| - Design Brief & Journey Mapping -> Zero-Color Macro Layout Wireframe (Mermaid / D2 / PlantUML subgraphs).     |
 | - Tactile Ergonomics & Direct Manipulation (how hands navigate & edit) -> Positive Design Tokens.             |
 | - Coexisting 7-State Component Matrix -> Interactive Executable Prototype (prototype-v0.1.html).               |
 +----------------------------------------------------------------------------------------------------------------+

@@ -8,9 +8,9 @@
    - Writing to `docs/01..05` is creating a **draft proposal** for the user to review. It is **never locked** until the user explicitly approves it!
    - Always make it clear: *"I drafted this proposal in `docs/02-...`. Please review it and tell me what you'd like changed."*
 
-2. **Law 2 — Prefer Visual Mermaid Diagrams in Artifacts (No Long Walls of Text):**
-   - When presenting data models, user flows, or architecture, **always provide a clean visual Mermaid diagram in an Artifact or fenced code block**.
-   - Humans absorb relationships visually much faster than reading 100 lines of plain text in chat.
+2. **Law 2 — Prefer Visual Declarative Diagrams (Mermaid, D2, PlantUML) in Artifacts (No Long Walls of Text):**
+   - When presenting data models, user flows, spatial layouts, or architecture, **always provide a clean visual declarative diagram (such as Mermaid, D2, or PlantUML) in an Artifact or fenced code block**.
+   - Humans absorb spatial layouts and object relationships visually much faster than reading 100 lines of plain text in chat. Never use wide fixed-width ASCII tables that wrap and break across different viewports.
 
 3. **Law 3 — Experience & Intent Precede Architecture & Code (Zero Premature Tech):**
    - The user defines *why we build* (brainstorming, problem definition, domain nouns) and *what they experience* (macro spatial layout, tactile ergonomics, visual tokens, interactive prototype) **FIRST**.
@@ -97,7 +97,7 @@ CGSpec is designed to be fully modular and adaptable to **any project size and a
 | - Domain Mental Model: Sophia Prater OOUX nouns, object relationships, and explicit granular permissions.      |
 +----------------------------------------------------------------------------------------------------------------+
 | TIER 2: VALIDATED v0.1 DESIGN & EXPERIENCE (docs/03-EXPERIENCE.md, docs/design/)                              |
-| - Design Brief & Journey Mapping -> Zero-Color Macro Layout Wireframe (Mermaid subgraphs, where parts live).    |
+| - Design Brief & Journey Mapping -> Zero-Color Macro Layout Wireframe (Mermaid / D2 / PlantUML subgraphs).     |
 | - Tactile Ergonomics & Direct Manipulation (how hands navigate & edit) -> Positive Design Tokens.             |
 | - Coexisting 7-State Component Matrix -> Interactive Executable Prototype (prototype-v0.1.html).               |
 +----------------------------------------------------------------------------------------------------------------+
