@@ -86,3 +86,34 @@
   - If starting fresh, **ask the user explicitly via `ask_question`** (recommending the most pragmatic structure for the product's scope, typically Monorepo for early-stage velocity) **without pushing or imposing polyrepo overhead** onto projects that do not need it.
 - **Contract-First Modularity:** Regardless of whether code lives in one repository or many, enforce clean Ports & Adapters interfaces so packages and services can develop in parallel with zero tight coupling.
 
+## 4. Universal Modularity: 3 Macro Milestone Tiers & Any-Stage Entry Gate
+
+CGSpec is designed to be fully modular and adaptable to **any project size and any project entry point**:
+
+```
++----------------------------------------------------------------------------------------------------------------+
+| TIER 1: BRAINSTORMED & LOCKED v0.1 INTENT (docs/01-INTENT.md, docs/02-OOUX.md)                                 |
+| - Is it interesting? Problem statement, mission, glossary, anti-goals, day-in-the-life walkthrough.             |
+| - Domain Mental Model: Sophia Prater OOUX nouns, object relationships, and explicit granular permissions.      |
++----------------------------------------------------------------------------------------------------------------+
+| TIER 2: VALIDATED v0.1 DESIGN & EXPERIENCE (docs/03-EXPERIENCE.md, docs/design/)                              |
+| - Design Brief & Journey Mapping -> Zero-Color Macro Layout Wireframe (Mermaid subgraphs, where parts live).    |
+| - Tactile Ergonomics & Direct Manipulation (how hands navigate & edit) -> Positive Design Tokens.             |
+| - Coexisting 7-State Component Matrix -> Interactive Executable Prototype (prototype-v0.1.html).               |
++----------------------------------------------------------------------------------------------------------------+
+| TIER 3: ENGINEERED v0.1 FOUNDATION & DELIVERY (docs/04-ARCHITECTURE.md, docs/05-DELIVERY.md, docs/adr/)       |
+| - Physical Architecture: Hexagonal Ports & Adapters, physical DDL schemas, foreign keys, contracts, ADRs.      |
+| - Code Conventions & Preferences: What the user likes / dislikes in code, libraries, and formatting.           |
+| - Delivery Slices: Bounded vertical slices (SLICE-001..N), definition of done, AST ingestion gates.           |
+| - Code Management & CI/CD: Git templates (issues/PRs), pre-commit doctor hook, automated testing, docker.      |
+| - Follow-up & Backlog Evolution: Ship v0.1 -> roll over to Future Backlog (v0.2+) in docs/00-INBOX.md.          |
++----------------------------------------------------------------------------------------------------------------+
+```
+
+### The 4 Any-Stage Entry Modes:
+1. **Mode A — Greenfield Creation (From Scratch):** Traverse Tier 1 (Brainstorming) -> Tier 2 (Experience) -> Tier 3 (Architecture, CI/CD, Delivery).
+2. **Mode B — Headless / Backend / CLI (No Web UI):** Execute Tier 1 (Intent & Nouns) -> skip GUI to define TUI/CLI command syntax & ergonomics -> execute Tier 3 (Architecture, Code, CI/CD).
+3. **Mode C — Brownfield Legacy Adoption (Existing Codebase):** Run `python3 scripts/ingest.py` (deterministic AST route & model parser) to generate a brownfield manifest -> reverse-derive `docs/02-OOUX.md` -> activate `doctor.py` integrity gate -> build bounded vertical slices (`cgspec-slice`) with zero disruption to legacy code.
+4. **Mode D — Mid-Flight Course Correction (Pivot / Migration):** Trigger `cgspec-pivot` to evaluate impact across Tier 1 (Adapter Swap), Tier 2 (Additive Scope Expansion), or Tier 3 (Total Soul Extraction).
+
+

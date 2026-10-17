@@ -53,7 +53,7 @@ Software begins with human intent, mental models, and daily ergonomics. Technica
 
 ### 2. The 5-Stage Phased Design Locking Funnel (Law 10)
 High-craft user experience cannot be generated in a single prompt. Every screen advances through 5 locked, versioned stages:
-1. **Macro Spatial Zoning & Zero-Color Wireframe:** Low-fidelity partitioning across screen zones (Header, Navigation Rail, Main Canvas, Context Drawer) with clean ASCII blockouts or wireframes in an Artifact. The human must see and approve where things live on screen before discussing micro-interactions. Zero colors, zero themes yet.
+1. **Macro Spatial Zoning & Zero-Color Wireframe:** Low-fidelity partitioning across screen zones (Header, Navigation Rail, Main Canvas, Context Drawer) with clean Mermaid subgraphs (`flowchart TB`) or wireframes in an Artifact. The human must see and approve where things live on screen before discussing micro-interactions. Zero colors, zero themes yet.
 2. **Tactile Ergonomics & Direct Manipulation:** Defining how hands navigate between zones and how editing operates inside the primary workspace (e.g. inline editing vs split preview, keyboard shortcuts, command palette).
 3. **Design Tokens & Aesthetic Direction:** Establishing typography hierarchy, atmospheric canvas texture, and a surgical signature brand anchor.
 4. **The 7-State Component Matrix:** Engineering for the full operational lifecycle (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial/Filtered`) with adversarial worst-case edge data.
@@ -74,6 +74,40 @@ Specification drift is eliminated deterministically. The built-in doctor utility
 
 ### 6. Disk-First Immediate Capture (Law 11)
 Chat context is ephemeral and lost across compacting or session boundaries; disk is permanent truth. Whenever an idea, spark, decision, consensus, or user preference emerges during a turn, the agent must commit it to disk (`docs/00-INBOX.md`, `docs/.memlog.md`, or the active spine) in the exact same turn before concluding its execution. The human architect must never bear the burden of asking "did you write that down?".
+
+---
+
+## Universal Modularity: 3 Macro Milestone Tiers & Any-Stage Entry Gate
+
+CGSpec is designed to be fully modular and adaptable to **any project size, lifecycle stage, and entry point**:
+
+```
++----------------------------------------------------------------------------------------------------------------+
+| TIER 1: BRAINSTORMED & LOCKED v0.1 INTENT (docs/01-INTENT.md, docs/02-OOUX.md)                                 |
+| - Active Thinking & Brainstorming: Is it interesting? Problem statement, mission, glossary, anti-goals.       |
+| - Day-in-the-Life Walkthrough: Realistic end-to-end human scenario from trigger to resolution.                 |
+| - Domain Mental Model: Sophia Prater OOUX nouns, object relationships, and explicit granular permissions.      |
++----------------------------------------------------------------------------------------------------------------+
+| TIER 2: VALIDATED v0.1 DESIGN & EXPERIENCE (docs/03-EXPERIENCE.md, docs/design/)                              |
+| - Design Brief & Journey Mapping -> Zero-Color Macro Layout Wireframe (Mermaid subgraphs, where parts live).    |
+| - Tactile Ergonomics & Direct Manipulation (how hands navigate & edit) -> Positive Design Tokens.             |
+| - Coexisting 7-State Component Matrix -> Interactive Executable Prototype (prototype-v0.1.html).               |
++----------------------------------------------------------------------------------------------------------------+
+| TIER 3: ENGINEERED v0.1 FOUNDATION & DELIVERY (docs/04-ARCHITECTURE.md, docs/05-DELIVERY.md, docs/adr/)       |
+| - Physical Architecture: Hexagonal Ports & Adapters, physical DDL schemas, foreign keys, contracts, ADRs.      |
+| - Code Conventions & Preferences: Explicit human code preferences, selected libraries, formatting rules.       |
+| - Delivery Slices: Bounded vertical slices (SLICE-001..N), definition of done, AST ingestion gates.           |
+| - Code Management & CI/CD: Git templates (issues/PRs), pre-commit doctor hook, automated testing, docker.      |
+| - Follow-up & Backlog Evolution: Ship v0.1 -> roll over to Future Backlog (v0.2+) in docs/00-INBOX.md.          |
++----------------------------------------------------------------------------------------------------------------+
+```
+
+### The 4 Any-Stage Entry Modes:
+1. **Mode A — Greenfield Creation (From Scratch):** Traverse Tier 1 (Brainstorming) -> Tier 2 (Experience) -> Tier 3 (Architecture, CI/CD, Delivery).
+2. **Mode B — Headless / Backend / CLI (No Web UI):** Execute Tier 1 (Intent & Nouns) -> skip GUI to define TUI/CLI command syntax & ergonomics -> execute Tier 3 (Architecture, Code, CI/CD).
+3. **Mode C — Brownfield Legacy Adoption (Existing Codebase):** Run `python3 scripts/ingest.py` (deterministic AST route & model parser) to generate a brownfield manifest -> reverse-derive `docs/02-OOUX.md` -> activate `doctor.py` integrity gate -> build bounded vertical slices (`cgspec-slice`) with zero disruption to legacy code.
+4. **Mode D — Mid-Flight Course Correction (Pivot / Migration):** Trigger `cgspec-pivot` to evaluate impact across Tier 1 (Adapter Swap), Tier 2 (Additive Scope Expansion), or Tier 3 (Total Soul Extraction).
+
 
 ---
 
