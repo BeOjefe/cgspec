@@ -12,14 +12,15 @@
    - When presenting data models, user flows, or architecture, **always provide a clean visual Mermaid diagram in an Artifact or fenced code block**.
    - Humans absorb relationships visually much faster than reading 100 lines of plain text in chat.
 
-3. **Law 3 — Human-Centered Journey (Visuals Before Deep Tech):**
-   - The user designs *what they want* and *how it looks* first. Technical "how" (database tables, SQL schemas, architecture) comes *after* the human visual experience is clear!
-   - **The 4-Stage Journey:**
-     `📍 1. What We Want (PRD & Features) → 2. How It Looks (Visual Design & Screen Walkthrough) → 3. How It Works (Data Model & Architecture) → 4. Build Slices`
+3. **Law 3 — Human Experience & UI/UX Precede Architecture & Backend (Zero Premature Tech):**
+   - The user defines *why we build* (PRD & Day-in-the-Life journey) and *what they experience* (complete UI/UX, spatial zoning, and interactive prototype) **FIRST**.
+   - Technical "how" (database tables, SQL schemas, foreign keys, programming languages, backend frameworks, ORMs) is **strictly forbidden** until the human has tested and approved the interactive prototype!
+   - **The Strict 4-Stage Sequence:**
+     `Stage 1: Problem & Day-in-the-Life Journey ──▶ Stage 2: UI/UX & Interactive Prototype ──▶ Stage 3: Data Model & Technical Architecture ──▶ Stage 4: Build Slices`
 
 4. **Law 4 — 1-Line Plain-English Compass:**
-   Start every message with the 1-line progress indicator so the human always knows where we are:
-   `📍 Where we are: 1. Features ✅ → [2. Visual Screens & Walkthrough] → 3. Data Model & Tech → 4. Build`
+   Start every message with the 1-line progress indicator so the human always knows where we are (clean text, zero emojis):
+   `Where we are: Stage 1: Features & Journey [Done] -> [Stage 2: UI/UX & Interactive Prototype] -> Stage 3: Data Model & Architecture -> Stage 4: Build Slices`
    **Never** use internal methodology jargon or cryptic codes (`Spine`, `SLICE-001`, `SCR-05`, `M-008`).
 
 5. **Law 5 — Never Ask Vague Open-Ended "How to Proceed?" Questions:**
@@ -63,6 +64,7 @@
 - **Tooling Defaults:** Use `uv` for Python and `bun`/`pnpm` for TypeScript/JS.
 - **Strict Modularity:** Enforce Ports & Adapters. Never allow UI components to import database or crypto clients directly.
 - **Visual QA Gate:** Verify all UI changes in a real headless browser across all 7 required states (`loading`, `empty`, `error`, `offline`, `partial`, `populated`, `denied`).
+- **Spec Integrity Hook (`cgspec doctor`):** Before completing any turn that modifies specifications or closing a milestone, run `python3 {skill-dir}/scripts/doctor.py .` to deterministically verify that all spines exist, memory log entries are sequential, all accepted ADRs are registered in `00-INDEX.md`, and zero specification drift exists.
 
 ## 3. Microservices & Arbitrary Polyrepo Topologies (Zero Hardcoded Silos)
 - **Zero Binary Assumptions:** Never assume a system is rigidly limited to just "one frontend and one backend". Modern engineering projects routinely have $N$ microservice repositories (e.g. `services/auth`, `services/order-matching`, `services/payments`, `workers/ingestion`, `workers/notifications`).
