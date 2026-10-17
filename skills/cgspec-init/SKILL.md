@@ -24,7 +24,7 @@ Determine whether the project is Greenfield or Brownfield:
 - **Brownfield Ingestion (`cgspec ingest`):** Existing codebase with pre-existing code, routes, or database schemas.
   1. **Deterministic AST Extraction:** Run `python3 {skill-dir}/scripts/ingest.py {project-root}` (optionally `--subsystem <path>` for bounded context scoping or `--live-schema <path>` for live SQL dumps).
   2. **Manifest Generation:** Produces `{project-root}/docs/.working/brownfield-manifest.json` conforming to `docs/.working/brownfield-manifest.schema.json`.
-  3. **OOUX Distillation:** High-level domain nouns automatically populated into `02-NOUNS-AND-FLOWS.md` without raw physical SQL.
+  3. **OOUX Distillation:** High-level domain nouns automatically populated into `02-OOUX.md` without raw physical SQL.
   4. **Baseline Lock (`ADR-000`):** Creates `docs/adr/ADR-000-legacy-baseline-adoption.md` codifying existing architectural decisions as the baseline freeze.
 
 ### 2. Workspace Topology Configuration
@@ -49,14 +49,14 @@ Detect or ask (via `ask_question`) the project structure:
      --tags "lock,init" \
      --summary "Initialized CGSpec vault"
    ```
-5. Generate the 6 core spine files in `{project-root}/docs/`:
+5. Generate the 6 core Reformed CGSpec v2 spine files in `{project-root}/docs/`:
    - `00-INDEX.md`: Phase state, spine matrix, and slice registry table.
    - `00-INBOX.md`: Parked future sparks and scope buffer.
-   - `01-PRD.md`: Problem statement, glossary, user profiles, and Day-in-the-Life journey.
-   - `02-NOUNS-AND-FLOWS.md`: OOUX domain mental models (`erDiagram`), Owner + 6 permissions (`read|invoke|propose_edit|write|share|admin`), core business flows. (Zero physical SQL/DDL).
-   - `03-ARCHITECTURE.md`: Modular boundaries, physical DDL, API contracts, Ports & Adapters, crypto/MCP envelopes.
-   - `04-DESIGN.md`: Typography scale, layout grid, aesthetic archetype, visual tokens.
-   - `05-EXPERIENCE.md`: Named protagonists, complete screen inventory, and the 7-State Component Matrix (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial`).
+   - `01-INTENT.md`: Problem statement, glossary, user profiles, and Day-in-the-Life journey.
+   - `02-OOUX.md`: OOUX domain mental models (`erDiagram`), Owner + 6 permissions (`read|invoke|propose_edit|write|share|admin`), core business flows (zero physical SQL/DDL).
+   - `03-EXPERIENCE.md`: Adaptive spatial zoning, visual design tokens, functional protagonists, screen inventory, and the 7-State Component Matrix.
+   - `04-ARCHITECTURE.md`: Modular boundaries, physical DDL, API contracts, Ports & Adapters, crypto/MCP envelopes.
+   - `05-DELIVERY.md`: Atomic vertical slices, contract-first mocks, verification criteria, and doctor invariant hooks.
 
 ### 5. Pre-Flight Integrity Verification
 Run the CGSpec Doctor to ensure all spines and memory logs are 100% compliant:

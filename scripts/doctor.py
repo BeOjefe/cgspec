@@ -34,16 +34,29 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
     print(f"CGSpec Doctor: Inspecting {project_root.resolve()}")
     print("-" * 60)
 
-    # 1. Verify Core Spines
-    expected_spines = [
-        "00-INDEX.md",
-        "01-PRD.md",
-        "02-NOUNS-AND-FLOWS.md",
-        "03-ARCHITECTURE.md",
-        "04-DESIGN.md",
-        "05-EXPERIENCE.md",
-    ]
-    
+    # 1. Verify Core Spines (Auto-detect Reformed CGSpec v2 vs Legacy v1)
+    if (docs_dir / "01-INTENT.md").exists():
+        version_label = "Reformed CGSpec v2 (Law 3 Pure)"
+        expected_spines = [
+            "00-INDEX.md",
+            "01-INTENT.md",
+            "02-OOUX.md",
+            "03-EXPERIENCE.md",
+            "04-ARCHITECTURE.md",
+            "05-DELIVERY.md",
+        ]
+    else:
+        version_label = "Legacy CGSpec v1"
+        expected_spines = [
+            "00-INDEX.md",
+            "01-PRD.md",
+            "02-NOUNS-AND-FLOWS.md",
+            "03-ARCHITECTURE.md",
+            "04-DESIGN.md",
+            "05-EXPERIENCE.md",
+        ]
+
+    print(f"  [SPEC] Active Standard: {version_label}")
     for spine in expected_spines:
         spine_path = docs_dir / spine
         spine_dir = docs_dir / spine.replace(".md", "")

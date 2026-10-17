@@ -16,7 +16,7 @@
    - The user defines *why we build* (PRD & Day-in-the-Life journey) and *what they experience* (complete UI/UX, spatial zoning, and interactive prototype) **FIRST**.
    - Technical "how" (database tables, SQL schemas, foreign keys, programming languages, backend frameworks, ORMs) is **strictly forbidden** until the human has tested and approved the interactive prototype!
    - **The Strict 4-Stage Sequence:**
-     `Stage 1: Intent, User Journey & Conceptual OOUX Nouns (docs/01-PRD.md, docs/02-NOUNS-AND-FLOWS.md) ──▶ Stage 2: UI/UX & Interactive Prototype (docs/04-DESIGN.md, docs/05-EXPERIENCE.md) ──▶ Stage 3: Physical Architecture, DDL & Contracts (docs/03-ARCHITECTURE.md) ──▶ Stage 4: Build Slices`
+     `Stage 1: Intent, User Journey & Conceptual OOUX Nouns (docs/01-INTENT.md, docs/02-OOUX.md) ──▶ Stage 2: UI/UX & Interactive Prototype (docs/03-EXPERIENCE.md) ──▶ Stage 3: Physical Architecture, DDL & Contracts (docs/04-ARCHITECTURE.md) ──▶ Stage 4: Build Slices (docs/05-DELIVERY.md)`
 
 4. **Law 4 — 1-Line Plain-English Compass:**
    Start every message with the 1-line progress indicator so the human always knows where we are (clean text, zero emojis):
@@ -35,12 +35,12 @@
    - **Pre-Flight ADR Check:** Every AI agent working on architecture or implementation MUST read all existing ADRs in `docs/adr/` to obey established system invariants and avoid re-litigating locked decisions.
 
 8. **Law 8 — Deterministic Sprouting with Numeric Preservation:**
-   - **v0.1 Single File Default:** Spine documents remain single files (`docs/01-PRD.md` .. `docs/05-EXPERIENCE.md`) for high reading speed and low prompt token usage.
+   - **v0.1 Single File Default:** Spine documents remain single files (`docs/01-INTENT.md` .. `docs/05-DELIVERY.md`) for high reading speed and low prompt token usage.
    - **Deterministic Sprout Trigger:** An agent may ONLY sprout a file into a directory if:
      - **Condition A:** The spine file exceeds 500 lines on disk (`wc -l > 500`), OR
      - **Condition B:** The project advances to `v0.2+` with multiple concurrent squads.
    - **Numeric Invariant:** Sprouted directories **MUST retain the two-digit numerical prefix** to maintain strict ordering:
-     `docs/01-PRD.md` $\rightarrow$ `docs/01-PRD/`, `docs/02-NOUNS-AND-FLOWS.md` $\rightarrow$ `docs/02-NOUNS-AND-FLOWS/`, `docs/03-ARCHITECTURE.md` $\rightarrow$ `docs/03-ARCHITECTURE/`.
+     `docs/01-INTENT.md` $\rightarrow$ `docs/01-INTENT/`, `docs/02-OOUX.md` $\rightarrow$ `docs/02-OOUX/`, `docs/03-EXPERIENCE.md` $\rightarrow$ `docs/03-EXPERIENCE/`, `docs/04-ARCHITECTURE.md` $\rightarrow$ `docs/04-ARCHITECTURE/`.
 
 9. **Law 9 — Strict Council Subagent Tree (Main Agent Spawns ONLY Supervisor):**
    - When executing `/cgspec-council`, the **Main Agent MUST remain in the chat with the user** at all times and provide a high-signal chat briefing (Locked Question, Tension, Stakes, Target Invariant).
@@ -52,8 +52,8 @@
 10. **Law 10 — Phased Design Locking Funnel (No Jumping Directly to Code):**
     - High-craft UI/UX cannot be generated in a single prompt. Design is at the absolute center of CGSpec. Every screen must proceed through 4 locked, versioned stages before final scaffolding:
       1. **Stage 1: OOUX & Spatial Zoning (Low-Fi):** Define core nouns, object relationships, and spatial canvas zones (Header, Nav, Master Workspace, Detail Drawer). Locked in `docs/.working/prototypes/wireframes.excalidraw` or ASCII blockout.
-      2. **Stage 2: Design Tokens & Visual Direction:** Lock typography pairing (Display vs Sans vs Monospace), canvas atmospheric texture, and signature brand anchor (1 dominant primary). Recorded in `docs/04-DESIGN.md`.
-      3. **Stage 3: Component & State Matrix:** Define all 7 lifecycle states (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial`) with realistic worst-case edge data. Locked in `docs/05-EXPERIENCE.md`.
+      2. **Stage 2: Design Tokens & Visual Direction:** Lock typography pairing (Display vs Sans vs Monospace), canvas atmospheric texture, and signature brand anchor (1 dominant primary). Recorded in `docs/03-EXPERIENCE.md`.
+      3. **Stage 3: Component & State Matrix:** Define all 7 lifecycle states (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Partial`) with realistic worst-case edge data. Locked in `docs/03-EXPERIENCE.md`.
       4. **Stage 4: Interactive Prototype Baseline (`prototype-v0.1.html`):** Single-file executable HTML with working state switcher and real keyboard navigation. Never mutate in place; versioned as `prototype-v0.1.html` with ADR experiments as `prototype-ADR-NNN.html`.
     - **One-Question-at-a-Time Interview:** The agent must interview the user on layout, flow, and taste decisions one question at a time (via `ask_question`), locking each decision into `docs/.memlog.md` with tags `lock,ux`.
 

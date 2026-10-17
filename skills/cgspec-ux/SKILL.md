@@ -1,6 +1,6 @@
 ---
 name: cgspec-ux
-description: Dual-Spine UX & Design Architect. Operates the 4-Stage Phased Design Locking Funnel (OOUX -> Adaptive Spatial Zoning -> Design Tokens -> Component State Matrix -> Interactive Prototype), locks 04-DESIGN.md + 05-EXPERIENCE.md, and verifies UI in a live browser.
+description: Dual-Spine UX & Design Architect. Operates the 4-Stage Phased Design Locking Funnel (OOUX -> Adaptive Spatial Zoning -> Design Tokens -> Component State Matrix -> Interactive Prototype), locks 03-EXPERIENCE.md, and verifies UI in a live browser.
 ---
 
 # cgspec-ux
@@ -20,7 +20,7 @@ When designing a product experience, never attempt to design every screen simult
 
 1. **Pick One Target Screen:** Select the immediate focal screen from the screen inventory (e.g. `SCR-01 Gateway Dashboard` or `SCR-02 Key Vault`).
 2. **Execute the 4-Question UX Interview (One Question at a Time via `ask_question`):**
-   - **Question 1 (Core Task & Primary Noun):** What primary job does the user arrive to do? Which domain noun from `docs/02-NOUNS-AND-FLOWS.md` is the hero object?
+   - **Question 1 (Core Task & Primary Noun):** What primary job does the user arrive to do? Which domain noun from `docs/02-OOUX.md` (or `docs/02-NOUNS-AND-FLOWS.md`) is the hero object?
    - **Question 2 (Form Factor & Spatial Zoning):** What is the target device/medium? Select the spatial zoning archetype (Desktop, Mobile, Canvas, Focused Flow, TUI).
    - **Question 3 (Progressive Disclosure):** What high-frequency data must be visible immediately? What contextual details are tucked into slide-overs, sheets, or expandable rows?
    - **Question 4 (Failure & Boundary Handling):** What happens when the collection is empty? When permissions are 403? When upstream calls time out?
@@ -32,7 +32,7 @@ When designing a product experience, never attempt to design every screen simult
 
 ### Stage 1: OOUX & Adaptive Spatial Zoning (Low-Fidelity Architecture)
 
-1. **Silent Noun Check:** Silently read `{project-root}/docs/02-NOUNS-AND-FLOWS.md`.
+1. **Silent Noun Check:** Silently read `{project-root}/docs/02-OOUX.md` (or `{project-root}/docs/02-NOUNS-AND-FLOWS.md`).
 2. **Actor & Primary Action:** Identify the explicit **Functional Actor** (`Organization Owner`, `Project Lead`, `Developer / Vault Owner`, `Security Auditor`, `AI Agent Session`).
 3. **Adaptive Spatial Zoning by Form Factor:**
    Select the layout archetype matching the target product type:
@@ -79,14 +79,14 @@ When designing a product experience, never attempt to design every screen simult
    - Option 3: *UX Pilot Architectural Atelier* (Warm limestone `#e8e8e2`, deep ink navy `#130537`, dashed borders).
    - Option 4: *Cloudflare High-Trust Daylight* (Pure white canvas, surgical Safety Orange `#f38020`, shallow jump lists).
 3. **Lock Design System Spine:**
-   - Update `{project-root}/docs/04-DESIGN.md` with typography scale, atmospheric canvas textures, and dominant signature brand anchor.
+   - Update `{project-root}/docs/03-EXPERIENCE.md` (or legacy `04-DESIGN.md`) with typography scale, atmospheric canvas textures, and dominant signature brand anchor.
    - Log to `docs/.memlog.md` (`lock,ux,tokens`).
 
 ---
 
 ### Stage 3: Component & 7-State Matrix
 
-1. **Screen Inventory:** For the active screen, document the complete 7-state lifecycle in `{project-root}/docs/05-EXPERIENCE.md`:
+1. **Screen Inventory:** For the active screen, document the complete 7-state lifecycle in `{project-root}/docs/03-EXPERIENCE.md` (or legacy `05-EXPERIENCE.md`):
    - `Populated`: Standard active view with realistic domain data.
    - `Loading Skeleton`: Geometry-matched pulsing shimmer placeholders.
    - `Empty State`: Diagnostic illustration, clear explanation, actionable primary CTA.
@@ -104,7 +104,7 @@ When designing a product experience, never attempt to design every screen simult
 1. **Executable Single-File Deliverable:**
    - Single self-contained HTML/CSS/JS file (Tailwind CDN + Lucide Icons + Google Fonts).
    - Built-in **Interactive 5-State Switcher Bar** pinned at the top (`Populated`, `Loading Skeleton`, `Empty`, `Error`, `Denied 403`).
-   - Working command palette (`⌘K`), functional search filters, and interactive drawer panels.
+   - Working command palette (`Ctrl+K`), functional search filters, and interactive drawer panels.
 2. **Prototype Versioning Invariant (Never Overwrite Baselines in Place):**
    - `{project-root}/docs/.working/prototypes/prototype-v0.1.html` (Locked milestone baseline).
    - `{project-root}/docs/.working/prototypes/prototype-ADR-NNN-<slug>.html` (ADR-specific visual experiments).

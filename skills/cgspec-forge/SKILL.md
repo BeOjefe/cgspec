@@ -29,5 +29,5 @@ description: Non-linear idea pressure-tester and spec hub. Challenges assumption
        --details "<rationale and rejected options>"
      ```
    - **Architectural Decision Mandate (ADR):** If the decision involves an architectural trade-off, database engine, auth/crypto protocol, multi-repo mount, or boundary contract, write `{project-root}/docs/adr/ADR-NNN-<slug>.md` (Context, Decision, Consequences) and register it in `docs/00-INDEX.md`.
-   - Update the affected spine (`01-PRD.md` .. `05-EXPERIENCE.md`) and `docs/00-INDEX.md`, and state in 1 short sentence what was saved.
+   - Update the affected spine (`01-INTENT.md` .. `05-DELIVERY.md`) and `docs/00-INDEX.md`, and state in 1 short sentence what was saved.
 

@@ -11,16 +11,16 @@
 
 ---
 
-## 2. Canonical Document Status Matrix
+## 2. Canonical Document Status Matrix (Reformed CGSpec v2)
 
 | Pillar Document | Status | Last ADR | Purpose |
 | :--- | :--- | :--- | :--- |
-| [`00-INBOX.md`](file:///home/ojefe/Documents/Project/cgspec/docs/00-INBOX.md) | `[Active]` | — | Idea Parking Lot & `v0.2+` Future Features for `cgspec` |
-| [`01-PRD.md`](file:///home/ojefe/Documents/Project/cgspec/docs/01-PRD.md) | `[Ready for Review]` | [`ADR-001`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-001-why-flowspec-over-speckit-bmad-gstack.md) | Problem Statement, Plain-English Glossary, Autopilot Coach UX, `v0.1` Scope & Non-Goals |
-| [`02-NOUNS-AND-FLOWS.md`](file:///home/ojefe/Documents/Project/cgspec/docs/02-NOUNS-AND-FLOWS.md) | `[Ready for Review]` | [`ADR-002`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-002-monorepo-vs-polyrepo-and-db-migrations.md) | Core Objects, Non-Linear `.memlog.md` Loop, 3-Tier Pivot Flow, Monorepo vs. Polyrepo & DB Migration Layout |
-| [`03-ARCHITECTURE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-ARCHITECTURE.md) | `[Ready for Review]` | [`ADR-003`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-003-supervised-peer-council-architecture.md) | Vendor-Neutral Skill Architecture (`AGENTS.md`, `CLAUDE.md`, `skills/cgspec-*/SKILL.md`, `scripts/memlog.py`, CortexGate MCP Bridge) |
-| [`04-DESIGN.md`](file:///home/ojefe/Documents/Project/cgspec/docs/04-DESIGN.md) | `[Ready for Review]` | [`ADR-004`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-004-arbitrary-multi-service-topologies-and-virtual-mounting.md) | Universal Templates, Google Labs `design.md` visual tokens & layout grid |
-| [`05-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/05-EXPERIENCE.md) | `[Ready for Review]` | [`ADR-005`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-005-hierarchical-adrs-and-documentation-scaling.md) | Protagonists, Interaction Journeys, and 7-State View Matrix |
+| [`00-INBOX.md`](file:///home/ojefe/Documents/Project/cgspec/docs/00-INBOX.md) | `[Active]` | — | Idea Parking Lot & future sparks |
+| [`01-INTENT.md`](file:///home/ojefe/Documents/Project/cgspec/docs/01-INTENT.md) | `[Locked]` | [`ADR-001`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-001-first-principles-spec-driven-sdlc-architecture.md) | Problem Statement, Mission, Glossary & Day-in-the-Life Journey |
+| [`02-OOUX.md`](file:///home/ojefe/Documents/Project/cgspec/docs/02-OOUX.md) | `[Locked]` | [`ADR-002`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-002-monorepo-vs-polyrepo-and-db-migrations.md) | Domain Mental Models, 6 Permissions & Non-Linear Lifecycle Flows |
+| [`03-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-EXPERIENCE.md) | `[Locked]` | [`ADR-004`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-004-arbitrary-multi-service-topologies-and-virtual-mounting.md) | Spatial Zoning, Visual Tokens, Functional Protagonists & 7-State Matrix |
+| [`04-ARCHITECTURE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/04-ARCHITECTURE.md) | `[Locked]` | [`ADR-003`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-003-supervised-peer-council-architecture.md) | Hexagonal Ports & Adapters, Council Architecture & MCP Bridge |
+| [`05-DELIVERY.md`](file:///home/ojefe/Documents/Project/cgspec/docs/05-DELIVERY.md) | `[Locked]` | [`ADR-005`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-005-hierarchical-adrs-and-documentation-scaling.md) | Bounded Slices, Verification Criteria, Doctor Gates & AST Ingestion |
 
 ---
 
