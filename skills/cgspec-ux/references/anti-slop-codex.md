@@ -50,3 +50,31 @@ When left unguided, AI models converge toward statistical averages ("AI Slop"). 
    - `Neutral / Idle`: Zinc (`text-zinc-400 bg-zinc-800 border-zinc-700`)
 8. **Zero Build Dependency Portable HTML:**
    - Prototypes in `docs/.working/prototypes/` must be 100% self-contained single HTML files runnable directly in any browser without requiring `npm install` or bundlers (using Tailwind CDN + Lucide Icons script).
+
+---
+
+## 3. The 4 Breakthrough Taste Archetypes (Beyond the Dark Dashboard Trap)
+
+1. **The "Traycer Luxury Developer Atelier" (Dark Luxury & Cybernetic Precision):**
+   - Canvas: Dark `#0a0b0e` with a tactile carbon dot-grid texture (`background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px); background-size: 20px 20px;`).
+   - Typographic Juxtaposition: Sharp literary Serif display headline (*Newsreader*, *Fraunces*, *Instrument Serif*) paired with neutral sans body and *JetBrains Mono* metrics.
+   - Accents: Ethereal cyan/teal ambient backlight (`rgba(6, 182, 212, 0.15)` blurred at `60px`).
+   - Hero: Realistic multi-pane IDE / terminal viewport.
+
+2. **The "Langfuse Calibrated Blueprint" (Precision Engineering Lab):**
+   - Canvas: Millimeter graph paper drafting grid (`background-image: linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 24px 24px;`).
+   - Signature Accent: Fluorescent highlighter tape marker blocks (`#facc15` / `#ffff55` with black text) behind key terms.
+   - Drafting Geometry: Corner crop brackets `[ ┌ ... ┐ ]` around hero panels.
+   - Hardware Keycaps: Embedded shortcut keycaps inside buttons (`Start free [S]`, `Documentation [D]`).
+
+3. **The "UX Pilot Architectural Atelier" (Tactile Brutalist Draftsman):**
+   - Canvas: Warm tactile limestone/bone surface (`#e8e8e2`) paired with deep ink-navy typography (`#130537`).
+   - Typographic Authority: Architectural all-caps grotesque (*Everett*, *Syne*, *Cabinet Grotesk*) with ink traps.
+   - Drafting Details: Dashed blueprint dividers (`border-dashed border-[#130537]`) and coordinate registration pills (`(-1)`, `(0)`, `(1)`).
+   - Pigment Framing: Soft pastel architectural framing mats (lavender `#BCB3F2`, putty `#DDDBCD`, sage `#CDDCDD`).
+
+4. **The "Cloudflare High-Trust Daylight Infrastructure" (Luminous Institutional Grade):**
+   - Canvas: Crisp daylight confidence (`#ffffff` canvas, `#f9fafb` sidebar, `#f3f4f6` hover).
+   - Brand Anchor: Surgical Safety Orange (`#f38020`) as a bold focal mark.
+   - Anti-4-Box Navigation: Replace generic 4-box metric strips with the "Shallow Jump-List Triad" (`Domains >`, `Workers >`, `Recents >`).
+
