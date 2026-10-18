@@ -314,6 +314,9 @@ def cmd_uninstall(root: Path, _args: argparse.Namespace) -> int:
         else:
             gitignore.unlink()
     shutil.rmtree(root / ENGINE_DIR, ignore_errors=True)
+    lock = root / "docs/.memlog.lock"
+    if lock.is_file() and not lock.is_symlink():
+        lock.unlink()
     if not archive_needed:
         shutil.rmtree(root / ARCHIVE, ignore_errors=True)
     remove_empty_dirs(root, set(dirs) & set(owned.get("dirs", [])) | {ENGINE_DIR.as_posix(), ARCHIVE.as_posix(), ARCHIVE.parent.as_posix()})

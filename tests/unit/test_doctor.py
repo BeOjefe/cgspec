@@ -404,3 +404,51 @@ class DoctorRecheckTests(unittest.TestCase):
         (self.root / "docs/adrs/ADR-001-bad.md").write_bytes(b"\xff\xfe not utf8")
         result = doctor(self.root)
         self.assertEqual(result.stdout.count("E-ENCODING docs/adrs/ADR-001-bad.md"), 1)
+
+
+class PrototypeCodeRuleTests(unittest.TestCase):
+    """Grey prototypes are plain browser pages: imports must be relative paths or full URLs."""
+
+    EVASIONS = [
+        "const { chromium } = await import(`playwright`);",
+        'const m = await import("play" + "wright");',
+        'import sharp from "sharp";',
+        'globalThis["process"].exit(0);',
+        "Bun.write('x', 'y');",
+        "Deno.writeTextFile('x', 'y');",
+        "const p = require('path');",
+        "import { pathToRegexp } from 'path-to-regexp';",
+    ]
+    ALLOWED = [
+        "import { render } from './render.js';",
+        "import '../shared/shell.js';",
+        "import { h } from 'https://esm.sh/preact@10.19.3';",
+        "export { x } from './x.js';",
+        "const mod = await import('./lazy.js');",
+        "document.querySelector('#app').textContent = 'process the order';",
+    ]
+
+    def setUp(self):
+        self._tmp = TempDir()
+        self.root = self._tmp.__enter__()
+        install(self.root)
+        (self.root / "docs/prototypes/home").mkdir()
+
+    def tearDown(self):
+        self._tmp.__exit__(None, None, None)
+
+    def check(self, code):
+        (self.root / "docs/prototypes/home/app.js").write_text(code + "\n")
+        return doctor(self.root)
+
+    def test_node_or_package_code_is_a_script(self):
+        for code in self.EVASIONS:
+            with self.subTest(code=code):
+                result = self.check(code)
+                self.assertIn("E-SCRIPT-UNREGISTERED", result.stdout)
+
+    def test_plain_browser_code_passes(self):
+        for code in self.ALLOWED:
+            with self.subTest(code=code):
+                result = self.check(code)
+                self.assertNotIn("E-SCRIPT-UNREGISTERED", result.stdout)

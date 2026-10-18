@@ -89,8 +89,14 @@ SCRIPT_SUFFIXES = {
 }
 # Browser code allowed in prototype screen folders and the vision board, unless it uses Node.
 PROTOTYPE_ASSET_SUFFIXES = {".js", ".mjs", ".ts", ".tsx", ".jsx"}
-NODE_MARKERS = (r"\brequire\s*\(|\bprocess\.(argv|env|exit|cwd)\b|__dirname|"
-                r"(from|import)\s*\(?\s*['\"](node:|fs|path|os|child_process|playwright|@playwright/|puppeteer)")
+# Grey prototypes are plain browser pages (layers 0-4; layers 5-7 live in the real frontend),
+# so their code may only load relative paths or full URLs. Anything else counts as a script.
+IMPORT_SPECIFIER = r"""(?:\bimport\s*(?:[\w*{}\s,]+\s*from\s*)?|\bexport\s*[\w*{}\s,]+\s*from\s*)(['"`])([^'"`]*)\1"""
+DYNAMIC_IMPORT = r"\bimport\s*\("
+LITERAL_CALL_ARG = r"""^\s*(['"`])([^'"`$]*)\1\s*\)"""
+NODE_GLOBALS = r"\brequire\s*\(|\bprocess\b\s*\.|\b(Bun|Deno)\s*\.|globalThis\s*\[|__dirname|__filename"
+BROWSER_SPECIFIER = r"^(\.{1,2}/|/|https?://)"
+
 # Outside docs/, scripts are expected under the code and tests path classes; these are also fine.
 CONFIG_GLOBS = ["*.config.*", "**/*.config.*", ".github/**", ".husky/**", "**/.*rc.*", "**/.*rc",
                 "**/conftest.py", "**/setup.py", "**/noxfile.py", "**/manage.py"]

@@ -78,6 +78,7 @@ class Lock:
         except OSError as exc:
             if exc.errno in busy:
                 return False
+            self.handle.close()
             raise CgspecError(f"this file system does not support locking ({exc}); move the project to a local disk") from None
 
     def __enter__(self) -> "Lock":

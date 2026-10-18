@@ -261,14 +261,24 @@ def _is_script(path: Path) -> bool:
     return path.suffix.lower() in L.SCRIPT_SUFFIXES or _has_shebang(path)
 
 
+def _browser_code_only(text: str) -> bool:
+    if re.search(L.NODE_GLOBALS, text):
+        return False
+    for match in re.finditer(L.DYNAMIC_IMPORT, text):
+        literal = re.match(L.LITERAL_CALL_ARG, text[match.end():])
+        if not literal or not re.match(L.BROWSER_SPECIFIER, literal.group(2)):
+            return False  # computed or bare dynamic import
+    return all(re.match(L.BROWSER_SPECIFIER, m.group(2)) for m in re.finditer(L.IMPORT_SPECIFIER, text))
+
+
 def _browser_asset(path: Path, prototypes: Path) -> bool:
-    """Browser code inside a screen folder or the vision board, with no Node usage."""
+    """Plain browser code inside a screen folder or the vision board."""
     if prototypes not in path.parents or path.parent == prototypes or "_snapshots" in path.parts:
         return False
     if path.suffix.lower() not in L.PROTOTYPE_ASSET_SUFFIXES or _has_shebang(path):
         return False
     try:
-        return not re.search(L.NODE_MARKERS, path.read_text(encoding="utf-8", errors="replace"))
+        return _browser_code_only(path.read_text(encoding="utf-8", errors="replace"))
     except OSError:
         return False
 
