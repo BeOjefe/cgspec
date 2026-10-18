@@ -22,7 +22,7 @@ from _lib.shellparse import inline_writes, write_targets  # noqa: E402
 
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 LATER = {"session-start", "session-check", "user-message", "post-tool", "pre-compact", "stop",
-         "commit-msg", "ci"}
+         "commit-msg"}
 
 
 def normalize(payload: dict, tool: str) -> dict:
@@ -108,6 +108,22 @@ def pre_commit(root: Path) -> int:
     return EXIT_OK
 
 
+def ci(root: Path, base: str | None, rerun: bool) -> int:
+    from _lib import ci_gate
+    import doctor
+    if not base:
+        raise CgspecError("ci needs --base (the commit before this push or the PR base)")
+    problems, notes = ci_gate.run(root, base, rerun)
+    problems += [f"doctor {f.code} {f.path}: {f.message}" for f in doctor.run_checks(root) if f.is_error]
+    for note in notes:
+        print(note)
+    if problems:
+        print("CGSpec governance failed:\n- " + "\n- ".join(problems))
+        return EXIT_FAIL
+    print("CGSpec governance passed")
+    return EXIT_OK
+
+
 def cmd_tier(root: Path, args: argparse.Namespace) -> int:
     if args.action == "show":
         print(json.dumps(tiers.active(root), indent=2))
@@ -139,6 +155,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--reason")
     parser.add_argument("--files", help="T0: comma-separated existing files")
     parser.add_argument("--slice", help="T1+: SLICE-NNN")
+    parser.add_argument("--base", help="ci: base commit of the range to check")
+    parser.add_argument("--no-rerun", action="store_true", help="ci: skip re-running failing-test records")
     return parser
 
 
@@ -152,6 +170,8 @@ def main(argv: list[str] | None = None) -> int:
             return pre_tool(root, args.tool, sys.stdin.read())
         if args.event == "pre-commit":
             return pre_commit(root)
+        if args.event == "ci":
+            return ci(root, args.base, not args.no_rerun)
         if args.event in LATER:
             print(f"cgspec_hook: '{args.event}' is not built yet (build step 2f)", file=sys.stderr)
             return EXIT_INTERNAL
