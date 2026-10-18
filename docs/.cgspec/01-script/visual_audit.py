@@ -286,6 +286,63 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
             f"Phantom DOM Element Reference Violation (Nielsen H5: Error Prevention): Found document.getElementById() calls for IDs not present in the HTML DOM: {sorted(list(phantom_ids))[:8]}. This causes catastrophic runtime TypeErrors ('Cannot read properties of null') when users interact with the UI. Ensure every referenced ID exists in the HTML or prune dead script logic."
         )
 
+    # 15. Check for AI Slop Gradient Clichés (Anti-Slop Invariant — RES-002 & Hallmark Gate #12)
+    # Detects generic AI purple-to-indigo/violet gradients that indicate lazy uncurated prompt defaults
+    purple_grad_matches = re.findall(
+        r"\bfrom-(?:purple|indigo|violet|fuchsia)-(?:500|600|700)\s+to-(?:indigo|purple|violet|pink|fuchsia)-(?:500|600|700)\b",
+        content,
+    )
+    if purple_grad_matches:
+        errors.append(
+            f"AI UI Slop Violation (RES-002 / Hallmark Gate #12): Detected generic AI purple/indigo hero gradient {set(purple_grad_matches)}. Use intentional brand color anchors, tonal surface elevation (#09090b -> #121316), or high-trust monochrome styling instead of default AI purple gradients."
+        )
+
+    # 16. Check for Disembodied Dark-Mode Box Shadows (Hallmark Gate #18 & Tactile Hairline Invariant)
+    # In dark mode, pure CSS drop shadows are muddy or invisible; cards require 1px hairline borders (border-white/10 or border-zinc-800)
+    shadow_divs = re.findall(r'<div[^>]*class="([^"]*shadow-(?:2xl|xl)[^"]*)"', content)
+    disembodied_cards = []
+    for c in shadow_divs:
+        # Check if card is dark-themed or inside dark canvas
+        is_dark = any(k in c for k in ("bg-zinc-9", "bg-neutral-9", "bg-slate-9", "bg-black", "bg-[#0", "dark:bg-"))
+        has_border = any(k in c for k in ("border", "ring-1", "ring-2", "outline"))
+        if is_dark and not has_border:
+            disembodied_cards.append(c[:60])
+    if disembodied_cards:
+        warnings.append(
+            f"Disembodied Dark Shadow Slop (RES-002 / Hallmark Gate #18): Found {len(disembodied_cards)} dark card(s) using shadow-xl/2xl without a 1px hairline border: {disembodied_cards[:2]}. In dark mode, pure CSS shadows appear muddy; pair with 'border border-white/10' or 'border border-zinc-800' for crisp tactile elevation."
+        )
+
+    # 17. Check for Multi-State Architecture Support (Puck Constrained Generative UI Invariant)
+    # Production-ready UI cannot be a happy-path-only static mockup; must support state branching (empty, skeleton/loading, error)
+    has_state_architecture = any(
+        k in content
+        for k in (
+            "st ===",
+            "state ===",
+            "data-state",
+            "?state=",
+            "switchState",
+            "setState",
+            "state-switcher",
+            "state-selector",
+            "skeleton",
+            "empty-state",
+        )
+    )
+    if not has_state_architecture:
+        warnings.append(
+            "Monolithic Happy-Path Viewport (RES-002 / Puck Model): No interactive state branching detected (missing '?state=', 'data-state', skeleton, or empty state). Production interfaces must handle loading skeletons, empty collections, and error states deterministically."
+        )
+
+    # 18. Check for Typographic Alignment on Critical Metrics (Tactile Monospace / Tabular Numerals)
+    # Metrics with latencies (ms, kb, tokens) should use tabular numerals or monospace to prevent jitter
+    has_metrics = bool(re.search(r">\s*\d+(?:\.\d+)?\s*(?:ms|tokens|kb|mb|req/s|%)\s*<", content, re.I))
+    has_tabular = "tabular-nums" in content or "font-mono" in content
+    if has_metrics and not has_tabular:
+        warnings.append(
+            "Jittering Technical Metrics (RES-002 / Nielsen H8): Found latency or token metric values without 'tabular-nums' or 'font-mono'. Numerical readouts should use tabular lining figures to prevent layout jittering during updates."
+        )
+
     return errors, warnings
 
 
