@@ -36,3 +36,21 @@ class TempDir:
 def write_json(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+def snapshot_tree(root: Path) -> dict[str, bytes]:
+    """Map of every file (relative path) to its bytes, ignoring caches."""
+    out = {}
+    for path in sorted(root.rglob("*")):
+        if path.is_file() and "__pycache__" not in path.parts:
+            out[path.relative_to(root).as_posix()] = path.read_bytes()
+    return out
+
+
+def install(root: Path, profile: str = "web-workspace", topology: str = "single", *extra: str):
+    return run_script("install.py", "install", "--root", str(root), "--profile", profile,
+                      "--topology", topology, "--tools", "claude,git", *extra)
+
+
+def doctor(root: Path, *extra: str):
+    return run_script("doctor.py", "--root", str(root), *extra)
