@@ -86,9 +86,9 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
                         "('01-script', '02-research', '03-council', '04-adr', '05-prototype', '06-slice', '.archive')."
                     )
 
-    # 2. Verify Core Spines (Auto-detect Reformed CGSpec v2 vs Legacy v1)
-    if (docs_dir / "01-INTENT.md").exists():
-        version_label = "Reformed CGSpec v2 (Law 3 Pure)"
+    # 2. Verify Core Spines (Auto-detect Reformed CGSpec v0.2 vs Legacy v0.1)
+    if (docs_dir / "01-INTENT.md").exists() or (docs_dir / "01-INTENT").is_dir():
+        version_label = "Reformed CGSpec v0.2 (Law 3 Pure)"
         expected_spines = [
             "00-INDEX.md",
             "01-INTENT.md",
@@ -98,7 +98,7 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
             "05-DELIVERY.md",
         ]
     else:
-        version_label = "Legacy CGSpec v1"
+        version_label = "Legacy CGSpec v0.1"
         expected_spines = [
             "00-INDEX.md",
             "01-PRD.md",
@@ -124,8 +124,9 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
     if index_file.exists():
         index_content = index_file.read_text(encoding="utf-8")
         for spine in expected_spines:
-            if spine != "00-INDEX.md" and spine not in index_content:
-                errors.append(f"docs/00-INDEX.md does not tabulate core spine: docs/{spine}")
+            spine_stem = spine.replace(".md", "")
+            if spine != "00-INDEX.md" and spine not in index_content and spine_stem not in index_content:
+                errors.append(f"docs/00-INDEX.md does not tabulate core spine: docs/{spine} (or docs/{spine_stem}/)")
 
     # 4. Check Memory Log Continuity & Parity (supports docs/.memlog.md or docs/.cgspec/memlog.md)
     memlog_file = docs_dir / ".memlog.md"
@@ -179,7 +180,7 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
             
             adr_id = adr_id_match.group(1)
             adr_text = adr.read_text(encoding="utf-8")
-            status_match = re.search(r"-?\s*\*\*Status:\*\*\s*([A-Za-z]+)", adr_text, re.IGNORECASE)
+            status_match = re.search(r"-?\s*\*\*Status:\*\*\s*[`\[]*([A-Za-z]+)", adr_text, re.IGNORECASE)
             
             st_disk = status_match.group(1).capitalize() if status_match else "Unknown"
 

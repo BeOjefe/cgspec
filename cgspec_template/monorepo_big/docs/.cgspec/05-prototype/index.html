@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CGSpec Prototype Simulator Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body class="bg-[#09090b] text-zinc-100 min-h-screen flex flex-col">
+  <!-- State Switcher Bar -->
+  <header class="border-b border-zinc-800 bg-[#121316] px-4 py-2 flex items-center justify-between text-xs">
+    <div class="flex items-center gap-3">
+      <span class="font-bold tracking-tight text-white">CGSpec Prototype Simulator</span>
+      <span class="text-zinc-500">|</span>
+      <span class="text-zinc-400">Screen: <span class="text-zinc-200 font-mono">SCR-01 Starter</span></span>
+    </div>
+    <div class="flex items-center gap-1.5" id="state-switcher">
+      <span class="text-zinc-400 mr-2">State:</span>
+      <button onclick="switchState('populated')" class="state-btn px-2.5 py-1 rounded bg-zinc-800 text-white font-medium border border-zinc-700">Populated</button>
+      <button onclick="switchState('skeleton')" class="state-btn px-2.5 py-1 rounded bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800">Skeleton</button>
+      <button onclick="switchState('empty')" class="state-btn px-2.5 py-1 rounded bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800">Empty</button>
+      <button onclick="switchState('error')" class="state-btn px-2.5 py-1 rounded bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800">Error</button>
+      <button onclick="switchState('denied')" class="state-btn px-2.5 py-1 rounded bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800">Denied 403</button>
+    </div>
+  </header>
+
+  <!-- Main Viewport -->
+  <main class="flex-1 p-6 max-w-7xl w-full mx-auto" id="viewport-root">
+    <div class="border border-white/10 rounded-lg p-6 bg-[#121316]">
+      <h1 class="text-lg font-semibold text-white mb-2">Welcome to your CGSpec Prototype Canvas</h1>
+      <p class="text-sm text-zinc-400 mb-4">This single-file HTML prototype is where Stage 2 compiles and verifies your user-facing interface before physical architecture.</p>
+      <div class="text-xs font-mono text-zinc-500 tabular-nums">Status: Baseline Initialized · 0 errors</div>
+    </div>
+  </main>
+
+  <script>
+    function switchState(state) {
+      document.querySelectorAll('.state-btn').forEach(btn => {
+        btn.classList.remove('bg-zinc-800', 'text-white', 'border-zinc-700');
+        btn.classList.add('bg-zinc-900', 'text-zinc-400', 'border-zinc-800');
+      });
+      event.target.classList.remove('bg-zinc-900', 'text-zinc-400', 'border-zinc-800');
+      event.target.classList.add('bg-zinc-800', 'text-white', 'border-zinc-700');
+    }
+  </script>
+</body>
+</html>

@@ -11,7 +11,7 @@
 
 ---
 
-## 2. Canonical Document Status Matrix (Reformed CGSpec v2)
+## 2. Canonical Document Status Matrix (Reformed CGSpec v0.2)
 
 | Pillar Document | Status | Last ADR | Purpose |
 | :--- | :--- | :--- | :--- |
