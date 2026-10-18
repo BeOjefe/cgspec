@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from tests.helpers import TempDir, git, git_project, hook, make_slice, run_script, write_json
+from tests.helpers import TempDir, git, git_project, hook, make_slice, run_script, set_test_command, write_json
 
 CHECK = ["python3", "-c", "import pathlib,sys; sys.exit(0 if pathlib.Path('src/login/fixed.txt').exists() else 1)"]
 
@@ -24,9 +24,16 @@ class CiTests(unittest.TestCase):
         self.root = self._tmp.__enter__()
         git_project(self.root)
         self.base = head(self.root)
+        set_test_command(self.root, ["python3", "{test_file}"])
         make_slice(self.root, scope="src/login/**, tests/**")
         git(self.root, "add", "-A")
-        git(self.root, "commit", "-q", "-m", "slice")
+        git(self.root, "commit", "-q", "-m", "slice and test command")
+        self.tier_t1()
+        (self.root / "tests").mkdir()
+        (self.root / "tests/login_check.py").write_text(
+            "import pathlib, sys\nsys.exit(0 if pathlib.Path('src/login/fixed.txt').exists() else 1)\n")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "failing test")
         self.failing_commit = head(self.root)
 
     def tearDown(self):
@@ -39,15 +46,13 @@ class CiTests(unittest.TestCase):
     def record(self, failed_at):
         write_json(self.root / "docs/_cgspec/06-evidence/tests/login.json", {
             "schema": 1, "test_id": "login-fixed", "test_file": "tests/login_check.py", "slice": "SLICE-001",
-            "command": CHECK, "failed_at": failed_at,
+            "command": ["python3", "tests/login_check.py"], "failed_at": failed_at,
             "passed_at": None, "covers": ["src/login/form.ts", "src/login/fixed.txt"], "recorded": "2026-10-18T00:00:00Z"})
 
     def fix_commit(self, failed_at):
         self.tier_t1()
         (self.root / "src/login/form.ts").write_text("export const f = 2;\n")
         (self.root / "src/login/fixed.txt").write_text("ok\n")
-        (self.root / "tests").mkdir(exist_ok=True)
-        (self.root / "tests/login_check.py").write_text("# checks src/login/fixed.txt exists\n")
         self.record(failed_at)
         git(self.root, "add", "-A")
         git(self.root, "commit", "-q", "-m", "fix login")
@@ -75,7 +80,7 @@ class CiTests(unittest.TestCase):
         git(self.root, "commit", "-q", "--no-verify", "-m", "sneaky")
         result = ci(self.root, self.base)
         self.assertEqual(result.returncode, 1)
-        self.assertIn("no change tier", result.stdout)
+        self.assertIn("outside the scope", result.stdout)
         self.assertIn("sneaky", result.stdout)
 
     def test_frozen_entry_rewritten_across_commits_is_caught(self):

@@ -33,16 +33,81 @@ def commit_message(view: View) -> str | None:
     return git(view.root, "log", "-1", "--format=%B", view.new).stdout
 
 
-def approval_ok(view: View, ref: str, ids: set[str]) -> str | None:
-    """None when ref is a valid approval for this change, else the reason."""
-    if ref in ids:
-        return None
+def trusted_signature(view: View) -> bool:
+    """The judged commit has a good signature from a key in project.json approver_keys
+    (SSH public key lines, verified with an allowed-signers file built from them, or GPG fingerprints)."""
+    keys = load(view.read_new(PROJECT_FILE.as_posix())).get("approver_keys", [])
+    if not keys or view.new == ":":
+        return False
+    import tempfile
+    from .gitview import git
+    ssh_keys = [k for k in keys if k.startswith(("ssh-", "ecdsa-", "sk-"))]
+    with tempfile.NamedTemporaryFile("w", suffix=".allowed", delete=False) as handle:
+        handle.write("".join(f"approver {k}\n" for k in ssh_keys))
+        allowed = handle.name
+    try:
+        out = git(view.root, "-c", f"gpg.ssh.allowedSignersFile={allowed}", "log", "-1",
+                  "--format=%G?%n%GF%n%GP", view.new).stdout.split("\n")
+    finally:
+        Path(allowed).unlink(missing_ok=True)
+    if out[0] != "G":
+        return False
+    fingerprints = [k for k in keys if k not in ssh_keys]
+    return bool(ssh_keys) or any(f and f in out[1:3] for f in fingerprints)
+
+
+def fresh_approvals(view: View) -> dict[str, dict]:
+    """Approvals added in this change: only these may be cited by records changed here."""
+    old = {a.get("id") for a in load(view.read_old(APPROVALS)).get("approvals", []) if isinstance(a, dict)}
+    return {a["id"]: a for a in load(view.read_new(APPROVALS)).get("approvals", [])
+            if isinstance(a, dict) and a.get("id") and a["id"] not in old}
+
+
+RECORD_ID = re.compile(r"\b((?:SLICE|ADR|CHK)-\d{3})\b", re.I)
+
+
+def approval_ok(view: View, ref: str, record_id: str | None = None) -> str | None:
+    """None when ref validly approves the record changed in this commit, else the reason."""
     if ref == TRAILER_REF:
         message = commit_message(view)
-        if message is None or TRAILER.search(message):
-            return None
-        return "cites the commit trailer but the commit has no 'Approved-by:' line"
-    return f"cites approval {ref!r}, which is not in {APPROVALS}"
+        if message is None:
+            return None  # staged: commit-msg checks the trailer, CI checks the signature
+        if not TRAILER.search(message):
+            return "cites the commit trailer but the commit has no 'Approved-by:' line"
+        if not trusted_signature(view):
+            return "cites the commit trailer but the commit is not signed by a key in project.json approver_keys"
+        return None
+    fresh = fresh_approvals(view)
+    if ref not in fresh:
+        known = ref in approval_ids(view)
+        return (f"cites approval {ref!r}, which was not given in this change (approvals are single-use and fresh)"
+                if known else f"cites approval {ref!r}, which is not in {APPROVALS}")
+    named = {m.upper() for m in RECORD_ID.findall(str(fresh[ref].get("excerpt", "")))}
+    if named and record_id and record_id.upper() not in named:
+        return f"cites approval {ref}, but your message names {', '.join(sorted(named))}, not {record_id}"
+    return None
+
+
+def citation_counts(view: View) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    def add(ref):
+        if ref and ref != TRAILER_REF:
+            counts[ref] = counts.get(ref, 0) + 1
+    for rel in view.files_new("docs/slices"):
+        add(slice_fields((view.read_new(rel) or b"").decode("utf-8", "replace"))[2])
+    for check in load(view.read_new(CHECKS)).get("checks", []):
+        if isinstance(check, dict):
+            add(str((check.get("approval") or {}).get("ref", "")))
+    for line in (view.read_new("docs/_memlog.md") or b"").decode("utf-8", "replace").splitlines():
+        match = APPROVAL_FIELD.match(line)
+        add(match.group(1).strip().strip("`") if match else "")
+    add(load(view.read_new(PROJECT_FILE.as_posix())).get("test_command_approval", ""))
+    return counts
+
+
+def single_use(view: View) -> list[str]:
+    return [f"approval {ref} is already cited by another record; each approval approves one thing"
+            for ref, n in citation_counts(view).items() if n > 1]
 
 
 def load(raw: bytes | None) -> dict:
@@ -119,6 +184,18 @@ def approval_ids(view: View) -> set[str]:
     return {a.get("id") for a in load(view.read_new(APPROVALS)).get("approvals", []) if isinstance(a, dict)}
 
 
+def test_command_change(view: View) -> list[str]:
+    old = load(view.read_old(PROJECT_FILE.as_posix()))
+    new = load(view.read_new(PROJECT_FILE.as_posix()))
+    if old.get("test_command") == new.get("test_command"):
+        return []
+    command = new.get("test_command")
+    if not (isinstance(command, list) and command and "{test_file}" in command):
+        return ["project.json test_command must be a list containing \"{test_file}\""]
+    problem = approval_ok(view, str(new.get("test_command_approval", "")), "test_command")
+    return [f"project.json test_command changed; its approval {problem}"] if problem else []
+
+
 def approvals_have_inbox_lines(view: View) -> list[str]:
     old = {a.get("id") for a in load(view.read_old(APPROVALS)).get("approvals", []) if isinstance(a, dict)}
     inbox = (view.read_new(INBOX) or b"").decode("utf-8", "replace")
@@ -132,13 +209,12 @@ def approvals_have_inbox_lines(view: View) -> list[str]:
 
 
 def check_approvals(view: View) -> list[str]:
-    ids = approval_ids(view)
     old_ids = {c.get("id") for c in load(view.read_old(CHECKS)).get("checks", []) if isinstance(c, dict)}
     reasons = []
     for check in load(view.read_new(CHECKS)).get("checks", []):
         if isinstance(check, dict) and check.get("id") not in old_ids:
             ref = str((check.get("approval") or {}).get("ref", ""))
-            problem = approval_ok(view, ref, ids)
+            problem = approval_ok(view, ref, str(check.get("id", "")))
             if problem:
                 reasons.append(f"registered check {check.get('id')} {problem}")
     return reasons
@@ -153,18 +229,23 @@ def slice_fields(text: str) -> tuple[str, str, str]:
 
 def slice_approvals(view: View, changes) -> list[str]:
     """Approved slices must cite a real approval; a changed Scope needs a new one."""
-    ids, reasons = approval_ids(view), []
+    reasons = []
     for change in changes:
         if not change.path.startswith("docs/slices/") or change.status == "D":
             continue
         new = slice_fields((view.read_new(change.path) or b"").decode("utf-8", "replace"))
         if new[0] not in ("Approved", "In progress", "Done"):
             continue
-        problem = approval_ok(view, new[2], ids) if new[2] else "cites no approval from your messages"
+        found_id = RECORD_ID.search(Path(change.path).name)
+        slice_id = found_id.group(1) if found_id else None
+        old_text = (view.read_old(change.old_path or change.path) or b"").decode("utf-8", "replace")
+        old = slice_fields(old_text) if old_text else ("", "", "")
+        if old[0] in ("Approved", "In progress", "Done") and old[1] == new[1] and old[2] == new[2]:
+            continue  # same scope and approval: a status step inside approved work needs nothing new
+        problem = approval_ok(view, new[2], slice_id) if new[2] else "cites no approval from your messages"
         if problem:
             reasons.append(f"{change.path} is {new[0]} but {problem}")
             continue
-        old = slice_fields((view.read_old(change.old_path or change.path) or b"").decode("utf-8", "replace"))
         if old[0] and old[1] != new[1] and old[2] == new[2]:
             reasons.append(f"{change.path}: Scope changed without a new approval")
     return reasons
@@ -172,13 +253,12 @@ def slice_approvals(view: View, changes) -> list[str]:
 
 def ledger_approvals(view: View) -> list[str]:
     """Ledger lines added in this change that claim an approval must cite a valid one."""
-    ids = approval_ids(view)
     added = view.added_lines().get("docs/_memlog.md", [])
     reasons = []
     for line in added:
         match = APPROVAL_FIELD.match(line)
         if match:
-            problem = approval_ok(view, match.group(1).strip().strip("`"), ids)
+            problem = approval_ok(view, match.group(1).strip().strip("`"))
             if problem:
                 reasons.append(f"docs/_memlog.md: an entry {problem}")
     return reasons

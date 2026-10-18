@@ -89,9 +89,21 @@ def shell_reasons(ctx: Context, command: str, cwd: str | None) -> list[str]:
             reasons.append(f"deleting {rel} would remove protected files")
         elif (ctx.root / rel).exists() and git_tracked(ctx.root, rel):
             reasons += check_write(ctx, rel, None, is_new=False)
-    for raw in broad:
+    import fnmatch
+    for item in broad:
+        raw, _, pattern_text = item.partition("\0")
+        patterns = [p for p in pattern_text.split("\0") if p]
         rel = ctx.relative(raw)
-        if rel is not None and any(rel == "." or p.startswith(rel.rstrip("/") + "/") or p == rel for p in guarded):
+        inside = [p for p in guarded if rel is not None and (rel == "." or p.startswith(rel.rstrip("/") + "/") or p == rel)]
+        if patterns:  # find -name/-path: only the protected files the patterns can match
+            files = []
+            for p in inside:
+                folder = ctx.root / p
+                files += ([f.relative_to(ctx.root).as_posix() for f in folder.rglob("*") if f.is_file()]
+                          if p.endswith("/") and folder.is_dir() else [p])
+            inside = [p for p in files if any(fnmatch.fnmatch(posixpath.basename(p), pat) or fnmatch.fnmatch(p, pat)
+                                              for pat in patterns)]
+        if inside:
             reasons.append(f"this command may change everything under {rel}, including protected files; use the edit tools instead")
     for code in inline:
         if WRITE_HINTS.search(code):

@@ -50,9 +50,10 @@ def _tier_rules(view: View, code_changes, tier: dict | None) -> list[str]:
     return reasons
 
 
-def _test_pairs(view: View, code_changes, tier: dict | None, classes: dict) -> list[str]:
+def _test_pairs(view: View, code_changes, tier: dict | None, classes: dict, project: dict) -> list[str]:
     if not tier or tier.get("tier") == "T0":
         return []
+    command = project.get("test_command")
     code = [c.path for c in code_changes if c.status != "D" and match_any(c.path, classes.get("code", []))
             and not match_any(c.path, classes.get("tests", []))]
     paths = [p for p in view.files_new("docs/_cgspec/06-evidence/tests") if p.endswith(".json")]
@@ -65,6 +66,10 @@ def _test_pairs(view: View, code_changes, tier: dict | None, classes: dict) -> l
             reasons.append(f"test-pair {record.get('test_id')}: failed_at {rev!r} is not a commit in this history")
         if not test_file or not match_any(test_file, classes.get("tests", [])) or view.read_new(test_file) is None:
             reasons.append(f"test-pair {record.get('test_id')}: test_file {test_file!r} must be an existing file in the tests path class")
+        if not isinstance(command, list) or not command:
+            reasons.append("no project test_command in project.json; set one (with your approval) so failing tests can be proven")
+        elif record.get("command") != [test_file if part == "{test_file}" else part for part in command]:
+            reasons.append(f"test-pair {record.get('test_id')}: command must be the project test_command run on its test_file")
     covered = {p for r in records for p in r.get("covers", [])}
     reasons += [f"{p} changed without a failing-test record for {tier.get('slice')} in 06-evidence/tests (spec 7)"
                 for p in code if p not in covered]
@@ -82,10 +87,13 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     reasons += trust.engine_changes(view, changes, release_dir, strict)
     reasons += trust.approvals_have_inbox_lines(view) + trust.check_approvals(view)
     reasons += trust.slice_approvals(view, changes) + trust.ledger_approvals(view)
+    reasons += trust.test_command_change(view) + trust.single_use(view)
+    reasons += [f"{c.path}: cache files may not be committed (__pycache__/.pyc)" for c in changes
+                if c.status != "D" and ("__pycache__/" in c.path or c.path.endswith(".pyc"))]
     code_changes = [c for c in changes if not c.path.startswith(NO_TIER) and c.path not in exempt
                     and not trust.engine_file(c.path) and not c.path.startswith(trust.ENGINE)]
     reasons += _tier_rules(view, code_changes, tier)
-    reasons += _test_pairs(view, code_changes, tier, classes)
+    reasons += _test_pairs(view, code_changes, tier, classes, project)
     for change in changes:
         if change.path.startswith(trust.ENGINE):
             continue  # engine files are checked against the release or manifest above

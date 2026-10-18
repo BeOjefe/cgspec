@@ -105,7 +105,7 @@ class TrustRootTests(unittest.TestCase):
         commit(self.root, "slice")
         path.write_text(path.read_text().replace("src/login/**", "**"))
         commit(self.root, "widen scope")
-        self.assertCiFails("Scope changed without a new approval")
+        self.assertCiFails("not given in this change")
 
     def test_forged_approval_without_message_is_rejected(self):
         write_json(self.root / "docs/_cgspec/07-state/approvals.json", {"schema": 1, "approvals": [
@@ -137,17 +137,20 @@ class TrustRootTests(unittest.TestCase):
         self.assertCiFails("CHK-001")
 
     # --- test pairs ----------------------------------------------------------------------------
-    def test_always_failing_command_is_not_proof(self):
+    def test_test_that_still_fails_is_not_proof(self):
+        from tests.helpers import set_test_command
+        set_test_command(self.root, ["python3", "{test_file}"])
         make_slice(self.root, scope="src/login/**, tests/**")
-        commit(self.root, "slice")
-        failed_at = head(self.root)
+        commit(self.root, "slice and test command")
         run_script("cgspec_hook.py", "tier", "set", "--tier", "T1", "--reason", "login fix", "--slice", "SLICE-001",
                    "--root", str(self.root))
         (self.root / "tests").mkdir()
-        (self.root / "tests/test_login.py").write_text("def test_x(): pass\n")
+        (self.root / "tests/test_login.py").write_text("import sys\nsys.exit(1)\n")  # always fails
+        commit(self.root, "failing test")
+        failed_at = head(self.root)
         (self.root / "src/login/form.ts").write_text("export const f = 3;\n")
         write_json(self.root / "docs/_cgspec/06-evidence/tests/fake.json", {
-            "schema": 1, "test_id": "T-1", "test_file": "tests/test_login.py", "command": ["false"],
+            "schema": 1, "test_id": "T-1", "test_file": "tests/test_login.py", "command": ["python3", "tests/test_login.py"],
             "failed_at": failed_at, "passed_at": None, "covers": ["src/login/form.ts"], "slice": "SLICE-001",
             "recorded": "2026-10-18T00:00:00Z"})
         commit(self.root, "fix with fake proof")

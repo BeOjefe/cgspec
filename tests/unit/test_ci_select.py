@@ -99,3 +99,47 @@ class CiSelectTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SelectorFallbackTests(unittest.TestCase):
+    """The workflow's first step, run for real in a simulated GitHub checkout."""
+
+    def run_block(self, workflow: str) -> str:
+        lines = workflow.splitlines()
+        start = next(i for i, l in enumerate(lines) if "Run the selection script as it was BEFORE" in l)
+        block = []
+        for line in lines[start:]:
+            if line.strip().startswith("- name:"):
+                break
+            block.append(line[10:] if line.startswith(" " * 10) else line.strip())
+        return "\n".join(block)
+
+    def test_new_branch_push_uses_the_default_branch_selector(self):
+        with TempDir() as tmp:
+            source = make_release_source(tmp, ["2.0.0"])
+            origin = tmp / "origin"
+            origin.mkdir()
+            git(origin, "init", "-q", "-b", "main")
+            from tests.helpers import run_script
+            run_script("install.py", "install", "--root", str(origin), "--profile", "headless", "--topology", "single",
+                       "--tools", "git,ci", "--plugin-source", str(source))
+            git(origin, "add", "-A")
+            git(origin, "commit", "-q", "--no-verify", "-m", "install")
+            work = tmp / "work"
+            git(tmp, "clone", "-q", str(origin), str(work))
+            git(work, "checkout", "-q", "-b", "feature")
+            selector = work / ".github/cgspec-select.sh"
+            os.chmod(selector, 0o644)
+            selector.write_text("#!/bin/sh\necho AGENT SCRIPT RAN\necho CGSPEC_RELEASE=/tmp/fake >> \"$GITHUB_ENV\"\n")
+            git(work, "add", "-A")
+            git(work, "commit", "-q", "--no-verify", "-m", "tamper selector")
+            script = self.run_block((work / ".github/workflows/cgspec.yml").read_text())
+            script = script.replace("${{ github.event.pull_request.base.sha || github.event.before }}", "0" * 40)
+            env_file = tmp / "env"
+            env_file.write_text("")
+            env = dict(os.environ, RUNNER_TEMP=str(tmp), GITHUB_ENV=str(env_file), DEFAULT_BRANCH="main",
+                       EVENT_BASE="0" * 40)
+            result = subprocess.run(["sh", "-c", script], cwd=work, env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("AGENT SCRIPT RAN", result.stdout)
+            self.assertNotIn("/tmp/fake", env_file.read_text())

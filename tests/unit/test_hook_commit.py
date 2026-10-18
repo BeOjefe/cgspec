@@ -8,7 +8,7 @@ import os
 import unittest
 from pathlib import Path
 
-from tests.helpers import TempDir, approve, git, git_project, hook, make_slice, run_script, write_json
+from tests.helpers import TempDir, approve, git, git_project, hook, make_slice, run_script, set_test_command, write_json
 
 
 def tier(root, *args):
@@ -56,7 +56,7 @@ class PreCommitTests(unittest.TestCase):
         (self.root / "tests/login.test.ts").write_text("test('rejects empty', () => {});\n")
         write_json(self.root / "docs/_cgspec/06-evidence/tests/login-form.json", {
             "schema": 1, "test_id": "tests/login.test.ts::rejects_empty", "test_file": "tests/login.test.ts",
-            "command": ["true"], "failed_at": failed_at, "passed_at": None, "covers": list(covers),
+            "command": ["npx", "vitest", "run", "tests/login.test.ts"], "failed_at": failed_at, "passed_at": None, "covers": list(covers),
             "slice": "SLICE-001", "recorded": "2026-10-18T00:00:00Z"})
         git(self.root, "add", "-A")
 
@@ -88,6 +88,9 @@ class PreCommitTests(unittest.TestCase):
         self.assertBlocked("T0 cannot create")
 
     def test_t1_scope_and_test_pair(self):
+        set_test_command(self.root, ["npx", "vitest", "run", "{test_file}"])
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "test command")
         self.slice()
         tier(self.root, "set", "--tier", "T1", "--reason", "login validation", "--slice", "SLICE-001")
         self.stage("src/login/form.ts", "export const f = 2;\n")

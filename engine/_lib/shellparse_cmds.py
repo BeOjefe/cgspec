@@ -61,7 +61,9 @@ def segment(seg: list[str], cwd: str, recurse) -> tuple[list[str], list[str], li
     elif name == "tar" and any(a.startswith("-x") or a == "x" or (not a.startswith("-") and "x" in a and rest.index(a) == 0) for a in rest):
         broad.append(_option_value(rest, "-C", "--directory") or ".")
     elif name == "find" and any(a in ("-delete", "-exec", "-execdir", "-ok") for a in rest):
-        broad += [a for a in rest[:next((k for k, a in enumerate(rest) if a.startswith("-")), len(rest))]] or ["."]
+        roots = rest[:next((k for k, a in enumerate(rest) if a.startswith("-")), len(rest))] or ["."]
+        names = [rest[k + 1] for k, a in enumerate(rest[:-1]) if a in ("-name", "-iname", "-path", "-ipath")]
+        broad += [root + ("\0" + "\0".join(names) if names else "") for root in roots]
     elif name == "git":
         found_t, found_b = _git(rest, cwd)
         targets += found_t

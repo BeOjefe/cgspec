@@ -6,6 +6,8 @@ import os
 import subprocess
 import unittest
 
+from pathlib import Path
+
 from tests.helpers import TempDir, git, git_project, hook, make_slice, run_script
 
 
@@ -27,11 +29,43 @@ class TrailerApprovalTests(unittest.TestCase):
     def ci(self):
         return hook(self.root, "ci", None, "--tool", "git", "--base", self.base)
 
-    def test_slice_approved_by_trailer_passes(self):
+    def signing_key(self, name="me"):
+        key = self.root.parent / f"{self.root.name}-{name}"
+        subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(key)], check=True)
+        return key, (key.with_suffix(".pub") if key.with_suffix(".pub").exists() else Path(str(key) + ".pub")).read_text().strip()
+
+    def signed_commit(self, key, message):
+        git(self.root, "add", "-A")
+        git(self.root, "-c", "gpg.format=ssh", "-c", f"user.signingkey={key}", "commit", "-q", "--no-verify",
+            "-S", "-m", message)
+
+    def trust_key(self, pub):
+        import json
+        pj = self.root / "docs/_cgspec/project.json"
+        os.chmod(pj, 0o644)
+        data = json.loads(pj.read_text())
+        data["approver_keys"] = [pub]
+        pj.write_text(json.dumps(data, indent=2) + "\n")
+        commit(self.root, "trust my signing key")
+        self.base = git(self.root, "rev-parse", "HEAD").stdout.strip()
+
+    def test_slice_approved_by_signed_trailer_passes(self):
+        key, pub = self.signing_key()
+        self.trust_key(pub)
         make_slice(self.root, approval="trailer")
-        commit(self.root, "Approve login slice\n\nApproved-by: Ojefe <me@example.com>")
+        self.signed_commit(key, "Approve login slice\n\nApproved-by: Ojefe <me@example.com>")
         result = self.ci()
         self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_trailer_signed_by_an_unknown_key_fails(self):
+        _, pub = self.signing_key("me")
+        other, _ = self.signing_key("agent")
+        self.trust_key(pub)
+        make_slice(self.root, approval="trailer")
+        self.signed_commit(other, "Approve login slice\n\nApproved-by: Ojefe <me@example.com>")
+        result = self.ci()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("not signed by a key", result.stdout)
 
     def test_trailer_claim_without_trailer_fails(self):
         make_slice(self.root, approval="trailer")
@@ -50,8 +84,10 @@ class TrailerApprovalTests(unittest.TestCase):
         self.assertEqual(run_script("cgspec_hook.py", "commit-msg", str(msg), "--root", str(self.root)).returncode, 0)
 
     def test_tier_accepts_a_trailer_approved_slice(self):
+        key, pub = self.signing_key()
+        self.trust_key(pub)
         make_slice(self.root, approval="trailer")
-        commit(self.root, "Approve\n\nApproved-by: Ojefe <me@example.com>")
+        self.signed_commit(key, "Approve\n\nApproved-by: Ojefe <me@example.com>")
         result = run_script("cgspec_hook.py", "tier", "set", "--tier", "T1", "--reason", "login work",
                             "--slice", "SLICE-001", "--root", str(self.root))
         self.assertEqual(result.returncode, 0, result.stderr)

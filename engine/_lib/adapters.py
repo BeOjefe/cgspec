@@ -56,7 +56,15 @@ jobs:
           if [ -n "$B" ] && git cat-file -e "$B:.github/cgspec-select.sh" 2>/dev/null; then
             git show "$B:.github/cgspec-select.sh" > "$RUNNER_TEMP/cgspec-select.sh"
           else
-            cp .github/cgspec-select.sh "$RUNNER_TEMP/cgspec-select.sh"
+            git fetch -q origin "$DEFAULT_BRANCH" 2>/dev/null || true
+            if git cat-file -e "FETCH_HEAD:.github/cgspec-select.sh" 2>/dev/null; then
+              git show "FETCH_HEAD:.github/cgspec-select.sh" > "$RUNNER_TEMP/cgspec-select.sh"
+            elif git cat-file -e "FETCH_HEAD:docs/_cgspec/project.json" 2>/dev/null; then
+              echo "CGSpec: the default branch uses CGSpec but has no selection script; refusing to trust this commit's copy"
+              exit 1
+            else
+              cp .github/cgspec-select.sh "$RUNNER_TEMP/cgspec-select.sh"  # first install: nothing older to trust
+            fi
           fi
           sh "$RUNNER_TEMP/cgspec-select.sh"
       - name: CGSpec governance (cannot be skipped)

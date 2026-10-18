@@ -58,6 +58,9 @@ def prove_failed(root: Path, record: dict) -> str | None:
     command, name = record.get("command"), record["_file"]
     if not isinstance(command, list) or not command:
         return f"{name}: no command to re-run"
+    failed_at, test_file = str(record.get("failed_at", "")), str(record.get("test_file", ""))
+    if git(root, "cat-file", "-e", f"{failed_at}:{test_file}").returncode != 0:
+        return f"{name}: test file {test_file} did not exist at {failed_at[:10]}, so it cannot have failed there"
     before = _run_at(root, record.get("failed_at", ""), command)
     if isinstance(before, str):
         return f"{name}: {before}"

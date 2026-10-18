@@ -103,7 +103,9 @@ def write_targets(command: str, cwd: str = ".") -> tuple[list[str], list[str], l
             t, d, code, b = segment(seg, here, write_targets)
             targets += [_norm(p, here) for p in t]
             deletes += [_norm(p, here) for p in d]
-            broad += [_norm(p, here) for p in b]
+            for item in b:
+                path, _, patterns = item.partition("\0")
+                broad.append(_norm(path, here) + ("\0" + patterns if patterns else ""))
             inline += code
     return targets, deletes, inline, broad
 
@@ -112,4 +114,9 @@ def mentions(command: str, candidates: list[str]) -> list[str]:
     """Protected paths a command names (full path or file name) when it runs a wrapper and looks like a write."""
     if not WRAPPERS.search(command) or not WRITE_HINTS.search(command):
         return []
-    return [c for c in candidates if c in command or posixpath.basename(c) in command]
+    found = []
+    for c in candidates:
+        name = posixpath.basename(c.rstrip("/"))
+        if c in command or (name and name in command):
+            found.append(c)
+    return found

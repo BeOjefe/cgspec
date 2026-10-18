@@ -112,3 +112,15 @@ def make_slice(root: Path, status: str = "Approved", scope: str = "src/login/**"
     if index and entry not in idx.read_text():
         idx.write_text(idx.read_text() + "\n" + entry + "\n")
     return path
+
+
+def set_test_command(root: Path, command: list[str]) -> None:
+    """Set project.json test_command with a fresh approval from the user, ready to commit."""
+    import json as _json
+    import os as _os
+    ref = approve(root, "approve the test command " + " ".join(command))
+    pj = root / "docs/_cgspec/project.json"
+    _os.chmod(pj, 0o644)
+    data = _json.loads(pj.read_text())
+    data.update(test_command=command, test_command_approval=ref)
+    write_json(pj, data)
