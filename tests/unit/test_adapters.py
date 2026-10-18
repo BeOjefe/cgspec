@@ -73,7 +73,9 @@ class WiringTests(unittest.TestCase):
                           "--topology", "single", "--tools", self.TOOLS)
 
     def test_all_adapters_are_wired(self):
-        self.assertEqual(self.do_install().returncode, 0)
+        result = self.do_install()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("require the 'governance' status check", result.stdout)
         claude = json.loads((self.root / ".claude/settings.json").read_text())
         self.assertIn("PreToolUse", claude["hooks"])
         self.assertIn("cgspec_hook.py pre-tool --tool claude", json.dumps(claude))

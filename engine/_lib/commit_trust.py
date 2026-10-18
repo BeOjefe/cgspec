@@ -21,6 +21,28 @@ ENGINE_BOOKKEEPING = {"manifest.json", "owned-files.json"}
 ADAPTER_PATHS = {".claude/settings.json", ".agents/hooks.json", ".github/workflows/cgspec.yml", ".github/cgspec-select.sh",
                  ".cursor/rules/cgspec.mdc", ".gitignore", "AGENTS.md", "CLAUDE.md"}
 APPROVAL_FIELD = re.compile(tiers.FIELD % "Approval", re.M | re.I)
+TRAILER = re.compile(r"^Approved-by:\s*\S", re.M | re.I)
+TRAILER_REF = "trailer"
+
+
+def commit_message(view: View) -> str | None:
+    """The message of the commit being judged; None for a staged change (commit-msg checks it)."""
+    if view.new == ":":
+        return None
+    from .gitview import git
+    return git(view.root, "log", "-1", "--format=%B", view.new).stdout
+
+
+def approval_ok(view: View, ref: str, ids: set[str]) -> str | None:
+    """None when ref is a valid approval for this change, else the reason."""
+    if ref in ids:
+        return None
+    if ref == TRAILER_REF:
+        message = commit_message(view)
+        if message is None or TRAILER.search(message):
+            return None
+        return "cites the commit trailer but the commit has no 'Approved-by:' line"
+    return f"cites approval {ref!r}, which is not in {APPROVALS}"
 
 
 def load(raw: bytes | None) -> dict:
@@ -115,9 +137,10 @@ def check_approvals(view: View) -> list[str]:
     reasons = []
     for check in load(view.read_new(CHECKS)).get("checks", []):
         if isinstance(check, dict) and check.get("id") not in old_ids:
-            ref = (check.get("approval") or {}).get("ref")
-            if ref not in ids:
-                reasons.append(f"registered check {check.get('id')} cites approval {ref!r}, which is not in {APPROVALS}")
+            ref = str((check.get("approval") or {}).get("ref", ""))
+            problem = approval_ok(view, ref, ids)
+            if problem:
+                reasons.append(f"registered check {check.get('id')} {problem}")
     return reasons
 
 
@@ -137,10 +160,34 @@ def slice_approvals(view: View, changes) -> list[str]:
         new = slice_fields((view.read_new(change.path) or b"").decode("utf-8", "replace"))
         if new[0] not in ("Approved", "In progress", "Done"):
             continue
-        if new[2] not in ids:
-            reasons.append(f"{change.path} is {new[0]} but cites no approval from your messages ({APPROVALS})")
+        problem = approval_ok(view, new[2], ids) if new[2] else "cites no approval from your messages"
+        if problem:
+            reasons.append(f"{change.path} is {new[0]} but {problem}")
             continue
         old = slice_fields((view.read_old(change.old_path or change.path) or b"").decode("utf-8", "replace"))
         if old[0] and old[1] != new[1] and old[2] == new[2]:
             reasons.append(f"{change.path}: Scope changed without a new approval")
     return reasons
+
+
+def ledger_approvals(view: View) -> list[str]:
+    """Ledger lines added in this change that claim an approval must cite a valid one."""
+    ids = approval_ids(view)
+    added = view.added_lines().get("docs/_memlog.md", [])
+    reasons = []
+    for line in added:
+        match = APPROVAL_FIELD.match(line)
+        if match:
+            problem = approval_ok(view, match.group(1).strip().strip("`"), ids)
+            if problem:
+                reasons.append(f"docs/_memlog.md: an entry {problem}")
+    return reasons
+
+
+def staged_trailer_refs(view: View) -> bool:
+    """True when the staged change cites the commit trailer anywhere (commit-msg must then see one)."""
+    for path, lines in view.added_lines().items():
+        if path.startswith("docs/slices/") or path == "docs/_memlog.md":
+            if any((m := APPROVAL_FIELD.match(l)) and m.group(1).strip().strip("`") == TRAILER_REF for l in lines):
+                return True
+    return False

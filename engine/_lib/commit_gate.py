@@ -42,7 +42,7 @@ def _tier_rules(view: View, code_changes, tier: dict | None) -> list[str]:
     found = _slice(view, tier.get("slice", ""))
     if not found or found[0] not in tiers.WORKING_SLICE:
         return [f"slice {tier.get('slice')} is missing or not Approved/In progress"]
-    if found[2] not in trust.approval_ids(view):
+    if found[2] != trust.TRAILER_REF and found[2] not in trust.approval_ids(view):
         return [f"slice {tier.get('slice')} cites no approval from your messages"]
     reasons = [f"{p} is outside the scope of {tier.get('slice')}" for p in sorted(paths) if not match_any(p, found[1])]
     if tier.get("tier") == "T1" and lines > tiers.T1_MAX_LINES:
@@ -81,7 +81,7 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     reasons = trust.append_only(view) + trust.frozen_touched(view, changes)
     reasons += trust.engine_changes(view, changes, release_dir, strict)
     reasons += trust.approvals_have_inbox_lines(view) + trust.check_approvals(view)
-    reasons += trust.slice_approvals(view, changes)
+    reasons += trust.slice_approvals(view, changes) + trust.ledger_approvals(view)
     code_changes = [c for c in changes if not c.path.startswith(NO_TIER) and c.path not in exempt
                     and not trust.engine_file(c.path) and not c.path.startswith(trust.ENGINE)]
     reasons += _tier_rules(view, code_changes, tier)

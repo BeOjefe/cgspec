@@ -98,7 +98,7 @@ class TrustRootTests(unittest.TestCase):
     def test_made_up_approval_id_is_rejected(self):
         make_slice(self.root, scope="**", approval="A-20261018-ffff")
         commit(self.root, "made-up approval")
-        self.assertCiFails("cites no approval")
+        self.assertCiFails("A-20261018-ffff")
 
     def test_widening_scope_needs_a_new_approval(self):
         path = make_slice(self.root)

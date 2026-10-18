@@ -70,7 +70,8 @@ def set_tier(root: Path, tier: str, reason: str, files: list[str], slice_id: str
             raise CgspecError(f"{slice_id} has no Scope line listing the files it may change")
         approval = re.search(FIELD % "Approval", found[0].read_text(encoding="utf-8", errors="replace"), re.M | re.I)
         from .inbox import approval_exists
-        if not approval or not approval_exists(root, approval.group(1).strip("* `")):
+        ref = approval.group(1).strip("* `") if approval else ""
+        if ref != "trailer" and not approval_exists(root, ref):
             raise CgspecError(f"{slice_id} needs an Approval line citing your approval (A-... from 07-state/approvals.json)")
         entry["slice"] = slice_id
     write_json(root / TIER_FILE, {"schema": 1, "active": entry})

@@ -90,6 +90,12 @@ echo "CGSPEC_BASE=$BASE" >> "$GITHUB_ENV"
 echo "CGSPEC_RELEASE=$RELEASE" >> "$GITHUB_ENV"
 echo "CGSpec: base ${BASE:-none}, release v$VERSION from $SOURCE"
 """
+GITHUB_STEPS = """To make the CGSpec check impossible to bypass, do this once on GitHub (spec 8, trust root):
+  1. Settings > Branches (or Rules): protect your main branch, require the 'governance' status check.
+  2. Require your review for changes to .github/, docs/_cgspec/07-state/ and docs/slices/
+     (CODEOWNERS with your account, plus 'Require review from Code Owners').
+  3. Do not give the AI agent your GitHub admin credentials.
+  Optional: sign approval commits with a hardware key that needs your touch."""
 CURSOR_RULE = """---
 description: CGSpec project rules
 alwaysApply: true
@@ -207,6 +213,7 @@ def wire(root: Path, tools: list[str], owned: dict) -> list[str]:
             record["ci_select"] = select
             _freeze_workflow(root, rel)
             _freeze_workflow(root, select)
+            notes.append(GITHUB_STEPS)
     if "cursor" in tools:
         ok, note = _write_new(root, ".cursor/rules/cgspec.mdc", CURSOR_RULE)
         notes.append(note)

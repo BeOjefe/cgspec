@@ -379,7 +379,14 @@ flowchart TB
 
 **Ownership without trusting identity.** Each run lists units, owners and allowed paths in `run.json`. Where the tool passes the agent's identity to hooks, writes outside an owner's paths are refused. Everywhere, frozen criteria are protected by hashes checked at commit and in CI, which needs no identity at all.
 
-**Trust root.** The agent can write files, so files it writes cannot be the final authority. CI compares `frozen.json` and `manifest.json` against git history and rejects any change to an existing entry; only new entries may be added. Approvals of slices, criteria and checks are recorded only by the hook that sees your own message ("approved" in your words), or by a commit trailer you add yourself (`Approved-by: you`), never written by the agent. On tools without a message hook (Antigravity, Codex, Cursor), the trailer is the only way, and your messages are captured at the start of each tool batch. CI workflow files are listed in `frozen.json`, and branch protection with the CGSpec checks as required is set up at install.
+**Trust root.** The agent can write files and runs in your shell, so nothing on your disk is fully tamper-proof on its own. CGSpec makes tampering detectable by CI, and impossible to merge once two GitHub settings are on:
+
+- **CI never runs the engine inside the commit it judges.** It downloads the published plugin release (the newer of the version before and after the change, from the source recorded before the change) and checks every commit in the push with it. Engine files may change only to match that release exactly.
+- **Append-only records.** `frozen.json`, `04-checks/manifest.json` and `07-state/approvals.json` are compared with git history; existing entries can never change.
+- **Approvals come from your words.** The message hook records an approval only from your own message, and saves the message in the inbox. An approved slice, a registered check and an Approved decision must cite one of those approvals; CI checks the citation and the inbox line. Widening a slice's Scope needs a new approval. On tools without a message hook (Antigravity, Codex, Cursor), approvals are recorded in Claude Code or through the commit trailer `Approved-by: you`.
+- **Failing tests are proven.** A failing-test record must name a test file, belong to the active slice, fail at its recorded commit and pass at the new one; CI re-runs both.
+
+What remains possible, and how to close it: an agent with your shell could still write a fake approval together with a fake inbox line, or edit the workflow file in the same push. To make that impossible, (1) turn on GitHub branch protection with the CGSpec check required and a rule requiring your review for changes to `.github/`, `docs/_cgspec/07-state/` and `docs/slices/`, and (2) keep your GitHub admin credentials away from the agent. Optional, strongest: sign approval commits with a hardware key that needs your touch. Install prints these steps.
 
 **Session lifecycle hooks:**
 
