@@ -30,6 +30,10 @@ APPROVAL = re.compile(
     r"(?:ok\s+)?on valide|je valide|d'accord|on y va|c'est bon"
     r")\b(?!.*\?\s*$)")
 NEGATION = re.compile(r"(?i)\b(not|don't|do not|no|pas|never|jamais)\b")
+RECORD_ID = re.compile(r"\b(?:SLICE|ADR|CHK)-\d{3}\b", re.I)
+DIRECT_TARGET = re.compile(r"^(?:SLICE|ADR|CHK)-\d{3}\b", re.I)
+TEST_COMMAND = re.compile(r"^test[ -]command\b", re.I)
+DECISION = re.compile(r"^decision\s*:\s*(\S.*)$", re.I)
 
 
 def scrub(text: str) -> str:
@@ -44,6 +48,30 @@ def scrub(text: str) -> str:
 def is_approval(text: str) -> bool:
     first = text.strip().splitlines()[0] if text.strip() else ""
     return bool(APPROVAL.match(first)) and not NEGATION.search(first.split(".")[0])
+
+
+def approval_target(text: str) -> str | None:
+    """Return an explicitly approved record, or None for unbound/ambiguous words.
+
+    The commit gate must compare this with the record being changed. Capturing a
+    generic acknowledgment in the inbox is not authorization for any record.
+    """
+    if not is_approval(text):
+        return None
+    first = text.strip().splitlines()[0]
+    rest = first[APPROVAL.match(first).end():].strip()
+    rest = re.sub(r"(?i)^the\s+", "", rest)
+    ids = {item.upper() for item in RECORD_ID.findall(text)}
+    if match := DIRECT_TARGET.match(rest):
+        target = match.group().upper()
+        other_target = re.search(r"(?i)\btest[ -]command\b|\bdecision\s*:", rest)
+        return target if ids == {target} and not other_target else None
+    if TEST_COMMAND.match(rest):
+        return "test_command" if not ids and not re.search(r"(?i)\bdecision\s*:", rest) else None
+    if match := DECISION.match(rest):
+        summary = " ".join(match.group(1).split()).casefold()
+        return f"decision:{summary}" if not ids and "test command" not in summary else None
+    return None
 
 
 def record(root: Path, prompt: str) -> tuple[str, str | None]:

@@ -77,6 +77,18 @@ class Round2Tests(unittest.TestCase):
         result = self.ci()
         self.assertEqual(result.returncode, 0, result.stdout)
 
+    def test_unrelated_yes_in_the_same_change_cannot_approve_slice(self):
+        ref = approve(self.root, "yes, go ahead and rename the README heading")
+        make_slice(self.root, scope="**", approval=ref)
+        commit(self.root, "spend unrelated yes on broad scope")
+        self.assertCiFails("does not name SLICE-001")
+
+    def test_unrelated_yes_in_the_same_change_cannot_approve_test_command(self):
+        ref = approve(self.root, "yes, fix the README heading")
+        self.set_project(test_command=["true", "{test_file}"], test_command_approval=ref)
+        commit(self.root, "spend unrelated yes on weak test command")
+        self.assertCiFails("does not name test_command")
+
     def test_scope_change_with_another_old_approval_fails(self):
         first = approve(self.root, "approved")
         spare = approve(self.root, "yes")
