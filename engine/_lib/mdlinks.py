@@ -6,7 +6,7 @@ import re
 
 INLINE_LINK = re.compile(r"(?<!!)\[[^\]]*\]\(\s*(<[^>\n]*>|(?:[^()\s]|\([^()\s]*\))+)(?:\s+[\"'][^\"']*[\"'])?\s*\)")
 REF_USE = re.compile(r"(?<![\]\\])\[([^\]\n]+)\]\[([^\]\n]*)\]")
-REF_DEF = re.compile(r"^\s{0,3}\[([^\]\n]+)\]:\s*(<[^>\n]*>|\S+)", re.M)
+REF_DEF = re.compile(r"^\s{0,3}\[(?!\^)([^\]\n]+)\]:\s*(<[^>\n]*>|\S+)", re.M)
 HREF = re.compile(r"<a\s[^>]*href=[\"']([^\"']+)[\"']", re.I)
 CODE_SPAN = re.compile(r"`[^`\n]*`")
 FENCE = re.compile(r"^```.*?^```", re.S | re.M)

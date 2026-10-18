@@ -208,14 +208,14 @@ flowchart LR
 
 | Layer | You see | Not in it yet | Lock scope |
 | --- | --- | --- | --- |
-| 0 References + words | AI-found references (up to 6, deliberately contrasting) as links + screenshots, each captioned; your words, images, videos; shared glossary | Any design of ours | Global |
+| 0 References + words | AI-found references (up to 6, deliberately contrasting) as links + screenshots, each captioned; your words, images, videos; shared glossary; 0–3 existing design systems that passed the enforceability check (6b) | Any design of ours | Global |
 | 1 Task map | What each actor does, v0.1 only | Visuals | Global |
 | 2 Screen map + flows | Every screen, its purpose, how you move between them | Layout | Global |
 | 3 Wireframe | Grey boxes with real labels: shared shell first (header, side bars), then each screen; named zone IDs | Color, fonts, icons, animation | Shell global, then per screen |
 | 4 Behavior | Clickable grey prototype: navigation, every state, actions; test IDs on every interactive element; motion described in words + a reference clip | Final look | Per screen |
 | 5 Visual language | One token sheet (DTCG format): type, color, spacing, radius, icons, motion durations and easings; project "avoid list" of generic defaults | Screens | Global, opens after layer 4 is locked for all v0.1 screens |
-| 6 High fidelity | Locked wireframes with tokens applied | Layout changes | Per screen |
-| 7 Motion | Layer 4 behaviors animated with motion tokens | New behaviors | Per screen |
+| 6 High fidelity | Real frontend screens (chosen stack, mocked data) matching the locked wireframes, tokens applied | Layout changes | Per screen |
+| 7 Motion | Layer 4 behaviors animated with motion tokens, in the real frontend | New behaviors | Per screen |
 
 Rules:
 
@@ -226,9 +226,38 @@ Rules:
 - **Generic-look tells.** The audit flags known AI-default patterns (RES-004: untouched component-library look, unprompted purple, gradient text, neon glows, centered hero + three cards, cream + serif "tasteful default") as warnings; usability breakers are errors.
 - **Versions.** Living source in `docs/prototypes/<screen>/`; a new snapshot `vN` is cut only when a layer is locked for that screen, by the bundler, recorded in the ledger. Snapshots are frozen (section 8).
 
-**Handoff to production code.** The prototype is disposable; the contract carries over: (1) the journeys written at layer 4 against test IDs run unchanged against the real app; (2) the token sheet becomes the app's real tokens, enforced by Stylelint; (3) production is checked by behavior and state assertions, not pixel equality with the prototype. If the real app behaves differently from what you approved, the build fails.
+**From layer 5 on, design is built in the real frontend.** Layers 0–4 stay a throwaway grey prototype, because screens and flows change many times and each change must stay cheap. When layer 4 is locked for the v0.1 screens, the agent runs a short frontend-stack decision (one ADR; a council only if the profile is T3) using the design system chosen at layer 0 when there is one. Layers 5–7 are then built directly as the real frontend with mocked data behind typed interfaces, so stage 3 only decides and connects the backend and nothing is rebuilt. What carries over from the grey prototype: (1) the journeys written at layer 4 against test IDs run unchanged against the real frontend; (2) the token sheet is the app's real tokens, enforced by Stylelint; (3) checks use behavior and state assertions, not pixel equality with the grey prototype. If the real frontend behaves differently from what you approved at layer 4, the build fails. If stage 3 later finds a backend constraint the frontend cannot meet, the frontend ADR is reopened like any other (section 7b).
 
 UX regression: each locked screen keeps a baseline (journeys + screenshots per state, generated in one pinned container). Every later change re-runs them; a difference fails unless you approve a new baseline.
+
+### 6b. Building on an existing design system
+
+**At layer 0, the AI may propose an existing design system to speed things up, but only one it can enforce with scripts; a design system it cannot check mechanically is never presented as an option.** The reason: AI agents that read a design system's website and re-create it from memory drift, even when the system is fully open source. What works is giving the agent the system's real code and machine-readable interface, then checking the output mechanically.
+
+Where the AI looks: its own web search first, plus your lists ([your fork of awesome-design-systems](https://github.com/mrojefe/awesome-design-systems), [Open Source Design resources](https://opensourcedesign.net/resources/links/)). It shows each candidate next to the visual references, with screenshots of its real components.
+
+**Enforceability check** (a script scores each candidate; it is proposed only if items 1, 2 and 5 pass):
+
+| # | Item | Why it matters |
+| --- | --- | --- |
+| 1 | Installable package with typed components (npm, PyPI...) | The agent uses the real components instead of re-drawing them; the type checker rejects invented props |
+| 2 | Official tokens in a machine-readable file (DTCG JSON, CSS variables, JS) | Token values come from the package, never typed from the docs |
+| 3 | Official lint rules (for example Atlassian `ensure-design-token-usage`, Primer and Carbon lint configs) | Ready-made checks; otherwise CGSpec generates them from the token file |
+| 4 | Machine-readable docs: MCP server, `llms.txt` or agent skill | The agent asks for exact props and tokens while building instead of guessing |
+| 5 | Permissive license (section 12) | No forced disclosure |
+| 6 | Reference renders (Storybook or a docs site per component) | Lets layer 2 compare our screens to the system's own components |
+
+For a reference that has no package (a closed product's look), the design system is extracted instead: tokens and component recipes are reverse-engineered by the specialist team, every value traced to its source, and the result becomes the project's own token sheet. The `getdesign` skill you are building is that extractor.
+
+**How adherence is enforced** (all registered checks, section 8):
+
+1. **Use, don't re-implement.** Components come only from the design system's package. A lint rule built from its component list refuses raw elements it already covers (a hand-made `<button>` when it ships `Button`) and imports from other UI libraries. A custom component must be built from the system's primitives and approved in a slice.
+2. **Tokens only.** The official lint plugin when one exists; otherwise a Stylelint rule generated from the token file rejects any raw color, size, spacing, radius, shadow or duration, and any Tailwind arbitrary value.
+3. **Correct usage.** Strict type checking against the package types; the design system's MCP server or `llms.txt` is queried during the build; mechanical Do/Don't rules from its guidelines become lint rules, and the rest go into the reviewer's frozen criteria.
+4. **Rendered conformance.** In the browser, a script reads the computed style of every element on every state and fails if a color, font size, spacing, radius or motion value is not a token value. Each used component is screenshot-compared with the design system's own render of the same component and props.
+5. **Version pin.** The design system version is pinned; upgrading it is a T2 change that re-runs every baseline.
+
+A screen cannot lock at layers 5–7 with a conformance error. The report shows a per-screen conformance count, so drift is visible instead of discovered later.
 
 ## 7. Verification
 
@@ -448,7 +477,7 @@ Install into a project (`engine/install.py`): copies `engine/` to `docs/_cgspec/
 Smoke test, required to pass in the plugin's CI before step 5 of the plan:
 
 1. Fresh empty repo → install → doctor PASS on each template.
-2. Doctor FAILs on each seeded defect: empty spines, duplicate ledger IDs, index-only ADR, broken link, edited frozen snapshot, unregistered script, code outside slice scope, missing failing-test record.
+2. Doctor FAILs on each seeded defect: empty spines, duplicate ledger IDs, index-only ADR, broken link, edited or unlisted frozen snapshot, unregistered script. Code outside slice scope and a missing failing-test record need git history, so the commit hook and CI catch them (item 3).
 3. Simulated hook payloads: each gate in section 8 blocks its case and allows the valid one; shell writes to frozen files are refused.
 4. Install twice → identical tree. Uninstall → only owned files removed.
 5. Upgrade fixture of an old-layout project (copy of CortexGate's structure) → all links resolve, doctor PASS.
@@ -534,6 +563,7 @@ Smoke test, required to pass in the plugin's CI before step 5 of the plan:
 | CortexGate optional, both independent | 0 | Yes |
 | Hidden-but-searchable engine folder, underscore names, numbered | 2 | Partial |
 | 20-minute follow-up of test sessions | 14 | Not yet installed |
+| Propose existing design systems only if enforceable; guarantee the system is respected | 6, 6b | No (getdesign skill in staging) |
 
 ## 14. Evidence base and plan
 

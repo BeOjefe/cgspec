@@ -6,7 +6,6 @@ import json
 import os
 import re
 import stat
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 from urllib.parse import unquote
@@ -15,25 +14,12 @@ from . import layout as L
 from .common import ENGINE_DIR, MEMLOG_FILE, STATE_DIR, sha256_file
 from .globs import match_any
 from .mdlinks import link_targets
+from .findings import Finding, rel as _rel
+from .doctor_layout import layout  # noqa: F401  (re-exported for doctor.py)
 from .schema import validate_named
 
 STATUS = re.compile(r"^\s*[-*]?\s*\*{0,2}Status:?\*{0,2}:?\s*(.+?)\s*$", re.M | re.I)
 URL_SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*:", re.I)
-
-
-@dataclass
-class Finding:
-    code: str
-    path: str
-    message: str
-
-    @property
-    def is_error(self) -> bool:
-        return self.code.startswith("E-")
-
-
-def _rel(path: Path, root: Path) -> str:
-    return path.relative_to(root).as_posix()
 
 
 def read_text(path: Path, root: Path, sink: list[Finding]) -> str | None:
@@ -79,47 +65,6 @@ def project(root: Path, data: dict | None) -> Iterator[Finding]:
         yield Finding("E-SCHEMA", "docs/_cgspec/project.json", error)
 
 
-def layout(root: Path, profile: str) -> Iterator[Finding]:
-    for rel in L.REQUIRED_FILES:
-        if not (root / rel).is_file():
-            yield Finding("E-LAYOUT-MISSING", rel, "required file missing")
-    for rel in L.REQUIRED_DIRS + (L.GUI_DIRS if profile in L.GUI_PROFILES else []):
-        if not (root / rel).is_dir():
-            yield Finding("E-LAYOUT-MISSING", rel, "required folder missing")
-    for parent, allowed in (("docs", L.ALLOWED_IN_DOCS), ("docs/_cgspec", L.ALLOWED_IN_CGSPEC),
-                            (STATE_DIR.as_posix(), set(L.ALLOWED_STATE_FILES))):
-        folder = root / parent
-        if folder.is_dir():
-            for child in sorted(folder.iterdir()):
-                if child.name not in allowed:
-                    yield Finding("E-LAYOUT-UNKNOWN", _rel(child, root), "not part of the CGSpec layout (spec 2)")
-    yield from _nested(root)
-    for spine in L.SPINES:
-        if not (root / f"docs/spines/{spine}.md").is_file() and not (root / f"docs/spines/{spine}/INDEX.md").is_file():
-            yield Finding("E-LAYOUT-MISSING", f"docs/spines/{spine}.md", "spine missing")
-
-
-def _nested(root: Path) -> Iterator[Finding]:
-    """One level deeper: flat record folders, known spines, snapshots as plain HTML files."""
-    for folder in ("docs/adrs", "docs/slices", "docs/_cgspec/02-research", "docs/_cgspec/04-checks"):
-        base = root / folder
-        if base.is_dir():
-            for child in base.iterdir():
-                if child.is_dir():
-                    yield Finding("E-LAYOUT-UNKNOWN", _rel(child, root), "this folder must stay flat")
-    spines = root / "docs/spines"
-    if spines.is_dir():
-        known = set(L.SPINES) | {f"{s}.md" for s in L.SPINES}
-        for child in spines.iterdir():
-            if child.name not in known:
-                yield Finding("E-LAYOUT-UNKNOWN", _rel(child, root), f"spines are {', '.join(L.SPINES)}")
-    snaps = root / "docs/prototypes/_snapshots"
-    if snaps.is_dir():
-        for child in snaps.iterdir():
-            if child.is_dir() or (child.name != ".gitkeep" and child.suffix.lower() != ".html"):
-                yield Finding("E-LAYOUT-UNKNOWN", _rel(child, root), "snapshots are single .html files")
-
-
 def symlinks(root: Path) -> Iterator[Finding]:
     for path in (root / "docs", root / "AGENTS.md", root / "CLAUDE.md"):
         if path.is_symlink():
@@ -158,11 +103,14 @@ def state_files(root: Path) -> Iterator[Finding]:
 
 def _real_content(text: str, spine: str) -> bool:
     template = L.SPINE_TEMPLATE_TEXT.get(spine, "")
+    words = 0
     for line in text.splitlines():
         stripped = line.strip()
-        if stripped and not stripped.startswith("#") and L.EMPTY_MARKER not in stripped and stripped != template:
-            return True
-    return False
+        if (not stripped or stripped.startswith("#") or L.EMPTY_MARKER in stripped or stripped == template
+                or re.match(L.PLACEHOLDER_LINE, stripped, re.I)):
+            continue
+        words += len(re.findall(r"[^\W_]{2,}", stripped))
+    return words >= L.MIN_SPINE_WORDS
 
 
 def spines(root: Path, stages: dict) -> Iterator[Finding]:
@@ -300,14 +248,27 @@ def frozen(root: Path) -> Iterator[Finding]:
             yield Finding("E-FROZEN-UNLISTED", _rel(snap, root), "snapshot not recorded in frozen.json (only the bundler makes snapshots)")
 
 
-def _is_script(path: Path) -> bool:
-    if path.suffix.lower() in L.SCRIPT_SUFFIXES:
-        return True
+def _has_shebang(path: Path) -> bool:
     try:
-        if path.stat().st_mode & stat.S_IXUSR:
-            return True
         with path.open("rb") as handle:
             return handle.read(2) == b"#!"
+    except OSError:
+        return False
+
+
+def _is_script(path: Path) -> bool:
+    # The exec bit alone is noise (WSL, exFAT, core.fileMode=false); a shebang is not.
+    return path.suffix.lower() in L.SCRIPT_SUFFIXES or _has_shebang(path)
+
+
+def _browser_asset(path: Path, prototypes: Path) -> bool:
+    """Browser code inside a screen folder or the vision board, with no Node usage."""
+    if prototypes not in path.parents or path.parent == prototypes or "_snapshots" in path.parts:
+        return False
+    if path.suffix.lower() not in L.PROTOTYPE_ASSET_SUFFIXES or _has_shebang(path):
+        return False
+    try:
+        return not re.search(L.NODE_MARKERS, path.read_text(encoding="utf-8", errors="replace"))
     except OSError:
         return False
 
@@ -340,9 +301,8 @@ def scripts(root: Path, path_classes: dict, legacy: set[str]) -> Iterator[Findin
             if path.is_symlink() or name == ".gitkeep" or not _is_script(path):
                 continue
             rel = _rel(path, root)
-            in_screen = prototypes in path.parents and path.parent != prototypes and "_" not in path.parent.name[:1]
             if rel.startswith("docs/"):
-                if rel in registered or (in_screen and path.suffix.lower() in L.PROTOTYPE_ASSET_SUFFIXES):
+                if rel in registered or _browser_asset(path, prototypes):
                     continue
                 yield Finding("E-SCRIPT-UNREGISTERED", rel, "scripts in docs/ must be registered checks (spec 8)")
             elif rel not in legacy and not match_any(rel, allowed_outside):

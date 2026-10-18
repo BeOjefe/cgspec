@@ -20,6 +20,9 @@ SPINE_REQUIRED_FROM = {
 STAGES = ["brainstorming", "design", "architecture", "milestones", "coding", "testing", "cicd", "follow-up"]
 
 EMPTY_MARKER = "<!-- cgspec:empty -->"
+# A spine counts as written only with at least this many words of real content.
+MIN_SPINE_WORDS = 12
+PLACEHOLDER_LINE = r"^[-*\s]*(tbd|tbc|todo|wip|n/?a|none( yet)?|\.{3,}|-+|lorem ipsum.*|to be (defined|done|decided|written).*)[.!\s]*$"
 INDEX_BEGIN = "<!-- cgspec:index:begin -->"
 INDEX_END = "<!-- cgspec:index:end -->"
 
@@ -84,8 +87,10 @@ SCRIPT_SUFFIXES = {
     ".py", ".pyw", ".ipynb", ".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".sh", ".bash", ".zsh",
     ".fish", ".ps1", ".psm1", ".bat", ".cmd", ".rb", ".pl", ".php", ".lua", ".r", ".jl", ".go", ".rs",
 }
-# Browser code that may live inside a prototype screen folder (docs/prototypes/<screen>/).
-PROTOTYPE_ASSET_SUFFIXES = {".js", ".mjs"}
+# Browser code allowed in prototype screen folders and the vision board, unless it uses Node.
+PROTOTYPE_ASSET_SUFFIXES = {".js", ".mjs", ".ts", ".tsx", ".jsx"}
+NODE_MARKERS = (r"\brequire\s*\(|\bprocess\.(argv|env|exit|cwd)\b|__dirname|"
+                r"(from|import)\s*\(?\s*['\"](node:|fs|path|os|child_process|playwright|@playwright/|puppeteer)")
 # Outside docs/, scripts are expected under the code and tests path classes; these are also fine.
 CONFIG_GLOBS = ["*.config.*", "**/*.config.*", ".github/**", ".husky/**", "**/.*rc.*", "**/.*rc",
                 "**/conftest.py", "**/setup.py", "**/noxfile.py", "**/manage.py"]

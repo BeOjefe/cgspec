@@ -323,3 +323,84 @@ class DoctorHardeningTests(DoctorTests):
         write_json(self.root / "docs/_cgspec/01-engine/manifest.json", {"schema": 1, "files": []})
         result = self.assertFails("E-ENGINE-HASH")
         self.assertNotIn("Traceback", result.stderr)
+
+
+class DoctorRecheckTests(unittest.TestCase):
+    """Regressions from the step-2 re-verification."""
+
+    def setUp(self):
+        self._tmp = TempDir()
+        self.root = self._tmp.__enter__()
+        install(self.root)
+
+    def tearDown(self):
+        self._tmp.__exit__(None, None, None)
+
+    def fails(self, code):
+        result = doctor(self.root)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn(code, result.stdout)
+
+    def no_errors(self):
+        result = doctor(self.root)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        return result
+
+    def test_placeholder_spines_are_empty(self):
+        for spine in (self.root / "docs/spines").glob("*.md"):
+            spine.write_text(spine.read_text().replace("<!-- cgspec:empty -->", "TBD"))
+        set_stage(self.root, "coding")
+        self.fails("E-SPINE-EMPTY")
+
+    def test_real_spine_content_counts(self):
+        set_stage(self.root, "design")
+        text = ("# Intent\n\nMEOCE helps retail investors in Casablanca read BRVM and BVC market data quickly, "
+                "with plain explanations and alerts they can trust.\n")
+        (self.root / "docs/spines/01-INTENT.md").write_text(text)
+        (self.root / "docs/spines/02-DOMAIN.md").write_text(
+            "# Domain\n\nNouns: Instrument (ticker, market, sector), Quote (price, time), Watchlist (owner, "
+            "instruments), Alert (rule, channel). A Watchlist belongs to one User.\n")
+        self.no_errors()
+
+    def test_node_script_in_screen_folder_fails(self):
+        screen = self.root / "docs/prototypes/home"
+        screen.mkdir()
+        (screen / "generate_v15_screenshots.js").write_text(
+            "const { chromium } = require('playwright');\n(async () => { await chromium.launch(); })();\n")
+        self.fails("E-SCRIPT-UNREGISTERED")
+
+    def test_node_import_in_screen_folder_fails(self):
+        screen = self.root / "docs/prototypes/home"
+        screen.mkdir()
+        (screen / "shot.mjs").write_text("import fs from 'node:fs';\nfs.writeFileSync('x', 'y');\n")
+        self.fails("E-SCRIPT-UNREGISTERED")
+
+    def test_browser_ts_and_vision_assets_pass(self):
+        screen = self.root / "docs/prototypes/home"
+        screen.mkdir()
+        (screen / "app.ts").write_text("export const title: string = 'Home';\n")
+        (self.root / "docs/prototypes/_vision/clip.js").write_text("document.body.classList.add('x');\n")
+        self.no_errors()
+
+    def test_executable_non_script_files_are_fine(self):
+        for rel in ("docs/00-INBOX.md", "docs/_cgspec/07-state/tier.json"):
+            os.chmod(self.root / rel, 0o755)
+        self.no_errors()
+
+    def test_stray_files_in_prototypes_root_and_evidence_fail(self):
+        (self.root / "docs/prototypes/random.txt").write_text("x\n")
+        self.fails("E-LAYOUT-UNKNOWN")
+        (self.root / "docs/prototypes/random.txt").unlink()
+        (self.root / "docs/_cgspec/06-evidence/x").mkdir()
+        (self.root / "docs/_cgspec/06-evidence/x/blob.bin").write_bytes(b"\x00\x01")
+        self.fails("E-LAYOUT-UNKNOWN")
+
+    def test_footnotes_are_not_links(self):
+        (self.root / "docs/spines/01-INTENT.md").write_text("# Intent\n\nA claim.[^1]\n\n[^1]: Source is the 2025 report.\n")
+        result = doctor(self.root)
+        self.assertNotIn("E-LINK", result.stdout)
+
+    def test_each_finding_reported_once(self):
+        (self.root / "docs/adrs/ADR-001-bad.md").write_bytes(b"\xff\xfe not utf8")
+        result = doctor(self.root)
+        self.assertEqual(result.stdout.count("E-ENCODING docs/adrs/ADR-001-bad.md"), 1)

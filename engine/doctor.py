@@ -73,7 +73,8 @@ def run_checks(root: Path) -> list[C.Finding]:
             findings += list(check())
         except Exception as exc:  # one broken check must not hide the others
             findings.append(C.Finding("E-INTERNAL", name, f"check crashed: {exc!r}"))
-    return findings
+    unique = {(f.code, f.path, f.message): f for f in findings}
+    return list(unique.values())
 
 
 def render_index(root: Path) -> str:

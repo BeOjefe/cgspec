@@ -193,6 +193,8 @@ def cmd_install(root: Path, args: argparse.Namespace) -> int:
     if args.repo_prefix:
         project["repo_prefix"] = args.repo_prefix
     write_json(root / PROJECT_FILE, project)  # written last: its presence means "install finished"
+    owned["created"][PROJECT_FILE.as_posix()] = sha256_file(root / PROJECT_FILE)
+    write_json(root / OWNED, owned)
     print(f"installed CGSpec {version()} ({args.profile}, {args.topology}) in {root}")
     return EXIT_OK
 

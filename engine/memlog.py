@@ -11,6 +11,7 @@ Commands:
 from __future__ import annotations
 
 import argparse
+import errno
 import os
 import re
 import sys
@@ -64,19 +65,20 @@ class Lock:
         self.path, self.timeout, self.handle = path, timeout, None
 
     def _try(self) -> bool:
-        if os.name == "nt":
-            import msvcrt
-            try:
-                msvcrt.locking(self.handle.fileno(), msvcrt.LK_NBLCK, 1)
-                return True
-            except OSError:
-                return False
-        import fcntl
+        busy = {errno.EAGAIN, errno.EWOULDBLOCK, errno.EACCES, errno.EDEADLK}
         try:
-            fcntl.flock(self.handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            if os.name == "nt":
+                import msvcrt
+                self.handle.seek(0)
+                msvcrt.locking(self.handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(self.handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
             return True
-        except OSError:
-            return False
+        except OSError as exc:
+            if exc.errno in busy:
+                return False
+            raise CgspecError(f"this file system does not support locking ({exc}); move the project to a local disk") from None
 
     def __enter__(self) -> "Lock":
         self.handle = open(self.path, "a+")
@@ -89,6 +91,10 @@ class Lock:
         return self
 
     def __exit__(self, *exc) -> None:
+        if os.name == "nt":
+            import msvcrt
+            self.handle.seek(0)
+            msvcrt.locking(self.handle.fileno(), msvcrt.LK_UNLCK, 1)
         self.handle.close()  # closing releases the lock; the side file stays, harmlessly
 
 

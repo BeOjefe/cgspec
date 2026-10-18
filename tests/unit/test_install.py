@@ -227,3 +227,14 @@ class InstallHardeningTests(unittest.TestCase):
         with TempDir() as root:
             install(root)
             self.assertIn("docs/.memlog.lock", (root / ".gitignore").read_text())
+
+
+class InstallRecheckTests(unittest.TestCase):
+    def test_uninstall_removes_version_marker_and_reinstall_works(self):
+        with TempDir() as root:
+            install(root)
+            run_script("install.py", "uninstall", "--root", str(root))
+            self.assertFalse((root / "docs/_cgspec/project.json").exists())
+            self.assertFalse((root / "docs").exists(), sorted(p.as_posix() for p in root.rglob("*")))
+            self.assertEqual(install(root).returncode, 0)
+            self.assertEqual(doctor(root).returncode, 0)
