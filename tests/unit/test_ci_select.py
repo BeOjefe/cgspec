@@ -62,6 +62,9 @@ class CiSelectTests(unittest.TestCase):
         git(self.root, "commit", "-q", "--no-verify", "-m", f"edit {rel}")
 
     def test_picks_release_matching_version_and_base(self):
+        (self.root / "README.md").write_text("project change\n")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "--no-verify", "-m", "project change")
         env = select(self.root, self.base, self.tmp)
         self.assertEqual(env["CGSPEC_BASE"], self.base)
         self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), "2.0.0")
@@ -85,10 +88,16 @@ class CiSelectTests(unittest.TestCase):
         env = select(self.root, self.base, self.tmp)
         self.assertTrue((Path(env["CGSPEC_RELEASE"]) / "engine/cgspec_hook.py").is_file())
 
-    def test_unknown_base_falls_back_without_crashing(self):
-        env = select(self.root, "0" * 40, self.tmp)
-        self.assertEqual(env["CGSPEC_BASE"], "")
-        self.assertTrue((Path(env["CGSPEC_RELEASE"]) / "engine/cgspec_hook.py").is_file())
+    def test_unknown_base_cannot_take_plugin_source_from_head(self):
+        env_file = self.tmp / "github_env"
+        env_file.write_text("")
+        env = dict(os.environ, EVENT_BASE="0" * 40, DEFAULT_BRANCH="", RUNNER_TEMP=str(self.tmp),
+                   GITHUB_ENV=str(env_file))
+        result = subprocess.run(["sh", str(self.root / ".github/cgspec-select.sh")], cwd=self.root, env=env,
+                                capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("trusted", result.stderr.lower())
+        self.assertNotIn("CGSPEC_RELEASE=", env_file.read_text())
 
     def test_workflow_runs_the_base_version_of_the_selector(self):
         workflow = (self.root / ".github/workflows/cgspec.yml").read_text()
@@ -135,7 +144,7 @@ class SelectorFallbackTests(unittest.TestCase):
         env_file = tmp / "env"
         env_file.write_text("")
         env = dict(os.environ, RUNNER_TEMP=str(tmp), GITHUB_ENV=str(env_file), DEFAULT_BRANCH="main",
-                   EVENT_BASE=before, GITHUB_REF=f"refs/heads/{branch}", GITHUB_EVENT_NAME="push")
+                   EVENT_BASE=before, EVENT_REF=f"refs/heads/{branch}", EVENT_NAME="push")
         return subprocess.run(["sh", "-c", script], cwd=work, env=env, capture_output=True, text=True)
 
     def tamper_selector(self, work: Path) -> None:
@@ -154,6 +163,7 @@ class SelectorFallbackTests(unittest.TestCase):
             git(work, "remote", "set-url", "origin", str(tmp / "missing-origin"))
             result = self.run_workflow_selector(work, tmp, branch="feature")
             self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("cannot fetch the default branch selector", result.stderr)
             self.assertNotIn("AGENT SCRIPT RAN", result.stdout)
 
     def test_force_push_to_default_branch_rejects_new_selector(self):
@@ -163,6 +173,7 @@ class SelectorFallbackTests(unittest.TestCase):
             git(work, "remote", "set-url", "origin", str(work))  # default branch now resolves to HEAD
             result = self.run_workflow_selector(work, tmp, branch="main")
             self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("no trusted selector before this change", result.stderr)
             self.assertNotIn("AGENT SCRIPT RAN", result.stdout)
 
     def test_first_install_on_default_branch_requires_trusted_bootstrap(self):
@@ -171,6 +182,40 @@ class SelectorFallbackTests(unittest.TestCase):
             git(work, "remote", "set-url", "origin", str(work))
             result = self.run_workflow_selector(work, tmp, branch="main")
             self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("no trusted selector before this change", result.stderr)
+
+    def test_preinstall_event_base_uses_default_branch_source(self):
+        with TempDir() as tmp:
+            trusted = make_release_source(tmp, ["2.0.0"])
+            evil_parent = tmp / "evil"
+            evil_parent.mkdir()
+            evil = make_release_source(evil_parent, ["2.0.0"])
+            origin = tmp / "origin"
+            origin.mkdir()
+            git(origin, "init", "-q", "-b", "main")
+            (origin / "README.md").write_text("before CGSpec\n")
+            git(origin, "add", "-A")
+            git(origin, "commit", "-q", "-m", "baseline")
+            before = git(origin, "rev-parse", "HEAD").stdout.strip()
+            from tests.helpers import run_script
+            run_script("install.py", "install", "--root", str(origin), "--profile", "headless", "--topology", "single",
+                       "--tools", "git,ci", "--plugin-source", str(trusted))
+            git(origin, "add", "-A")
+            git(origin, "commit", "-q", "--no-verify", "-m", "install")
+            work = tmp / "work"
+            git(tmp, "clone", "-q", str(origin), str(work))
+            git(work, "checkout", "-q", "-b", "feature")
+            config = work / "docs/_cgspec/project.json"
+            data = json.loads(config.read_text())
+            data["plugin_source"] = str(evil)
+            write_json(config, data)
+            git(work, "add", "-A")
+            git(work, "commit", "-q", "--no-verify", "-m", "redirect plugin source")
+            result = self.run_workflow_selector(work, tmp, branch="feature", before=before)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            release = tmp / "cgspec-release"
+            remote = git(release, "remote", "get-url", "origin").stdout.strip()
+            self.assertEqual(remote, str(trusted))
 
     def test_new_branch_push_uses_the_default_branch_selector(self):
         with TempDir() as tmp:

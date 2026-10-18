@@ -58,6 +58,7 @@ jobs:
           B="$EVENT_BASE"
           if [ -n "$B" ] && [ "$B" != "$(git rev-parse HEAD)" ] &&
              git cat-file -e "$B:.github/cgspec-select.sh" 2>/dev/null; then
+            TRUSTED="$B"
             git show "$B:.github/cgspec-select.sh" > "$RUNNER_TEMP/cgspec-select.sh"
           else
             # A default-branch push with no usable before SHA has no older trust root.
@@ -79,31 +80,39 @@ jobs:
             fi
             git show "$TRUSTED:.github/cgspec-select.sh" > "$RUNNER_TEMP/cgspec-select.sh"
           fi
-          sh "$RUNNER_TEMP/cgspec-select.sh"
+          CGSPEC_TRUST_BASE="$TRUSTED" sh "$RUNNER_TEMP/cgspec-select.sh"
       - name: CGSpec governance (cannot be skipped)
         run: python3 "$CGSPEC_RELEASE/engine/cgspec_hook.py" ci --root "$GITHUB_WORKSPACE" --base "$CGSPEC_BASE" --release-dir "$CGSPEC_RELEASE" --tool git
 """
 SELECT = """#!/bin/sh
 # Installed by CGSpec. Chooses the range base and downloads the plugin release used to judge it.
-# Version = the newer of base and HEAD (no downgrade); source = the base's plugin_source (no redirect).
+# Version = the newer of trusted selector commit and HEAD; source = that trusted commit.
 set -eu
+TRUST_BASE="${CGSPEC_TRUST_BASE:-${EVENT_BASE:-}}"
+if [ -z "$TRUST_BASE" ] ||
+   ! git cat-file -e "$TRUST_BASE:.github/cgspec-select.sh" 2>/dev/null ||
+   ! git cat-file -e "$TRUST_BASE:docs/_cgspec/project.json" 2>/dev/null; then
+  echo "CGSpec: no trusted selector and plugin source before this change" >&2
+  exit 1
+fi
 BASE="${EVENT_BASE:-}"
-if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-  BASE=""
-  if [ -n "${DEFAULT_BRANCH:-}" ] && git fetch -q origin "$DEFAULT_BRANCH" 2>/dev/null; then
-    BASE="$(git merge-base HEAD FETCH_HEAD 2>/dev/null || true)"
-  fi
+if [ -z "$BASE" ] || ! git cat-file -e "$BASE:docs/_cgspec/project.json" 2>/dev/null; then
+  BASE="$(git merge-base HEAD "$TRUST_BASE" 2>/dev/null || true)"
+fi
+if [ -z "$BASE" ] || [ "$BASE" = "$(git rev-parse HEAD)" ]; then
+  echo "CGSpec: cannot establish a trusted range base before HEAD" >&2
+  exit 1
 fi
 read_at() { git show "$1:$2" 2>/dev/null || true; }
 field() { python3 -c "import json,sys; d=sys.stdin.read(); print(json.loads(d).get('$1','') if d.strip() else '')"; }
 HEAD_VERSION="$(read_at HEAD docs/_cgspec/01-engine/VERSION | tr -d '[:space:]')"
-BASE_VERSION=""; SOURCE=""
-if [ -n "$BASE" ]; then
-  BASE_VERSION="$(read_at "$BASE" docs/_cgspec/01-engine/VERSION | tr -d '[:space:]')"
-  SOURCE="$(read_at "$BASE" docs/_cgspec/project.json | field plugin_source)"
+TRUST_VERSION="$(read_at "$TRUST_BASE" docs/_cgspec/01-engine/VERSION | tr -d '[:space:]')"
+SOURCE="$(read_at "$TRUST_BASE" docs/_cgspec/project.json | field plugin_source)"
+if [ -z "$TRUST_VERSION" ] || [ -z "$SOURCE" ]; then
+  echo "CGSpec: trusted selector lacks a version or plugin source" >&2
+  exit 1
 fi
-[ -n "$SOURCE" ] || SOURCE="$(read_at HEAD docs/_cgspec/project.json | field plugin_source)"
-VERSION="$(printf '%s\\n%s\\n' "$BASE_VERSION" "$HEAD_VERSION" | grep . | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)"
+VERSION="$(printf '%s\\n%s\\n' "$TRUST_VERSION" "$HEAD_VERSION" | grep . | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)"
 RELEASE="${RUNNER_TEMP:-/tmp}/cgspec-release"
 rm -rf "$RELEASE"
 git clone -q --depth 1 --branch "v$VERSION" "$SOURCE" "$RELEASE"
