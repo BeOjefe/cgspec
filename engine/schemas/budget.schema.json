@@ -1,0 +1,24 @@
+{
+  "title": "docs/_cgspec/07-state/budget.json — per-task caps counted by hooks",
+  "type": "object",
+  "required": ["schema", "task", "limits", "used"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "task": {"type": "string"},
+    "limits": {"$ref": "#/definitions/counts"},
+    "used": {"$ref": "#/definitions/counts"}
+  },
+  "definitions": {
+    "counts": {
+      "type": "object",
+      "required": ["helpers", "review_rounds", "research_passes"],
+      "additionalProperties": false,
+      "properties": {
+        "helpers": {"type": "integer", "minimum": 0},
+        "review_rounds": {"type": "integer", "minimum": 0},
+        "research_passes": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

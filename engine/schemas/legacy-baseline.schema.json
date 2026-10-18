@@ -1,0 +1,21 @@
+{
+  "title": "docs/_cgspec/07-state/legacy-baseline.json — pre-adoption files exempt from size and test rules until changed",
+  "type": "object",
+  "required": ["schema", "created", "files"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "created": {"type": "string"},
+    "files": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["sha256", "lines"],
+        "properties": {
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "lines": {"type": "integer", "minimum": 0}
+        }
+      }
+    }
+  }
+}

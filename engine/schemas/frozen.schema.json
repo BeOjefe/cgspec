@@ -1,0 +1,24 @@
+{
+  "title": "docs/_cgspec/07-state/frozen.json — append-only list of files that must never change",
+  "type": "object",
+  "required": ["schema", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "kind", "added", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "kind": {"enum": ["snapshot", "criteria", "test", "ci", "check", "baseline"]},
+          "added": {"type": "string"},
+          "reason": {"type": "string", "minLength": 3}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "title": "docs/_cgspec/07-state/tier.json — the change size declared before editing",
+  "type": "object",
+  "required": ["schema", "active"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "active": {"anyOf": [{"type": "null"}, {"$ref": "#/definitions/tier"}]}
+  },
+  "definitions": {
+    "tier": {
+      "type": "object",
+      "required": ["id", "tier", "reason", "created"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "pattern": "^T-\\d{8}-[0-9a-f]{4}$"},
+        "tier": {"enum": ["T0", "T1", "T2", "T3"]},
+        "reason": {"type": "string", "minLength": 3},
+        "files": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "slice": {"type": "string", "pattern": "^([a-z0-9-]+:)?SLICE-(\\d{3}|draft-[a-z0-9-]+)$"},
+        "run_id": {"type": "string", "pattern": "^R-\\d{8}-[0-9a-f]{4}$"},
+        "created": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"}
+      }
+    }
+  }
+}

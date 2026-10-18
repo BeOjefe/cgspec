@@ -1,0 +1,17 @@
+{
+  "title": "docs/_cgspec/06-evidence/tests/<test-id>.json — proof a test failed before the code change",
+  "type": "object",
+  "required": ["schema", "test_id", "command", "failed_at", "covers", "recorded"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "test_id": {"type": "string", "pattern": "^[A-Za-z0-9_.:/-]+$"},
+    "command": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "failed_at": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"},
+    "passed_at": {"anyOf": [{"type": "null"}, {"type": "string", "pattern": "^[0-9a-f]{7,40}$"}]},
+    "covers": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "slice": {"type": "string"},
+    "tier": {"enum": ["T1", "T2", "T3"]},
+    "recorded": {"type": "string"}
+  }
+}
