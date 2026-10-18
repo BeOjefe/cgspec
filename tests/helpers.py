@@ -101,7 +101,7 @@ def approve(root: Path, text: str = "approved, go ahead") -> str:
 
 def make_slice(root: Path, status: str = "Approved", scope: str = "src/login/**", approval: str | None = None,
                number: str = "001", index: bool = True) -> Path:
-    approval = approval if approval is not None else approve(root)
+    approval = approval if approval is not None else approve(root, f"approve SLICE-{number}")
     path = root / f"docs/slices/SLICE-{number}-login.md"
     lines = [f"# SLICE-{number}: Login", "", f"- **Status:** {status}", f"- **Scope:** {scope}"]
     if approval:

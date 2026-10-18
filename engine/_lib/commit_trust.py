@@ -8,11 +8,13 @@ import binascii
 import hashlib
 import json
 import re
+from collections import Counter
 from pathlib import Path
 
 from . import tiers
 from .common import ENGINE_DIR, PROJECT_FILE, STATE_DIR
 from .gitview import View
+from .inbox import approval_target
 
 FROZEN = (STATE_DIR / "frozen.json").as_posix()
 CHECKS = "docs/_cgspec/04-checks/manifest.json"
@@ -111,9 +113,11 @@ def approval_ok(view: View, ref: str, record_id: str | None = None) -> str | Non
         known = ref in approval_ids(view)
         return (f"cites approval {ref!r}, which was not given in this change (approvals are single-use and fresh)"
                 if known else f"cites approval {ref!r}, which is not in {APPROVALS}")
-    named = {m.upper() for m in RECORD_ID.findall(str(fresh[ref].get("excerpt", "")))}
-    if named and record_id and record_id.upper() not in named:
-        return f"cites approval {ref}, but your message names {', '.join(sorted(named))}, not {record_id}"
+    target = approval_target(str(fresh[ref].get("excerpt", "")))
+    if target != record_id:
+        if target and target.startswith(("SLICE-", "ADR-", "CHK-")):
+            return f"cites approval {ref}, but your message names {target}, not {record_id}"
+        return f"cites approval {ref}, but your message does not name {record_id or 'an approval target'}"
     return None
 
 
@@ -282,12 +286,21 @@ def slice_approvals(view: View, changes) -> list[str]:
 
 def ledger_approvals(view: View) -> list[str]:
     """Ledger lines added in this change that claim an approval must cite a valid one."""
-    added = view.added_lines().get("docs/_memlog.md", [])
+    added = Counter(view.added_lines().get("docs/_memlog.md", []))
+    lines = (view.read_new("docs/_memlog.md") or b"").decode("utf-8", "replace").splitlines()
     reasons = []
-    for line in added:
+    summary = ""
+    for line in lines:
+        if line.startswith("### ["):
+            summary = ""
+        found = re.match(tiers.FIELD % "Summary", line, re.I)
+        if found:
+            summary = found.group(1).strip()
         match = APPROVAL_FIELD.match(line)
-        if match:
-            problem = approval_ok(view, match.group(1).strip().strip("`"))
+        if match and added[line]:
+            added[line] -= 1
+            expected = f"decision:{' '.join(summary.split()).casefold()}" if summary else None
+            problem = approval_ok(view, match.group(1).strip().strip("`"), expected)
             if problem:
                 reasons.append(f"docs/_memlog.md: an entry {problem}")
     return reasons

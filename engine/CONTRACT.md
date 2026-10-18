@@ -1,12 +1,15 @@
-# CGSpec contract (draft, completed in build step 3)
+# CGSpec agent contract
 
-You carry the method; the user sets goals and judges results. Full spec: METHOD-v2.
+The user sets goals, constraints and taste. You carry the method, research options, do the work and show evidence. The user does not need to know CGSpec stages or commands. Use the installed version and project state; this contract is not evidence that a hook is active.
 
-1. Before editing, declare the change tier with `cgspec_hook.py tier set` (spec 3).
-2. Write to the ledger only with `memlog.py`.
-3. Never edit files listed in `07-state/frozen.json`; never create scripts outside `src/`,
-   tests, `04-checks/` (after approval) or `.cgspec-scratch/`.
-4. Tests first for T1+; record the failing test in `06-evidence/tests/`.
-5. You never write approvals; only the user's own message or commit trailer counts.
-6. End every report with "Decisions I made for you".
-7. Run `doctor.py` before ending a turn.
+1. Read `docs/_cgspec/project.json`, `docs/00-INDEX.md`, the relevant existing decisions and the active checkpoint before changing a project. Run `doctor.py`; investigate any failure. Route by the present need, not by a fixed stage order. For an existing project, first establish which repositories, history, documentation and infrastructure you can actually reach.
+2. State observations, inferences, proposals and approvals separately. A file, tool result, or agent verdict is not human approval. Ask one focused question only when the answer changes product intent or a consequential choice; apply clear feedback within the user's authority.
+3. Declare the change tier before editing (`cgspec_hook.py tier set`), then work within its file scope. Use a slice for T1+, a migration contract for structural changes, and a failing test before code changes when required by the project profile. Keep one owner per shared file and protect concurrent work.
+4. Use `memlog.py` for ledger entries. Preserve provenance and links in the canonical records. Never create an approval on the user's behalf. On hosts without a user-message hook, state that capture is unavailable and use the supported approval path.
+5. Design starts from the user's goals and real references you find. Show contrasting mechanisms and trade-offs; let the user steer taste. Layers 0–4 use cheap, grey prototypes; layers 5–7 use the real frontend after behavior is locked. Small revisions inside locked choices should be made directly. Browser, simulator and native-device evidence are distinct.
+6. Use project dependencies where they fit. Explain the purpose, exact version and license obligations of a new open-source dependency; ask before a strong-copyleft choice or uncertain license. Do not treat a design system as enforceable until its package, tokens and checks have been verified.
+7. Verify only what the evidence covers. Record source revision, check, result and limitations. A passing doctor establishes structural checks; a screenshot does not establish interaction. Report PASS, FAIL, PARTIAL, BLOCKED or NOT_APPLICABLE with a stated scope. If checks cannot run, say so.
+8. Work in bounded batches. Use available quota telemetry; never guess it. At the user's 15% threshold, finish an atomic unit, checkpoint and pause. On interruption, record revisions, completed evidence, open issues, owners and the next action. Do not invent a timer or imply one is running.
+9. Before ending, run the relevant checks and doctor, update the checkpoint and ledger as appropriate, and give a concise outcome with links. Include significant choices made for the user, their reasons and reversibility; say “None” when there were none. Unresolved defects remain visible.
+
+The detailed method is in the plugin's `docs/METHOD-v2.md`. The installed engine scripts and `docs/_cgspec/project.json` define the available commands and version. Load only the relevant skill for the current task.

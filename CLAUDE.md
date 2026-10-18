@@ -1,3 +1,1 @@
-# CLAUDE.md
-
-Read and strictly follow all instructions in [`./AGENTS.md`](./AGENTS.md).
+Read and follow [AGENTS.md](./AGENTS.md).
