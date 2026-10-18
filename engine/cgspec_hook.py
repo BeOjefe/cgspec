@@ -21,6 +21,18 @@ from _lib.gates import Context, check_write  # noqa: E402
 from _lib.shellparse import inline_writes, write_targets  # noqa: E402
 
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
+AG_WRITE_TOOLS = {"write_to_file", "replace_file_content", "multi_replace_file_content"}
+AG_PATH_KEYS = {"TargetFile", "AbsolutePath", "Cwd"}
+
+
+def _strings(value, skip=frozenset()) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [s for k, v in value.items() if k not in skip for s in _strings(v, skip)]
+    if isinstance(value, list):
+        return [s for v in value for s in _strings(v, skip)]
+    return []
 LATER = {"post-tool"}
 
 
@@ -37,6 +49,16 @@ def normalize(payload: dict, tool: str) -> dict:
                     "new": name == "Write" and None, "cwd": payload.get("cwd")}
         if name == "Bash":
             return {"kind": "shell", "command": data.get("command", ""), "cwd": payload.get("cwd")}
+        return {"kind": "other"}
+    if tool == "antigravity":
+        call = payload.get("toolCall") or {}
+        name, data = call.get("name", ""), call.get("args") or {}
+        cwd = (payload.get("workspacePaths") or [None])[0]
+        if name in AG_WRITE_TOOLS:
+            return {"kind": "write", "paths": [data["TargetFile"]] if data.get("TargetFile") else [],
+                    "content": "\n".join(_strings(data, AG_PATH_KEYS)), "cwd": cwd}
+        if name == "run_command":
+            return {"kind": "shell", "command": data.get("CommandLine", ""), "cwd": data.get("Cwd") or cwd}
         return {"kind": "other"}
     kind = payload.get("tool")
     if kind in ("write", "edit"):
@@ -83,14 +105,21 @@ def pre_tool(root: Path, tool: str, raw: str) -> int:
                     reasons += check_write(ctx, rel, call.get("content"))
     except Exception as exc:  # fail closed only where it matters
         if ctx and any(ctx.protected(rel) for rel in touched):
-            print(f"CGSpec blocked (internal error on a protected path): {exc!r}", file=sys.stderr)
-            return EXIT_BLOCK
+            return block(tool, f"CGSpec blocked (internal error on a protected path): {exc!r}")
         print(f"CGSpec hook internal error (not blocking; commit hook and CI still check): {exc!r}", file=sys.stderr)
         return EXIT_INTERNAL
     if reasons:
-        print("Blocked by CGSpec:\n- " + "\n- ".join(dict.fromkeys(reasons)), file=sys.stderr)
-        return EXIT_BLOCK
+        return block(tool, "Blocked by CGSpec:\n- " + "\n- ".join(dict.fromkeys(reasons)))
     return EXIT_OK
+
+
+def block(tool: str, message: str) -> int:
+    """Claude Code reads exit 2 + stderr; Antigravity reads a JSON decision on stdout."""
+    if tool == "antigravity":
+        print(json.dumps({"decision": "deny", "reason": message}))
+        return EXIT_OK
+    print(message, file=sys.stderr)
+    return EXIT_BLOCK
 
 
 def pre_commit(root: Path) -> int:
@@ -162,6 +191,12 @@ def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str) -> int
         return EXIT_FAIL if errors or problems else EXIT_OK
     if event == "stop":
         allow, message = session.stop_decision(root, session.stop_problems(root, errors))
+        if args.tool == "antigravity":
+            if not allow:
+                print(json.dumps({"decision": "continue", "reason": message}))
+            elif message:
+                print(message, file=sys.stderr)
+            return EXIT_OK
         if message:
             print(message, file=sys.stderr)
         return EXIT_OK if allow else EXIT_BLOCK
@@ -217,7 +252,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    args = build_parser().parse_intermixed_args(argv)
     try:
         root = resolve_root(args.root)
         if args.event == "tier":

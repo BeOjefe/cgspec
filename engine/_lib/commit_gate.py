@@ -109,22 +109,48 @@ def _test_pairs(view: View, code_changes, tier: dict | None, classes: dict) -> l
     return reasons
 
 
+def _is_install_commit(view: View) -> bool:
+    """A commit that adds the version marker or changes its version, with a manifest-consistent
+    engine (checked separately), is install.py at work: install-owned files need no tier."""
+    old = _json(view.read_old(PROJECT_FILE.as_posix())).get("cgspec_version")
+    new = _json(view.read_new(PROJECT_FILE.as_posix())).get("cgspec_version")
+    engine_version = (view.read_new(ENGINE_DIR.as_posix() + "/VERSION") or b"").decode().strip()
+    return bool(new) and new != old and new == engine_version
+
+
+def _install_owned(view: View) -> set[str]:
+    owned = _json(view.read_new(ENGINE_DIR.as_posix() + "/owned-files.json"))
+    paths = set(owned.get("created", {})) | set(owned.get("replaced", {})) | {".gitignore"}
+    for value in owned.get("adapters", {}).values():
+        if isinstance(value, dict):
+            paths.add(value.get("path", ""))
+        elif isinstance(value, list):
+            paths.update(value)
+        elif isinstance(value, str):
+            paths.add(value)
+    return paths
+
+
 def evaluate(root: Path, view: View) -> list[str]:
     changes = view.changes()
+    engine_prefix = ENGINE_DIR.as_posix() + "/"
+    install_owned = _install_owned(view) if _is_install_commit(view) else set()
     project = _json(view.read_new(PROJECT_FILE.as_posix()))
     classes = project.get("path_classes", {}) if isinstance(project.get("path_classes"), dict) else {}
     tier = _json(view.read_new((STATE_DIR / "tier.json").as_posix())).get("active")
     ctx = Context(root, project)
     reasons = _frozen_and_engine(view, changes)
-    code_changes = [c for c in changes if not c.path.startswith(NO_TIER)]
+    code_changes = [c for c in changes if not c.path.startswith(NO_TIER) and c.path not in install_owned]
     reasons += _tier_rules(view, code_changes, tier)
     reasons += _test_pairs(view, code_changes, tier, classes)
     for change in changes:
+        if change.path.startswith(engine_prefix):
+            continue  # engine files are verified against the engine manifest above
         if change.status in "AC" and _is_script_name(change.path, None):
             content = (view.read_new(change.path) or b"").decode("utf-8", "replace")
             if not _script_allowed(ctx, change.path, content):
                 reasons.append(f"new script {change.path} is not allowed here (spec 8)")
     for path, lines in view.added_lines().items():
-        if any(EMOJI.search(line) for line in lines):
+        if not path.startswith(engine_prefix) and any(EMOJI.search(line) for line in lines):
             reasons.append(f"decorative emoji added in {path} (spec 1)")
     return list(dict.fromkeys(reasons))

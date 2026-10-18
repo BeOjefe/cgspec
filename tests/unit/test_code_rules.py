@@ -43,3 +43,12 @@ class CodeRuleTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SourceHygieneTests(unittest.TestCase):
+    def test_engine_source_has_no_emoji_characters(self):
+        from _lib.gates import EMOJI
+        for path in ENGINE.rglob("*"):
+            if path.is_file() and "__pycache__" not in path.parts and path.suffix in (".py", ".md", ".json"):
+                with self.subTest(file=path.name):
+                    self.assertIsNone(EMOJI.search(path.read_text(encoding="utf-8")))

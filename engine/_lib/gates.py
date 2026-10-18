@@ -13,7 +13,7 @@ from . import tiers
 from .common import ENGINE_DIR, MEMLOG_FILE, PROJECT_FILE, STATE_DIR
 from .globs import match_any
 
-EMOJI = re.compile("[\U0001F000-\U0001FAFF☀-⛿✅❌❎✨⭐⭕⬛⬜️]")
+EMOJI = re.compile("[\U0001F000-\U0001FAFF\u2600-\u26FF\u2705\u274C\u274E\u2728\u2B50\u2B55\u2B1B\u2B1C\uFE0F]")
 ALWAYS_PROTECTED = [
     PROJECT_FILE.as_posix(),
     (STATE_DIR / "frozen.json").as_posix(),

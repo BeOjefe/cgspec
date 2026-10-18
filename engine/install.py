@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib.common import (  # noqa: E402
     ENGINE_DIR, EXIT_FAIL, EXIT_OK, PROJECT_FILE, CgspecError, read_json, sha256_file, utc_now, write_json,
 )
+from _lib.adapters import unwire, wire  # noqa: E402
 from _lib.layout import GUI_PROFILES  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -187,9 +188,12 @@ def cmd_install(root: Path, args: argparse.Namespace) -> int:
         owned["dirs"].append(ENGINE_DIR.as_posix())
     copy_engine(root)
     update_gitignore(root, owned)
+    tools = sorted(set(args.tools.split(",")) - {""})
+    for note in wire(root, tools, owned):
+        print(note)
     write_json(root / OWNED, owned)
     project = {"schema": 1, "cgspec_version": version(), "profile": args.profile, "topology": args.topology,
-               "path_classes": PATH_CLASSES, "tools": sorted(set(args.tools.split(",")) - {""})}
+               "path_classes": PATH_CLASSES, "tools": tools}
     if args.repo_prefix:
         project["repo_prefix"] = args.repo_prefix
     write_json(root / PROJECT_FILE, project)  # written last: its presence means "install finished"
@@ -303,6 +307,7 @@ def cmd_uninstall(root: Path, _args: argparse.Namespace) -> int:
     project = read_json(root / PROJECT_FILE) if (root / PROJECT_FILE).is_file() else {}
     files, dirs = template_files(project.get("profile", "web-workspace"), project.get("topology", "single"))
     allowed = set(files) | {PROJECT_FILE.as_posix(), ".gitignore"}
+    unwire(root, owned)
     report = remove_created(root, owned, allowed)
     restored, archive_needed = restore_replaced(root, owned)
     report += restored

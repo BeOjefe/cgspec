@@ -22,6 +22,8 @@ in `install.py upgrade`.
 | `docs/_cgspec/06-evidence/tests/<test-id>.json` | `test-pair` | slice workflow | `failed_at` is the commit where the test failed; CI checks it out and re-runs `command` to confirm. |
 | `docs/_cgspec/06-evidence/<scope>/<check>.json` | `evidence` | whoever ran the check | `state` becomes `Stale` when a covered file changes. |
 | `docs/_cgspec/07-state/legacy-baseline.json` | `legacy-baseline` | `cgspec-adopt` | Files listed here are exempt from size and test rules until their hash changes. |
+| `docs/_cgspec/07-state/approvals.json` | `approvals` | `user-message` hook only | One entry per user message that reads as an approval. A ledger entry with status Approved must cite one of these IDs (`--approval-ref A-...`). |
+| `docs/_cgspec/07-state/stop-retries.json` | none | `stop` hook | Counts consecutive stop refusals; reset when the agent ends cleanly. |
 
 ## IDs
 
@@ -48,6 +50,14 @@ are still read so old projects can be upgraded.
 
 Only `memlog.py` writes this file.
 
+## Slice file fields read by the engine
+
+```
+# SLICE-004: Login form
+- **Status:** Approved            (Draft, Approved, In progress, Done, Blocked)
+- **Scope:** src/login/**, tests/login/**   (comma-separated globs; T1+ edits must match)
+```
+
 ## `cgspec_hook.py` command line
 
 ```
@@ -69,6 +79,17 @@ and `--tool` tells the hook how to read it. Events:
 | `pre-commit` | git pre-commit | yes |
 | `commit-msg` | git commit-msg | yes |
 | `ci` | CI governance stage | yes |
+
+Tier declarations: `cgspec_hook.py tier set --tier T0 --reason "..." --files a,b` (T0) or
+`--slice SLICE-NNN` (T1+); `tier show`; `tier clear`. CI: `cgspec_hook.py ci --base <sha>`.
+
+Per-tool payloads: `--tool claude` reads Claude Code hook JSON (`tool_name`, `tool_input`);
+`--tool antigravity` reads `toolCall.name` / `toolCall.args` (`TargetFile`, `CommandLine`,
+`Cwd`) and answers with `{"decision": "deny", "reason": ...}` on stdout (and `{"decision":
+"continue"}` from `stop`) instead of exit 2; `--tool generic` reads
+`{"tool": "write|edit|shell", "paths": [...], "content": ..., "command": ..., "cwd": ...}`.
+Antigravity hooks receive no user message, so inbox and approval capture work only on Claude
+Code; elsewhere approvals use the commit trailer path.
 
 Exit codes (same for every engine script):
 
