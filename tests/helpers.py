@@ -54,3 +54,17 @@ def install(root: Path, profile: str = "web-workspace", topology: str = "single"
 
 def doctor(root: Path, *extra: str):
     return run_script("doctor.py", "--root", str(root), *extra)
+
+
+def hook(root: Path, event: str, payload: dict | None = None, *extra: str):
+    import json as _json
+    return run_script("cgspec_hook.py", event, "--root", str(root), *extra,
+                      stdin=_json.dumps(payload) if payload is not None else "")
+
+
+def claude_payload(root: Path, tool: str, **tool_input) -> dict:
+    for key in ("file_path", "notebook_path"):
+        if key in tool_input and not str(tool_input[key]).startswith("/"):
+            tool_input[key] = str(root / tool_input[key])
+    return {"session_id": "s1", "cwd": str(root), "hook_event_name": "PreToolUse",
+            "tool_name": tool, "tool_input": tool_input}
