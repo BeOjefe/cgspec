@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import tiers  # noqa: E402
 from _lib.common import EXIT_BLOCK, EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, CgspecError, resolve_root  # noqa: E402
 from _lib.gates import Context, check_write  # noqa: E402
-from _lib.shellparse import inline_writes, write_targets  # noqa: E402
+from _lib.shellparse import write_targets  # noqa: E402
 
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 AG_WRITE_TOOLS = {"write_to_file", "replace_file_content", "multi_replace_file_content"}
@@ -71,17 +71,33 @@ def normalize(payload: dict, tool: str) -> dict:
 
 
 def shell_reasons(ctx: Context, command: str, cwd: str | None) -> list[str]:
-    base = cwd or str(ctx.root)
-    targets, inline = write_targets(command, base)
+    from _lib.gates import git_tracked, protected_list
+    from _lib.shellparse import WRITE_HINTS, mentions
+    import posixpath
+    targets, deletes, inline, broad = write_targets(command, cwd or str(ctx.root))
+    guarded = protected_list(ctx)
     reasons = []
     for raw in targets:
         rel = ctx.relative(raw)
         if rel is not None and rel != ".":
             reasons += check_write(ctx, rel, None)
-    protected = sorted(ctx.frozen | ctx.checks)
+    for raw in deletes:
+        rel = ctx.relative(raw)
+        if rel is None or rel == ".":
+            continue
+        if ctx.protected(rel) or any(p.startswith(rel.rstrip("/") + "/") for p in guarded):
+            reasons.append(f"deleting {rel} would remove protected files")
+        elif (ctx.root / rel).exists() and git_tracked(ctx.root, rel):
+            reasons += check_write(ctx, rel, None, is_new=False)
+    for raw in broad:
+        rel = ctx.relative(raw)
+        if rel is not None and any(rel == "." or p.startswith(rel.rstrip("/") + "/") or p == rel for p in guarded):
+            reasons.append(f"this command may change everything under {rel}, including protected files; use the edit tools instead")
     for code in inline:
-        for rel in inline_writes(code, protected):
-            reasons.append(f"inline script writes to protected {rel}")
+        if WRITE_HINTS.search(code):
+            reasons += [f"inline script writes to protected {p}" for p in guarded
+                        if p in code or (not p.endswith("/") and posixpath.basename(p) in code)]
+    reasons += [f"command names protected {p} and looks like a write" for p in mentions(command, guarded)]
     return reasons
 
 
@@ -123,12 +139,26 @@ def block(tool: str, message: str) -> int:
     return EXIT_BLOCK
 
 
+def staged_doctor(root: Path, doctor) -> list:
+    """Run the doctor on exactly what is staged, not on the working tree."""
+    import shutil
+    import subprocess
+    import tempfile
+    tmp = Path(tempfile.mkdtemp(prefix="cgspec-index-"))
+    try:
+        subprocess.run(["git", "checkout-index", "-a", "-f", f"--prefix={tmp}/"], cwd=root, check=True,
+                       capture_output=True)
+        return doctor.run_checks(tmp)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def pre_commit(root: Path) -> int:
     from _lib.commit_gate import evaluate
     from _lib.gitview import View
     import doctor
     reasons = evaluate(root, View.staged(root))
-    findings = [f for f in doctor.run_checks(root) if f.is_error]
+    findings = [f for f in staged_doctor(root, doctor) if f.is_error]
     reasons += [f"doctor {f.code} {f.path}: {f.message}" for f in findings]
     if reasons:
         print("CGSpec commit check failed:\n- " + "\n- ".join(reasons))

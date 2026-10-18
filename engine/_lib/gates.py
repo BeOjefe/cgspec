@@ -13,7 +13,13 @@ from . import tiers
 from .common import ENGINE_DIR, MEMLOG_FILE, PROJECT_FILE, STATE_DIR
 from .globs import match_any
 
-EMOJI = re.compile("[\U0001F000-\U0001FAFF\u2600-\u26FF\u2705\u274C\u274E\u2728\u2B50\u2B55\u2B1B\u2B1C\uFE0F]")
+EMOJI = re.compile(
+    "[\\U0001F000-\\U0001FAFF]"  # pictographs, emoticons, transport, flags
+    "|[\\u2614\\u2615\\u2648-\\u2653\\u267F\\u2693\\u26A1\\u26AA\\u26AB\\u26BD\\u26BE\\u26C4\\u26C5\\u26CE\\u26D4\\u26EA"
+    "\\u26F2\\u26F3\\u26F5\\u26FA\\u26FD\\u2705\\u270A\\u270B\\u2728\\u274C\\u274E\\u2753-\\u2755\\u2757\\u2795-\\u2797"
+    "\\u27B0\\u27BF\\u2B1B\\u2B1C\\u2B50\\u2B55]"  # symbols shown as emoji by default
+    "|.\\uFE0F"  # any symbol forced into emoji presentation
+)
 ALWAYS_PROTECTED = [
     PROJECT_FILE.as_posix(),
     (STATE_DIR / "frozen.json").as_posix(),
@@ -71,6 +77,32 @@ class Context:
             return None
 
 
+def _git_ok(root: Path, *args: str) -> bool:
+    import subprocess
+    try:
+        return subprocess.run(["git", *args], cwd=root, capture_output=True, timeout=10).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def git_ignored(root: Path, rel: str) -> bool:
+    return _git_ok(root, "check-ignore", "-q", "--", rel)
+
+
+def git_tracked(root: Path, rel: str) -> bool:
+    """True when rel, or anything under it, is tracked by git."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "ls-files", "--", rel], cwd=root, capture_output=True, text=True, timeout=10)
+        return out.returncode == 0 and bool(out.stdout.strip())
+    except (OSError, subprocess.TimeoutExpired):
+        return True  # unknown: be careful
+
+
+def protected_list(ctx: "Context") -> list[str]:
+    return sorted(ctx.frozen | ctx.checks | set(ALWAYS_PROTECTED)) + [ENGINE_DIR.as_posix() + "/"]
+
+
 def _is_script_name(rel: str, content: str | None) -> bool:
     return Path(rel).suffix.lower() in L.SCRIPT_SUFFIXES or bool(content and content.startswith("#!"))
 
@@ -86,7 +118,7 @@ def _script_allowed(ctx: Context, rel: str, content: str | None) -> bool:
 
 
 def _tier_reason(ctx: Context, rel: str, is_new: bool) -> str | None:
-    if rel.startswith(NO_TIER_NEEDED):
+    if rel.startswith(NO_TIER_NEEDED) or git_ignored(ctx.root, rel):
         return None
     tier = tiers.active(ctx.root)
     hint = "declare it first: python3 docs/_cgspec/01-engine/cgspec_hook.py tier set --tier T0|T1|T2|T3 ..."
