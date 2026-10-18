@@ -49,22 +49,35 @@ jobs:
       - name: Pick the base and a trusted engine (never the engine inside this commit)
         env:
           EVENT_BASE: ${{{{ github.event.pull_request.base.sha || github.event.before }}}}
+          EVENT_NAME: ${{{{ github.event_name }}}}
+          EVENT_REF: ${{{{ github.ref }}}}
           DEFAULT_BRANCH: ${{{{ github.event.repository.default_branch }}}}
         run: |
+          set -eu
           # Run the selection script as it was BEFORE this change, so a change cannot rewrite its own judge.
-          B="${{{{ github.event.pull_request.base.sha || github.event.before }}}}"
-          if [ -n "$B" ] && git cat-file -e "$B:.github/cgspec-select.sh" 2>/dev/null; then
+          B="$EVENT_BASE"
+          if [ -n "$B" ] && [ "$B" != "$(git rev-parse HEAD)" ] &&
+             git cat-file -e "$B:.github/cgspec-select.sh" 2>/dev/null; then
             git show "$B:.github/cgspec-select.sh" > "$RUNNER_TEMP/cgspec-select.sh"
           else
-            git fetch -q origin "$DEFAULT_BRANCH" 2>/dev/null || true
-            if git cat-file -e "FETCH_HEAD:.github/cgspec-select.sh" 2>/dev/null; then
-              git show "FETCH_HEAD:.github/cgspec-select.sh" > "$RUNNER_TEMP/cgspec-select.sh"
-            elif git cat-file -e "FETCH_HEAD:docs/_cgspec/project.json" 2>/dev/null; then
-              echo "CGSpec: the default branch uses CGSpec but has no selection script; refusing to trust this commit's copy"
+            # A default-branch push with no usable before SHA has no older trust root.
+            if [ "$EVENT_NAME" != "push" ] || [ -z "$DEFAULT_BRANCH" ] ||
+               [ "$EVENT_REF" = "refs/heads/$DEFAULT_BRANCH" ]; then
+              echo "CGSpec: no trusted selector before this change; refusing this push" >&2
               exit 1
-            else
-              cp .github/cgspec-select.sh "$RUNNER_TEMP/cgspec-select.sh"  # first install: nothing older to trust
             fi
+            # Do not read FETCH_HEAD after a failed fetch: it may name a stale object.
+            if ! git fetch -q origin "refs/heads/$DEFAULT_BRANCH"; then
+              echo "CGSpec: cannot fetch the default branch selector" >&2
+              exit 1
+            fi
+            TRUSTED="$(git rev-parse 'FETCH_HEAD^{{commit}}')"
+            if [ "$TRUSTED" = "$(git rev-parse HEAD)" ] ||
+               ! git cat-file -e "$TRUSTED:.github/cgspec-select.sh" 2>/dev/null; then
+              echo "CGSpec: default branch has no prior trusted selector" >&2
+              exit 1
+            fi
+            git show "$TRUSTED:.github/cgspec-select.sh" > "$RUNNER_TEMP/cgspec-select.sh"
           fi
           sh "$RUNNER_TEMP/cgspec-select.sh"
       - name: CGSpec governance (cannot be skipped)

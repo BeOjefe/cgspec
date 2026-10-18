@@ -114,6 +114,64 @@ class SelectorFallbackTests(unittest.TestCase):
             block.append(line[10:] if line.startswith(" " * 10) else line.strip())
         return "\n".join(block)
 
+    def installed_checkout(self, tmp: Path) -> Path:
+        source = make_release_source(tmp, ["2.0.0"])
+        origin = tmp / "origin"
+        origin.mkdir()
+        git(origin, "init", "-q", "-b", "main")
+        from tests.helpers import run_script
+        run_script("install.py", "install", "--root", str(origin), "--profile", "headless", "--topology", "single",
+                   "--tools", "git,ci", "--plugin-source", str(source))
+        git(origin, "add", "-A")
+        git(origin, "commit", "-q", "--no-verify", "-m", "install")
+        work = tmp / "work"
+        git(tmp, "clone", "-q", str(origin), str(work))
+        return work
+
+    def run_workflow_selector(self, work: Path, tmp: Path, *, branch: str,
+                              before: str = "0" * 40) -> subprocess.CompletedProcess:
+        script = self.run_block((work / ".github/workflows/cgspec.yml").read_text())
+        script = script.replace("${{ github.event.pull_request.base.sha || github.event.before }}", before)
+        env_file = tmp / "env"
+        env_file.write_text("")
+        env = dict(os.environ, RUNNER_TEMP=str(tmp), GITHUB_ENV=str(env_file), DEFAULT_BRANCH="main",
+                   EVENT_BASE=before, GITHUB_REF=f"refs/heads/{branch}", GITHUB_EVENT_NAME="push")
+        return subprocess.run(["sh", "-c", script], cwd=work, env=env, capture_output=True, text=True)
+
+    def tamper_selector(self, work: Path) -> None:
+        selector = work / ".github/cgspec-select.sh"
+        os.chmod(selector, 0o644)
+        selector.write_text("#!/bin/sh\necho AGENT SCRIPT RAN\necho CGSPEC_RELEASE=/tmp/fake >> \"$GITHUB_ENV\"\n")
+        git(work, "add", "-A")
+        git(work, "commit", "-q", "--no-verify", "-m", "tamper selector")
+
+    def test_failed_fetch_rejects_stale_fetch_head(self):
+        with TempDir() as tmp:
+            work = self.installed_checkout(tmp)
+            git(work, "checkout", "-q", "-b", "feature")
+            self.tamper_selector(work)
+            git(work, "fetch", "-q", "origin", "main")  # leaves a trusted but stale FETCH_HEAD
+            git(work, "remote", "set-url", "origin", str(tmp / "missing-origin"))
+            result = self.run_workflow_selector(work, tmp, branch="feature")
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("AGENT SCRIPT RAN", result.stdout)
+
+    def test_force_push_to_default_branch_rejects_new_selector(self):
+        with TempDir() as tmp:
+            work = self.installed_checkout(tmp)
+            self.tamper_selector(work)
+            git(work, "remote", "set-url", "origin", str(work))  # default branch now resolves to HEAD
+            result = self.run_workflow_selector(work, tmp, branch="main")
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("AGENT SCRIPT RAN", result.stdout)
+
+    def test_first_install_on_default_branch_requires_trusted_bootstrap(self):
+        with TempDir() as tmp:
+            work = self.installed_checkout(tmp)
+            git(work, "remote", "set-url", "origin", str(work))
+            result = self.run_workflow_selector(work, tmp, branch="main")
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_new_branch_push_uses_the_default_branch_selector(self):
         with TempDir() as tmp:
             source = make_release_source(tmp, ["2.0.0"])
@@ -138,7 +196,7 @@ class SelectorFallbackTests(unittest.TestCase):
             env_file = tmp / "env"
             env_file.write_text("")
             env = dict(os.environ, RUNNER_TEMP=str(tmp), GITHUB_ENV=str(env_file), DEFAULT_BRANCH="main",
-                       EVENT_BASE="0" * 40)
+                       EVENT_BASE="0" * 40, EVENT_NAME="push", EVENT_REF="refs/heads/feature")
             result = subprocess.run(["sh", "-c", script], cwd=work, env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertNotIn("AGENT SCRIPT RAN", result.stdout)
