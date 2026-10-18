@@ -241,10 +241,17 @@ def version_tuple(text: str) -> tuple[int, ...]:
 
 
 def cmd_upgrade(root: Path, args: argparse.Namespace) -> int:
+    if args.from_v1:
+        from _lib.upgrade_v1 import run as upgrade_v1
+        code, report = upgrade_v1(root, vars(args), args.apply, args.rollback)
+        print(json.dumps(report, indent=2))
+        return code
     if not (root / PROJECT_FILE).exists():
         raise CgspecError("CGSpec is not installed here; run 'install.py install'")
     project = read_json(root / PROJECT_FILE)
     old = project.get("cgspec_version", "0.0.0")
+    if str(old).startswith("1.") or (root / "docs/_cgspec/01-script").exists():
+        raise CgspecError("v1 layout needs 'upgrade --from-v1' with a reviewed dry-run")
     if version_tuple(version()) < version_tuple(old) and not args.force:
         raise CgspecError(f"refusing downgrade {old} -> {version()} (use --force if you mean it)")
     owned = read_json(root / OWNED) if (root / OWNED).is_file() else new_owned()
@@ -358,6 +365,8 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--root", required=True)
         if name == "upgrade":
             p.add_argument("--force", action="store_true", help="allow a downgrade")
+            from _lib.upgrade_v1 import add_cli_args
+            add_cli_args(p, PLUGIN_SOURCE)
         if name == "install":
             p.add_argument("--profile", required=True,
                            choices=["website", "web-workspace", "mobile", "cli", "headless", "small"])
