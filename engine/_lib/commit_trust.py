@@ -3,6 +3,8 @@ approvals. Pure functions over a git View; used by the commit hook and by CI."""
 
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import json
 import re
@@ -34,10 +36,13 @@ def commit_message(view: View) -> str | None:
 
 
 def trusted_signature(view: View) -> bool:
-    """The judged commit has a good signature from a key in project.json approver_keys
-    (SSH public key lines, verified with an allowed-signers file built from them, or GPG fingerprints)."""
-    keys = load(view.read_new(PROJECT_FILE.as_posix())).get("approver_keys", [])
-    if not keys or view.new == ":":
+    """Verify the judged commit against approver keys already trusted by its parent.
+
+    A key introduced by the judged commit cannot establish trust in that same commit.
+    Staged changes have no commit signature yet; CI verifies the final commit.
+    """
+    keys = load(view.read_old(PROJECT_FILE.as_posix())).get("approver_keys", [])
+    if not isinstance(keys, list) or not keys or view.new == ":":
         return False
     import tempfile
     from .gitview import git
@@ -52,8 +57,32 @@ def trusted_signature(view: View) -> bool:
         Path(allowed).unlink(missing_ok=True)
     if out[0] != "G":
         return False
-    fingerprints = [k for k in keys if k not in ssh_keys]
-    return bool(ssh_keys) or any(f and f in out[1:3] for f in fingerprints)
+    signed_fingerprint = out[1].strip() if len(out) > 1 else ""
+    for key in ssh_keys:
+        try:
+            blob = base64.b64decode(key.split()[1], validate=True)
+        except (IndexError, ValueError, binascii.Error):
+            continue
+        digest = base64.b64encode(hashlib.sha256(blob).digest()).decode().rstrip("=")
+        if signed_fingerprint == "SHA256:" + digest:
+            return True
+    return signed_fingerprint in {k for k in keys if k not in ssh_keys}
+
+
+def approver_key_change(view: View) -> list[str]:
+    """Key changes require a signature made with a key trusted before the change.
+
+    The first key must be established in the protected installation baseline or by
+    separately verified GitHub review; this local check cannot attest to a review.
+    """
+    old = load(view.read_old(PROJECT_FILE.as_posix())).get("approver_keys", [])
+    new = load(view.read_new(PROJECT_FILE.as_posix())).get("approver_keys", [])
+    if old == new or view.new == ":":
+        return []
+    if trusted_signature(view):
+        return []
+    return ["project.json approver_keys changed without a commit signature from a previously trusted key; "
+            "bootstrap requires a protected installation baseline or separately verified GitHub review"]
 
 
 def fresh_approvals(view: View) -> dict[str, dict]:

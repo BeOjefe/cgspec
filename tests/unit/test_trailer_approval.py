@@ -49,6 +49,14 @@ class TrailerApprovalTests(unittest.TestCase):
         commit(self.root, "trust my signing key")
         self.base = git(self.root, "rev-parse", "HEAD").stdout.strip()
 
+    def set_keys(self, keys):
+        import json
+        pj = self.root / "docs/_cgspec/project.json"
+        os.chmod(pj, 0o644)
+        data = json.loads(pj.read_text())
+        data["approver_keys"] = keys
+        pj.write_text(json.dumps(data, indent=2) + "\n")
+
     def test_slice_approved_by_signed_trailer_passes(self):
         key, pub = self.signing_key()
         self.trust_key(pub)
@@ -66,6 +74,45 @@ class TrailerApprovalTests(unittest.TestCase):
         result = self.ci()
         self.assertEqual(result.returncode, 1)
         self.assertIn("not signed by a key", result.stdout)
+
+    def test_self_added_key_cannot_approve_its_own_commit(self):
+        agent, agent_pub = self.signing_key("agent")
+        self.set_keys([agent_pub])
+        make_slice(self.root, approval="trailer")
+        self.signed_commit(agent, "Approve login slice\n\nApproved-by: agent")
+        result = self.ci()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("not signed by a key", result.stdout)
+        self.assertIn("approver_keys changed", result.stdout)
+
+    def test_unsigned_key_rotation_is_rejected(self):
+        _, old_pub = self.signing_key("old")
+        _, new_pub = self.signing_key("new")
+        self.trust_key(old_pub)
+        self.set_keys([new_pub])
+        commit(self.root, "replace signing key")
+        result = self.ci()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("approver_keys changed", result.stdout)
+
+    def test_existing_key_can_sign_rotation(self):
+        old, old_pub = self.signing_key("old")
+        _, new_pub = self.signing_key("new")
+        self.trust_key(old_pub)
+        self.set_keys([new_pub])
+        self.signed_commit(old, "rotate signing key")
+        result = self.ci()
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_new_key_cannot_sign_its_own_rotation(self):
+        _, old_pub = self.signing_key("old")
+        new, new_pub = self.signing_key("new")
+        self.trust_key(old_pub)
+        self.set_keys([new_pub])
+        self.signed_commit(new, "rotate signing key")
+        result = self.ci()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("approver_keys changed", result.stdout)
 
     def test_trailer_claim_without_trailer_fails(self):
         make_slice(self.root, approval="trailer")
