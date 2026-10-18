@@ -158,7 +158,20 @@ def handle_pre_tool_use(payload: dict, ws: Path) -> dict:
                     )
                 }
 
+        # 3. Rogue Script Check: Block ad-hoc regex replacer scripts
+        file_name = target_path.name
+        if re.match(r"^(apply|patch|fix|overhaul)_.*\.py$", file_name) or "scratch" in target_path.parts:
+            if target_path.suffix == ".py":
+                return {
+                    "decision": "deny",
+                    "reason": (
+                        "CGSpec Invariant: Ad-hoc Python string-patch scripts in scratch/ are strictly forbidden. "
+                        "Modify component files directly or use bundle_prototype.py with modular partials."
+                    )
+                }
+
     return {"decision": "allow"}
+
 
 
 def handle_pre_tool_use_command(payload: dict, ws: Path) -> dict:

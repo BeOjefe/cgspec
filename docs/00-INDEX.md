@@ -7,7 +7,7 @@
 ## 1. Current System Phase
 - **Active Phase:** `PHASE 2: ARCHITECTURE & SKILL SPECIFICATION LOCKED`
 - **Active Milestone:** `v0.1 — Core Portable Skill Suite & Non-Linear _memlog.md Engine`
-- **Memory Log:** [19 entries (Latest: M-019)](file:///home/ojefe/Documents/Project/cgspec/docs/_memlog.md)
+- **Memory Log:** [20 entries (Latest: M-020)](file:///home/ojefe/Documents/Project/cgspec/docs/_memlog.md)
 - **Current Focus:** Standardizing the Model 1 (`docs/spines/`) topology, visible first-class ADRs (`docs/adr/`), slice contracts (`docs/slices/`), and underscore engine space (`docs/_cgspec/`).
 
 ---

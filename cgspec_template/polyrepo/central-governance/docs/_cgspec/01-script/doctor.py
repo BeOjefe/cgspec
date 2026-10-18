@@ -291,6 +291,38 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
         else:
             print("  [PASS] AGENTS.md Constitution Parity (11 Core Coach Laws active)")
 
+    # 10. Check Prototype Architecture & File Size
+    prototype_dir = docs_dir / "prototypes"
+    if not prototype_dir.exists():
+        prototype_dir = cgspec_dir / "05-prototype"
+    if prototype_dir.exists():
+        html_files = [f for f in prototype_dir.glob("*.html") if not f.is_symlink()]
+        for hf in html_files:
+            try:
+                line_count = len(hf.read_text(encoding="utf-8", errors="ignore").splitlines())
+                size_kb = hf.stat().st_size / 1024
+                if line_count > 1500 or size_kb > 150:
+                    warnings.append(
+                        f"Prototype bloat warning: {hf.relative_to(project_root)} is large "
+                        f"({line_count} lines, {size_kb:.1f} KB). "
+                        "Recommend decomposing into modular partials with bundle_prototype.py to prevent token truncation."
+                    )
+            except Exception:
+                pass
+
+    # 11. Check Rogue Ad-Hoc Scripts in Workspace
+    rogue_patterns = [r"^apply_.*\.py$", r"^patch_.*\.py$", r"^fix_.*\.py$", r"^overhaul_.*\.py$"]
+    search_dirs = [project_root, project_root / "scratch"]
+    for sdir in search_dirs:
+        if sdir.exists() and sdir.is_dir():
+            for f in sdir.iterdir():
+                if f.is_file() and any(re.match(pat, f.name) for pat in rogue_patterns):
+                    warnings.append(
+                        f"Rogue modification script detected: '{f.relative_to(project_root)}'. "
+                        "CGSpec Invariant: Ad-hoc regex string-patch scripts are forbidden. "
+                        "Use canonical tooling in docs/_cgspec/01-script/ or modular partials."
+                    )
+
     # Print Summary
     print("-" * 60)
     if warnings:

@@ -66,3 +66,7 @@
 - **Summary:** Implemented Universal Multi-AI Lifecycle Hooks (cgspec_hook.py) for Antigravity, Claude Code, Cursor, and Git Pre-Commit
 - **Details:** Added cgspec_hook.py supporting Antigravity JSON lifecycle events (SessionStart, PreToolUse, PostToolUse, Stop), native Git pre-commit hooks, standalone pre-flight CI checks, and automated installation. Synchronized .agents/hooks.json, .githooks/pre-commit, .cursorrules, and CLAUDE.md across living repository and all 4 template archetypes.
 
+### [M-020] 2026-10-18T15:04:24Z | tags: methodology,modular-prototyping,containment-ooux | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Codified Modular Prototyping Pipeline (bundle_prototype.py), 4-tier OOUX hierarchy, and rogue script ban
+- **Details:** Updated doctor.py with prototype bloat and rogue scratch script checks. Updated cgspec_hook.py to deny ad-hoc string-patch scripts. Eradicated the cp loophole in SKILL.md and AGENTS.md, mandating bundle_prototype.py and 4-tier OOUX containment hierarchy. Synchronized all 4 template archetypes.
+
