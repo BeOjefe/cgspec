@@ -100,10 +100,11 @@ echo "CGSpec: base ${BASE:-none}, release v$VERSION from $SOURCE"
 """
 GITHUB_STEPS = """To make the CGSpec check impossible to bypass, do this once on GitHub (spec 8, trust root):
   1. Settings > Branches (or Rules): protect your main branch, require the 'governance' status check.
-  2. Require your review for changes to .github/, docs/_cgspec/07-state/ and docs/slices/
+  2. Require your review for changes to .github/, docs/_cgspec/ and docs/slices/
      (CODEOWNERS with your account, plus 'Require review from Code Owners').
   3. Do not give the AI agent your GitHub admin credentials.
-  Optional: sign approval commits with a hardware key that needs your touch."""
+  Optional: sign approvals with a hardware key that needs your touch and list it in
+  project.json approver_keys."""
 CURSOR_RULE = """---
 description: CGSpec project rules
 alwaysApply: true
