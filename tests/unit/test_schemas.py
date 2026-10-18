@@ -37,8 +37,9 @@ VALID = {
                "used": {"helpers": 0, "review_rounds": 1, "research_passes": 0}},
     "quota": {"schema": 1, "read_at": NOW, "source": "claude-statusline",
               "five_hour": {"used_pct": 40.5}, "weekly": {"used_pct": 12}},
-    "test-pair": {"schema": 1, "test_id": "tests/login.test.ts::rejects_empty", "command": ["npx", "vitest", "run"],
-                  "failed_at": "abc1234", "passed_at": None, "covers": ["src/login/form.ts"], "recorded": NOW},
+    "test-pair": {"schema": 1, "test_id": "tests/login.test.ts::rejects_empty", "test_file": "tests/login.test.ts",
+                  "command": ["npx", "vitest", "run"], "failed_at": "abc1234", "passed_at": None,
+                  "covers": ["src/login/form.ts"], "slice": "SLICE-004", "recorded": NOW},
     "evidence": {"schema": 1, "check": "doctor", "revision": "abc1234", "verdict": "PASS", "ran_at": NOW, "ran_by": "ci"},
     "legacy-baseline": {"schema": 1, "created": NOW, "files": {"src/old.js": {"sha256": H64, "lines": 900}}},
 }

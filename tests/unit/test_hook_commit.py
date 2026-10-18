@@ -8,7 +8,7 @@ import os
 import unittest
 from pathlib import Path
 
-from tests.helpers import TempDir, git, git_project, hook, run_script, write_json
+from tests.helpers import TempDir, approve, git, git_project, hook, make_slice, run_script, write_json
 
 
 def tier(root, *args):
@@ -46,17 +46,18 @@ class PreCommitTests(unittest.TestCase):
         result = precommit(self.root)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def slice(self, status="Approved", scope="src/login/**"):
-        self.stage("docs/slices/SLICE-001-login.md", f"# SLICE-001\n\n- **Status:** {status}\n- **Scope:** {scope}\n")
-        idx = self.root / "docs/00-INDEX.md"
-        idx.write_text(idx.read_text() + "\n- [SLICE-001](slices/SLICE-001-login.md)\n")
+    def slice(self, status="Approved", scope="src/login/**, tests/**", approval=None):
+        make_slice(self.root, status, scope, approval)
         git(self.root, "add", "-A")
 
     def add_test_pair(self, covers=("src/login/form.ts",), failed_at=None):
         failed_at = failed_at or git(self.root, "rev-parse", "HEAD").stdout.strip()
+        (self.root / "tests").mkdir(exist_ok=True)
+        (self.root / "tests/login.test.ts").write_text("test('rejects empty', () => {});\n")
         write_json(self.root / "docs/_cgspec/06-evidence/tests/login-form.json", {
-            "schema": 1, "test_id": "tests/login.test.ts::rejects_empty", "command": ["true"],
-            "failed_at": failed_at, "passed_at": None, "covers": list(covers), "recorded": "2026-10-18T00:00:00Z"})
+            "schema": 1, "test_id": "tests/login.test.ts::rejects_empty", "test_file": "tests/login.test.ts",
+            "command": ["true"], "failed_at": failed_at, "passed_at": None, "covers": list(covers),
+            "slice": "SLICE-001", "recorded": "2026-10-18T00:00:00Z"})
         git(self.root, "add", "-A")
 
     def test_docs_only_commit_needs_no_tier(self):

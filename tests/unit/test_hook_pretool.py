@@ -8,7 +8,7 @@ import os
 import unittest
 from pathlib import Path
 
-from tests.helpers import TempDir, claude_payload, hook, install, write_json
+from tests.helpers import TempDir, claude_payload, hook, install, make_slice, write_json
 
 BLOCK = 2
 
@@ -44,9 +44,8 @@ class PreToolTests(unittest.TestCase):
     def bash(self, command):
         return hook(self.root, "pre-tool", claude_payload(self.root, "Bash", command=command), "--tool", "claude")
 
-    def slice(self, status="Approved", scope="src/login/**"):
-        (self.root / "docs/slices/SLICE-001-login.md").write_text(
-            f"# SLICE-001: Login\n\n- **Status:** {status}\n- **Scope:** {scope}\n")
+    def slice(self, status="Approved", scope="src/login/**", approval=None):
+        make_slice(self.root, status, scope, approval)
 
     def freeze(self, rel, content="<html>v1</html>"):
         target = self.root / rel
@@ -77,6 +76,10 @@ class PreToolTests(unittest.TestCase):
     def test_t1_needs_an_approved_slice(self):
         self.assertEqual(tier(self.root, "set", "--tier", "T1", "--reason", "login").returncode, 1)
         self.slice(status="Draft")
+        self.assertEqual(tier(self.root, "set", "--tier", "T1", "--reason", "test change", "--slice", "SLICE-001").returncode, 1)
+        self.slice(approval="")  # Approved in the text, but no approval from the user
+        self.assertEqual(tier(self.root, "set", "--tier", "T1", "--reason", "test change", "--slice", "SLICE-001").returncode, 1)
+        self.slice(approval="A-20261018-ffff")  # made-up approval id
         self.assertEqual(tier(self.root, "set", "--tier", "T1", "--reason", "test change", "--slice", "SLICE-001").returncode, 1)
         self.slice()
         self.assertEqual(tier(self.root, "set", "--tier", "T1", "--reason", "test change", "--slice", "SLICE-001").returncode, 0)

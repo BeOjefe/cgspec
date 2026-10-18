@@ -37,35 +37,68 @@ def new_test_records(root: Path, base: str) -> list[dict]:
     return records
 
 
-def prove_failed(root: Path, record: dict) -> str | None:
-    """Run the recorded command at failed_at in a throwaway worktree; it must exit non-zero."""
-    rev, command = record.get("failed_at", ""), record.get("command")
-    if not isinstance(command, list) or not command:
-        return f"{record['_file']}: no command to re-run"
+def _run_at(root: Path, rev: str, command: list) -> int | str:
+    """Exit code of command in a throwaway worktree at rev, or an error message."""
     tmp = Path(tempfile.mkdtemp(prefix="cgspec-proof-"))
     tree = tmp / "tree"
     try:
-        added = git(root, "worktree", "add", "--detach", "-q", str(tree), rev)
-        if added.returncode != 0:
-            return f"{record['_file']}: failed_at {rev} cannot be checked out"
+        if git(root, "worktree", "add", "--detach", "-q", str(tree), rev).returncode != 0:
+            return f"{rev} cannot be checked out"
         try:
-            run = subprocess.run(command, cwd=tree, capture_output=True, timeout=TEST_TIMEOUT)
+            return subprocess.run(command, cwd=tree, capture_output=True, timeout=TEST_TIMEOUT).returncode
         except (OSError, subprocess.TimeoutExpired) as exc:
-            return f"{record['_file']}: could not run the test at {rev}: {exc}"
-        if run.returncode == 0:
-            return f"{record['_file']}: test {record.get('test_id')} did not fail at {rev[:10]}; the record is not proof"
-        return None
+            return f"could not run at {rev[:10]}: {exc}"
     finally:
         git(root, "worktree", "remove", "--force", str(tree))
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def run(root: Path, base: str, rerun_tests: bool = True) -> tuple[list[str], list[str]]:
+def prove_failed(root: Path, record: dict) -> str | None:
+    """The recorded test must fail at failed_at and pass at HEAD."""
+    command, name = record.get("command"), record["_file"]
+    if not isinstance(command, list) or not command:
+        return f"{name}: no command to re-run"
+    before = _run_at(root, record.get("failed_at", ""), command)
+    if isinstance(before, str):
+        return f"{name}: {before}"
+    if before == 0:
+        return f"{name}: test {record.get('test_id')} did not fail at {str(record.get('failed_at'))[:10]}; the record is not proof"
+    after = _run_at(root, "HEAD", command)
+    if isinstance(after, str):
+        return f"{name}: {after}"
+    if after != 0:
+        return f"{name}: test {record.get('test_id')} still fails at HEAD"
+    return None
+
+
+def install_commit(root: Path) -> str | None:
+    out = git(root, "log", "--diff-filter=A", "--format=%H", "--", "docs/_cgspec/project.json").stdout.split()
+    return out[-1] if out else None
+
+
+def effective_base(root: Path, base: str | None) -> str:
+    """Never judge history from before CGSpec was installed; fall back to the install commit."""
+    installed = install_commit(root)
+    valid = bool(base) and git(root, "cat-file", "-e", f"{base}^{{commit}}").returncode == 0
+    if not valid:
+        if not installed:
+            raise RuntimeError("no valid base and no install commit found")
+        return installed
+    if installed and git(root, "merge-base", "--is-ancestor", installed, base).returncode != 0:
+        return installed  # base predates the install
+    return base
+
+
+def run(root: Path, base: str | None, rerun_tests: bool = True,
+        release_dir: Path | None = None) -> tuple[list[str], list[str]]:
     """(problems, notes) for the range base..HEAD."""
     problems, notes = [], []
+    base = effective_base(root, base)
+    notes.append(f"checking {base[:10]}..HEAD")
     for commit in commits_in_range(root, base):
         subject = git(root, "log", "-1", "--format=%h %s", commit).stdout.strip()
-        problems += [f"commit {subject}: {reason}" for reason in evaluate(root, View.commit(root, commit))]
+        reasons = evaluate(root, View.commit(root, commit), release_dir, strict=True)
+        problems += [f"commit {subject}: {reason}" for reason in reasons]
     if rerun_tests:
         for record in new_test_records(root, base):
             problem = prove_failed(root, record)

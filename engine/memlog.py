@@ -19,6 +19,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+sys.dont_write_bytecode = True  # never leave caches in the vendored engine
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib.common import (  # noqa: E402
     EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, MEMLOG_FILE, CgspecError, new_id, resolve_root, utc_now,

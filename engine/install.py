@@ -19,6 +19,7 @@ import shutil
 import sys
 from pathlib import Path
 
+sys.dont_write_bytecode = True  # never leave caches in the vendored engine
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib.common import (  # noqa: E402
     ENGINE_DIR, EXIT_FAIL, EXIT_OK, PROJECT_FILE, CgspecError, read_json, sha256_file, utc_now, write_json,
@@ -31,7 +32,7 @@ OWNED = ENGINE_DIR / "owned-files.json"
 MANIFEST = ENGINE_DIR / "manifest.json"
 ARCHIVE = Path("docs/_cgspec/_archive/pre-cgspec")
 REPLACEABLE = {"AGENTS.md", "CLAUDE.md"}
-GITIGNORE_LINES = [".cgspec-scratch/", "docs/.memlog.lock"]
+GITIGNORE_LINES = [".cgspec-scratch/", "docs/.memlog.lock", "__pycache__/", "*.pyc"]
 SKIP_NAMES = {"__pycache__", ".pytest_cache", "owned-files.json", "manifest.json"}
 
 PATH_CLASSES = {

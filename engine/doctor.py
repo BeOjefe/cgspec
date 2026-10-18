@@ -15,6 +15,7 @@ import stat
 import sys
 from pathlib import Path
 
+sys.dont_write_bytecode = True  # never leave caches in the vendored engine
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import doctor_checks as C  # noqa: E402
 from _lib import layout as L  # noqa: E402

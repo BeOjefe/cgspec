@@ -4,9 +4,11 @@
   "required": [
     "schema",
     "test_id",
+    "test_file",
     "command",
     "failed_at",
     "covers",
+    "slice",
     "recorded"
   ],
   "additionalProperties": false,
@@ -49,7 +51,8 @@
       }
     },
     "slice": {
-      "type": "string"
+      "type": "string",
+      "pattern": "^([a-z0-9-]+:)?SLICE-\\d{3}$"
     },
     "tier": {
       "enum": [
@@ -60,6 +63,10 @@
     },
     "recorded": {
       "type": "string"
+    },
+    "test_file": {
+      "type": "string",
+      "pattern": "^(?![/\\\\])(?![A-Za-z]:)(?!.*(^|[/\\\\])\\.\\.([/\\\\]|$)).+$"
     }
   }
 }

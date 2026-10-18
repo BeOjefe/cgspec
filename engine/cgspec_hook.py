@@ -14,6 +14,7 @@ import json
 import sys
 from pathlib import Path
 
+sys.dont_write_bytecode = True  # never leave caches in the vendored engine
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import tiers  # noqa: E402
 from _lib.common import EXIT_BLOCK, EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, CgspecError, resolve_root  # noqa: E402
@@ -136,12 +137,10 @@ def pre_commit(root: Path) -> int:
     return EXIT_OK
 
 
-def ci(root: Path, base: str | None, rerun: bool) -> int:
+def ci(root: Path, base: str | None, rerun: bool, args: argparse.Namespace) -> int:
     from _lib import ci_gate
     import doctor
-    if not base:
-        raise CgspecError("ci needs --base (the commit before this push or the PR base)")
-    problems, notes = ci_gate.run(root, base, rerun)
+    problems, notes = ci_gate.run(root, base, rerun, Path(args.release_dir) if args.release_dir else None)
     problems += [f"doctor {f.code} {f.path}: {f.message}" for f in doctor.run_checks(root) if f.is_error]
     for note in notes:
         print(note)
@@ -248,6 +247,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--slice", help="T1+: SLICE-NNN")
     parser.add_argument("--base", help="ci: base commit of the range to check")
     parser.add_argument("--no-rerun", action="store_true", help="ci: skip re-running failing-test records")
+    parser.add_argument("--release-dir", help="ci: checkout of the CGSpec plugin release to verify engine changes")
     return parser
 
 
@@ -262,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.event == "pre-commit":
             return pre_commit(root)
         if args.event == "ci":
-            return ci(root, args.base, not args.no_rerun)
+            return ci(root, args.base, not args.no_rerun, args)
         if args.event in ("user-message", "session-start", "session-check", "pre-compact", "stop", "commit-msg"):
             return lifecycle(root, args.event, args, "" if args.event == "commit-msg" else sys.stdin.read())
         if args.event in LATER:

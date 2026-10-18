@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from tests.helpers import TempDir, git, git_project, hook, run_script, write_json
+from tests.helpers import TempDir, git, git_project, hook, make_slice, run_script, write_json
 
 CHECK = ["python3", "-c", "import pathlib,sys; sys.exit(0 if pathlib.Path('src/login/fixed.txt').exists() else 1)"]
 
@@ -24,10 +24,7 @@ class CiTests(unittest.TestCase):
         self.root = self._tmp.__enter__()
         git_project(self.root)
         self.base = head(self.root)
-        slice_md = "# SLICE-001\n\n- **Status:** Approved\n- **Scope:** src/login/**\n"
-        (self.root / "docs/slices/SLICE-001-login.md").write_text(slice_md)
-        idx = self.root / "docs/00-INDEX.md"
-        idx.write_text(idx.read_text() + "\n- [SLICE-001](slices/SLICE-001-login.md)\n")
+        make_slice(self.root, scope="src/login/**, tests/**")
         git(self.root, "add", "-A")
         git(self.root, "commit", "-q", "-m", "slice")
         self.failing_commit = head(self.root)
@@ -41,13 +38,16 @@ class CiTests(unittest.TestCase):
 
     def record(self, failed_at):
         write_json(self.root / "docs/_cgspec/06-evidence/tests/login.json", {
-            "schema": 1, "test_id": "login-fixed", "command": CHECK, "failed_at": failed_at,
+            "schema": 1, "test_id": "login-fixed", "test_file": "tests/login_check.py", "slice": "SLICE-001",
+            "command": CHECK, "failed_at": failed_at,
             "passed_at": None, "covers": ["src/login/form.ts", "src/login/fixed.txt"], "recorded": "2026-10-18T00:00:00Z"})
 
     def fix_commit(self, failed_at):
         self.tier_t1()
         (self.root / "src/login/form.ts").write_text("export const f = 2;\n")
         (self.root / "src/login/fixed.txt").write_text("ok\n")
+        (self.root / "tests").mkdir(exist_ok=True)
+        (self.root / "tests/login_check.py").write_text("# checks src/login/fixed.txt exists\n")
         self.record(failed_at)
         git(self.root, "add", "-A")
         git(self.root, "commit", "-q", "-m", "fix login")

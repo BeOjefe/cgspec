@@ -89,3 +89,26 @@ def git_project(root: Path, profile: str = "web-workspace") -> None:
     (root / "src/login/form.ts").write_text("export const f = 1;\n")
     git(root, "add", "-A")
     git(root, "commit", "-q", "-m", "init")
+
+
+def approve(root: Path, text: str = "approved, go ahead") -> str:
+    """Record an approval the way the user-message hook does and return its id."""
+    import json as _json
+    hook(root, "user-message", {"hook_event_name": "UserPromptSubmit", "prompt": text}, "--tool", "claude")
+    data = _json.loads((root / "docs/_cgspec/07-state/approvals.json").read_text())
+    return data["approvals"][-1]["id"]
+
+
+def make_slice(root: Path, status: str = "Approved", scope: str = "src/login/**", approval: str | None = None,
+               number: str = "001", index: bool = True) -> Path:
+    approval = approval if approval is not None else approve(root)
+    path = root / f"docs/slices/SLICE-{number}-login.md"
+    lines = [f"# SLICE-{number}: Login", "", f"- **Status:** {status}", f"- **Scope:** {scope}"]
+    if approval:
+        lines.append(f"- **Approval:** {approval}")
+    path.write_text("\n".join(lines) + "\n")
+    idx = root / "docs/00-INDEX.md"
+    entry = f"- [SLICE-{number}](slices/{path.name})"
+    if index and entry not in idx.read_text():
+        idx.write_text(idx.read_text() + "\n" + entry + "\n")
+    return path
