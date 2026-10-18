@@ -134,6 +134,10 @@ def cmd_add(root: Path, args: argparse.Namespace) -> int:
     if args.repo_prefix and not PREFIX.match(args.repo_prefix):
         raise CgspecError("--repo-prefix must match ^[a-z0-9][a-z0-9-]*$")
     approval = clean_field("approval-ref", args.approval_ref) if args.approval_ref else None
+    if approval:
+        from _lib.inbox import approval_exists
+        if not approval_exists(root, approval):
+            raise CgspecError(f"approval {approval} is not in 07-state/approvals.json (only your own message creates one)")
     if args.status == "Approved" and not approval:
         # Spec 8: approvals come only from the user's message or commit trailer; the hook that
         # records them passes the reference, and CI verifies it exists.

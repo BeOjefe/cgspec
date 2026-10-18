@@ -21,8 +21,7 @@ from _lib.gates import Context, check_write  # noqa: E402
 from _lib.shellparse import inline_writes, write_targets  # noqa: E402
 
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
-LATER = {"session-start", "session-check", "user-message", "post-tool", "pre-compact", "stop",
-         "commit-msg"}
+LATER = {"post-tool"}
 
 
 def normalize(payload: dict, tool: str) -> dict:
@@ -124,11 +123,68 @@ def ci(root: Path, base: str | None, rerun: bool) -> int:
     return EXIT_OK
 
 
+def read_payload(raw: str) -> dict:
+    try:
+        data = json.loads(raw) if raw.strip() else {}
+        return data if isinstance(data, dict) else {}
+    except ValueError:
+        return {}
+
+
+def doctor_state(root: Path) -> tuple[int, str]:
+    import doctor
+    findings = doctor.run_checks(root)
+    errors = [f for f in findings if f.is_error]
+    summary = f"{len(errors)} errors, {len(findings) - len(errors)} warnings"
+    if errors:
+        summary += " - " + "; ".join(f"{f.code} {f.path}" for f in errors[:5])
+    return len(errors), summary
+
+
+def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str) -> int:
+    from _lib import inbox, session
+    if event == "user-message":
+        try:
+            prompt = read_payload(raw).get("prompt") or ""
+            if prompt:
+                inbox.record(root, prompt)
+        except Exception as exc:  # never block the user's message
+            print(f"cgspec_hook: inbox capture failed: {exc!r}", file=sys.stderr)
+        return EXIT_OK
+    errors, summary = doctor_state(root)
+    if event in ("session-start", "pre-compact"):
+        print(session.pack(root, summary))
+        return EXIT_OK
+    if event == "session-check":
+        from install import verify_engine
+        problems = verify_engine(root)
+        print(f"doctor: {summary}" + (f"; engine: {len(problems)} problems" if problems else "; engine OK"))
+        return EXIT_FAIL if errors or problems else EXIT_OK
+    if event == "stop":
+        allow, message = session.stop_decision(root, session.stop_problems(root, errors))
+        if message:
+            print(message, file=sys.stderr)
+        return EXIT_OK if allow else EXIT_BLOCK
+    if event == "commit-msg":
+        from _lib.gates import EMOJI
+        if not args.rest:
+            raise CgspecError("commit-msg needs the message file path")
+        text = Path(args.rest[0]).read_text(encoding="utf-8", errors="replace")
+        if EMOJI.search(text):
+            print("CGSpec: decorative emoji in the commit message (spec 1)")
+            return EXIT_FAIL
+        return EXIT_OK
+    raise CgspecError(f"unknown event: {event}")
+
+
 def cmd_tier(root: Path, args: argparse.Namespace) -> int:
-    if args.action == "show":
+    action = args.rest[0] if args.rest else ""
+    if action not in ("set", "show", "clear"):
+        raise CgspecError("usage: cgspec_hook.py tier set|show|clear")
+    if action == "show":
         print(json.dumps(tiers.active(root), indent=2))
         return EXIT_OK
-    if args.action == "clear":
+    if action == "clear":
         tiers.clear(root)
         print("tier cleared")
         return EXIT_OK
@@ -148,7 +204,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cgspec_hook.py", description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("event", help="tier, pre-tool, or a later hook event")
-    parser.add_argument("action", nargs="?", choices=["set", "show", "clear"])
+    parser.add_argument("rest", nargs="*", help="tier: set|show|clear; commit-msg: message file")
     parser.add_argument("--root")
     parser.add_argument("--tool", default="generic", choices=["claude", "antigravity", "codex", "cursor", "git", "generic"])
     parser.add_argument("--tier", choices=["T0", "T1", "T2", "T3"])
@@ -172,6 +228,8 @@ def main(argv: list[str] | None = None) -> int:
             return pre_commit(root)
         if args.event == "ci":
             return ci(root, args.base, not args.no_rerun)
+        if args.event in ("user-message", "session-start", "session-check", "pre-compact", "stop", "commit-msg"):
+            return lifecycle(root, args.event, args, "" if args.event == "commit-msg" else sys.stdin.read())
         if args.event in LATER:
             print(f"cgspec_hook: '{args.event}' is not built yet (build step 2f)", file=sys.stderr)
             return EXIT_INTERNAL

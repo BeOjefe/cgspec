@@ -1,0 +1,23 @@
+{
+  "title": "docs/_cgspec/07-state/approvals.json — approvals captured from the user's own messages",
+  "type": "object",
+  "required": ["schema", "approvals"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "approvals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "at", "excerpt", "sha256"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "pattern": "^A-\\d{8}-[0-9a-f]{4}$"},
+          "at": {"type": "string"},
+          "excerpt": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    }
+  }
+}

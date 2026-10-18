@@ -212,9 +212,11 @@ class MemlogHardeningTests(unittest.TestCase):
         with TempDir() as root:
             make_project(root)
             self.assertEqual(add(root, "--status", "Approved").returncode, 1)
-            ok = add(root, "--status", "Approved", "--approval-ref", "inbox:M-20261018-aaaa")
+            write_json(root / "docs/_cgspec/07-state/approvals.json", {"schema": 1, "approvals": [
+                {"id": "A-20261018-aaaa", "at": "2026-10-18T00:00:00Z", "excerpt": "approved", "sha256": "0" * 64}]})
+            ok = add(root, "--status", "Approved", "--approval-ref", "A-20261018-aaaa")
             self.assertEqual(ok.returncode, 0, ok.stderr)
-            self.assertIn("- **Approval:** inbox:M-20261018-aaaa", (root / "docs/_memlog.md").read_text())
+            self.assertIn("- **Approval:** A-20261018-aaaa", (root / "docs/_memlog.md").read_text())
 
     def test_read_only_ledger_reports_cleanly(self):
         with TempDir() as root:

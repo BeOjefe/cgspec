@@ -69,6 +69,7 @@ ALLOWED_STATE_FILES = {
     "tier.json": "tier",
     "quota.json": "quota",
     "legacy-baseline.json": "legacy-baseline",
+    "approvals.json": "approvals",
     "stop-retries.json": None,
 }
 

@@ -18,6 +18,7 @@ ALWAYS_PROTECTED = [
     PROJECT_FILE.as_posix(),
     (STATE_DIR / "frozen.json").as_posix(),
     (STATE_DIR / "tier.json").as_posix(),
+    (STATE_DIR / "approvals.json").as_posix(),
     "docs/_cgspec/04-checks/manifest.json",
     MEMLOG_FILE.as_posix(),
 ]
