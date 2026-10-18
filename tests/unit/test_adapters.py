@@ -83,7 +83,7 @@ class WiringTests(unittest.TestCase):
         self.assertTrue(os.access(self.root / ".git/hooks/pre-commit", os.X_OK))
         self.assertTrue((self.root / ".git/hooks/commit-msg").exists())
         workflow = (self.root / ".github/workflows/cgspec.yml").read_text()
-        self.assertIn("cgspec_hook.py ci", workflow)
+        self.assertIn("engine/cgspec_hook.py\" ci", workflow)
         frozen = json.loads((self.root / "docs/_cgspec/07-state/frozen.json").read_text())
         self.assertIn(".github/workflows/cgspec.yml", [e["path"] for e in frozen["entries"]])
         self.assertIn("CONTRACT.md", (self.root / ".cursor/rules/cgspec.mdc").read_text())
