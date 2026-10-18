@@ -59,6 +59,11 @@ def main() -> int:
     try:
         raw_shell = shell_path.read_text(encoding="utf-8")
         bundled = resolve_includes(raw_shell, shell_path.parent)
+        if "Compiled via bundle_prototype.py" not in bundled[:500]:
+            if "<!DOCTYPE html>" in bundled[:100]:
+                bundled = bundled.replace("<!DOCTYPE html>", f"<!DOCTYPE html>\n<!-- Compiled via bundle_prototype.py from {shell_path.name} -->", 1)
+            else:
+                bundled = f"<!-- Compiled via bundle_prototype.py from {shell_path.name} -->\n" + bundled
     except Exception as exc:
         print(f"[FAIL] Bundle compilation error: {exc}", file=sys.stderr)
         return 1

@@ -297,8 +297,34 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
         prototype_dir = cgspec_dir / "05-prototype"
     if prototype_dir.exists():
         html_files = [f for f in prototype_dir.glob("*.html") if not f.is_symlink()]
+        # Identify highest version for versioned prototypes
+        versioned = {}
+        for hf in html_files:
+            m = re.search(r"-v(\d+)\.html$", hf.name)
+            if m:
+                prefix = hf.name[:m.start()]
+                vnum = int(m.group(1))
+                if prefix not in versioned or vnum > versioned[prefix][0]:
+                    versioned[prefix] = (vnum, hf)
+
         for hf in html_files:
             try:
+                # Skip audit snapshot states (e.g. v14_threedot.html, scr01-wireframe-v3-snapshot.html)
+                if re.search(r"v\d+_[a-z0-9_]+\.html$", hf.name) or hf.name.endswith("-snapshot.html"):
+                    continue
+                # Skip historic frozen prototype versions if a higher version exists
+                m = re.search(r"-v(\d+)\.html$", hf.name)
+                if m:
+                    prefix = hf.name[:m.start()]
+                    if prefix in versioned and int(m.group(1)) < versioned[prefix][0]:
+                        continue
+                head_text = hf.read_text(encoding="utf-8", errors="ignore")[:500]
+                # Compiled output from bundle_prototype.py is an assembled artifact, not an un-decomposed source
+                if "Compiled via bundle_prototype.py" in head_text:
+                    continue
+                # Also skip historic legacy baseline files
+                if hf.name in ("prototype.html", "prototype-v0.1.html") or hf.name.startswith("wireframe-v"):
+                    continue
                 line_count = len(hf.read_text(encoding="utf-8", errors="ignore").splitlines())
                 size_kb = hf.stat().st_size / 1024
                 if line_count > 1500 or size_kb > 150:
