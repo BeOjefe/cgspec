@@ -128,7 +128,7 @@ class Round2Tests(unittest.TestCase):
         self.assertCiFails("test_command")
 
     def test_proof_must_use_the_project_test_command(self):
-        ref = approve(self.root, "approve the test command python3 {test_file}")
+        ref = approve(self.root, "approve the test command")
         self.set_project(test_command=["python3", "{test_file}"], test_command_approval=ref)
         commit(self.root, "set test command")
         self.base = head(self.root)
@@ -136,7 +136,7 @@ class Round2Tests(unittest.TestCase):
         self.assertCiFails("project test_command")
 
     def test_honest_proof_with_project_command_passes(self):
-        ref = approve(self.root, "approve the test command python3 {test_file}")
+        ref = approve(self.root, "approve the test command")
         self.set_project(test_command=["python3", "{test_file}"], test_command_approval=ref)
         commit(self.root, "set test command")
         self.base = head(self.root)
@@ -150,7 +150,7 @@ class Round2Tests(unittest.TestCase):
         self.assertCiFails("test_command")
 
     def test_test_file_must_exist_where_it_failed(self):
-        ref = approve(self.root, "approve the test command python3 {test_file}")
+        ref = approve(self.root, "approve the test command")
         self.set_project(test_command=["python3", "{test_file}"], test_command_approval=ref)
         commit(self.root, "set test command")
         self.base = head(self.root)

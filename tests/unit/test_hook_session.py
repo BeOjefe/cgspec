@@ -87,6 +87,13 @@ class SessionTests(unittest.TestCase):
                           "--status", "Approved", "--approval-ref", ref)
         self.assertEqual(good.returncode, 0, good.stderr)
 
+    def test_decision_summary_can_contain_after(self):
+        say(self.root, "approve decision: Use after-tax pricing")
+        ref = self.approvals()[0]["id"]
+        good = run_script("memlog.py", "--root", str(self.root), "add", "--summary", "Use after-tax pricing",
+                          "--tags", "decision", "--status", "Approved", "--approval-ref", ref)
+        self.assertEqual(good.returncode, 0, good.stderr)
+
     # --- session start / check -----------------------------------------------------------------
     def test_session_start_prints_the_pack(self):
         cp = self.root / "docs/_cgspec/07-state/checkpoint.json"

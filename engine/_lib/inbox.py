@@ -30,12 +30,9 @@ APPROVAL = re.compile(
     r"approved?|i approve|lgtm|ship it|go(?: ahead)?|ok(?:ay)?[,]?\s*go|yes|oui|valid(?:e|é|ated?)|"
     r"(?:ok\s+)?on valide|je valide|d'accord|on y va|c'est bon"
     r")\b(?!.*\?\s*$)")
-NEGATION = re.compile(r"(?i)\b(not|don't|do not|no|pas|never|jamais)\b")
-QUALIFICATION = re.compile(r"(?i)\b(if|unless|until|provided|subject\s+to|except|but|however|si|sauf|mais|after)\b")
-RECORD_ID = re.compile(r"\b(?:SLICE|ADR|CHK)-\d{3}\b", re.I)
-DIRECT_TARGET = re.compile(r"^(?:SLICE|ADR|CHK)-\d{3}\b", re.I)
-TEST_COMMAND = re.compile(r"^test[ -]command\b", re.I)
-DECISION = re.compile(r"^decision\s*:\s*(\S.*)$", re.I)
+DIRECT_TARGET = re.compile(r"((?:SLICE|ADR|CHK)-\d{3})\s*[.!]?", re.I)
+TEST_COMMAND = re.compile(r"test[ -]command\s*[.!]?", re.I)
+DECISION = re.compile(r"decision\s*:\s*(\S.*)", re.I)
 
 
 def scrub(text: str) -> str:
@@ -49,7 +46,7 @@ def scrub(text: str) -> str:
 
 def is_approval(text: str) -> bool:
     first = text.strip().splitlines()[0] if text.strip() else ""
-    return bool(APPROVAL.match(first)) and not NEGATION.search(first.split(".")[0])
+    return bool(APPROVAL.match(first))
 
 
 def approval_target(text: str) -> str | None:
@@ -60,23 +57,18 @@ def approval_target(text: str) -> str | None:
     """
     # The committed excerpt has a 200-character limit. Longer or multi-line
     # messages can hide a contradictory clause from the commit gate.
-    if (len(text) > MAX_APPROVAL_CHARS or len(text.strip().splitlines()) != 1 or
-            "?" in text or NEGATION.search(text) or QUALIFICATION.search(text) or
-            not is_approval(text)):
+    if len(text) > MAX_APPROVAL_CHARS or len(text.strip().splitlines()) != 1 or not is_approval(text):
         return None
     first = text.strip().splitlines()[0]
     rest = first[APPROVAL.match(first).end():].strip()
     rest = re.sub(r"(?i)^the\s+", "", rest)
-    ids = {item.upper() for item in RECORD_ID.findall(text)}
-    if match := DIRECT_TARGET.match(rest):
-        target = match.group().upper()
-        other_target = re.search(r"(?i)\btest[ -]command\b|\bdecision\s*:", rest)
-        return target if ids == {target} and not other_target else None
-    if TEST_COMMAND.match(rest):
-        return "test_command" if not ids and not re.search(r"(?i)\bdecision\s*:", rest) else None
-    if match := DECISION.match(rest):
+    if match := DIRECT_TARGET.fullmatch(rest):
+        return match.group(1).upper()
+    if TEST_COMMAND.fullmatch(rest):
+        return "test_command"
+    if match := DECISION.fullmatch(rest):
         summary = " ".join(match.group(1).split()).casefold()
-        return f"decision:{summary}" if not ids and "test command" not in summary else None
+        return f"decision:{summary}"
     return None
 
 

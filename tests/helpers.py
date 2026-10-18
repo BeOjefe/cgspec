@@ -118,7 +118,7 @@ def set_test_command(root: Path, command: list[str]) -> None:
     """Set project.json test_command with a fresh approval from the user, ready to commit."""
     import json as _json
     import os as _os
-    ref = approve(root, "approve the test command " + " ".join(command))
+    ref = approve(root, "approve the test command")
     pj = root / "docs/_cgspec/project.json"
     _os.chmod(pj, 0o644)
     data = _json.loads(pj.read_text())

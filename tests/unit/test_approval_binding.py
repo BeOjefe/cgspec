@@ -13,8 +13,11 @@ class ApprovalBindingTests(unittest.TestCase):
             "approve SLICE-004": "SLICE-004",
             "approved CHK-012": "CHK-012",
             "yes, approve SLICE-001": "SLICE-001",
-            "approve the test command python3 -m unittest": "test_command",
+            "approve SLICE-001.": "SLICE-001",
+            "approve the test command": "test_command",
             "approve decision: Use SQLite for the local cache": "decision:use sqlite for the local cache",
+            "approve decision: Use after-tax pricing": "decision:use after-tax pricing",
+            "approve decision: No data retention": "decision:no data retention",
         }
         for words, target in examples.items():
             with self.subTest(words=words):
@@ -29,6 +32,9 @@ class ApprovalBindingTests(unittest.TestCase):
             "approve decision", "approve decision: ", "approve SLICE-004?",
             "do not approve SLICE-004", "approve SLICE-004. No, wait",
             "approve SLICE-004 only if the tests pass", "approve SLICE-004\nBut not yet",
+            "approve SLICE-004 pending security review", "approve SLICE-004 only when tests pass",
+            "approve SLICE-004 and continue", "approve test command pending review",
+            "approve the test command python3 -m unittest",
             "approve SLICE-004" + " " * 190 + "and CHK-012",
         ):
             with self.subTest(words=words):
