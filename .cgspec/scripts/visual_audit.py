@@ -282,8 +282,8 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
             if target_id not in dom_ids:
                 phantom_ids.add(target_id)
     if phantom_ids:
-        warnings.append(
-            f"Phantom DOM Element Reference(s) in JavaScript: Found document.getElementById() calls for IDs not present in the DOM: {sorted(list(phantom_ids))[:6]}. This causes silent TypeErrors ('Cannot read properties of null') when users click buttons."
+        errors.append(
+            f"Phantom DOM Element Reference Violation (Nielsen H5: Error Prevention): Found document.getElementById() calls for IDs not present in the HTML DOM: {sorted(list(phantom_ids))[:8]}. This causes catastrophic runtime TypeErrors ('Cannot read properties of null') when users interact with the UI. Ensure every referenced ID exists in the HTML or prune dead script logic."
         )
 
     return errors, warnings
