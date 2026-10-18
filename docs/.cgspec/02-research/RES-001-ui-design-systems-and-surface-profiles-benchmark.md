@@ -91,3 +91,24 @@ When drafting Stage 2 design tokens and visual prototypes:
    - If Mobile: Recommend SwiftUI for iOS, Jetpack Compose for Android.
    - If Multi-Platform: Recommend Flutter or React Native + NativeWind.
 3. **Registry Status:** Recorded as `RES-001` in `docs/00-INDEX.md`. Future ADRs on UI stacks must cite this research record.
+
+---
+
+## 6. Primary References, Benchmark Sources & Citations
+
+1. **Figma Community UI Kits & Design Token Libraries:**
+   - [Figma Community UI Kits Index](https://www.figma.com/community/ui-kits)
+   - [Figma Design System Examples & Case Studies](https://www.figma.com/resource-library/design-system-examples/)
+   - [UI Things: Curated Free Figma UI Kits](https://uithings.com/free-figma-ui-kits)
+2. **Platform-Native Titan Guidelines:**
+   - [Google Material Design 3 (M3 / Expressive Motion Guidelines)](https://m3.material.io/)
+   - [Apple Human Interface Guidelines (HIG / SwiftUI Architecture)](https://developer.apple.com/design/human-interface-guidelines/)
+3. **Open-Source Web & Enterprise Framework Comparisons:**
+   - [Reddit Frontend Architecture: UI Frameworks Beyond MUI (Community Benchmark)](https://www.reddit.com/r/Frontend/comments/vr3ino/what_ui_frameworks_other_than_mui_would_you/)
+   - [ThemeWagon: Comparing Best Open-Source UI Component Libraries](https://themewagon.com/blog/comparing-best-open-source-ui-libraries/)
+   - [GreatFrontend: Top Open-Source Design Systems by Leading Tech Companies](https://www.greatfrontend.com/blog/top-open-source-design-systems-by-tech-companies-you-can-use-right-away)
+4. **Mobile & Cross-Platform Framework Performance:**
+   - [Purchasely Mobile Engineering: Native vs Cross-Platform UI Benchmark](https://www.purchasely.com/blog/mobile-app-frameworks)
+5. **Open-Source Collaborative Design Alternatives:**
+   - [Penpot Open-Source Standards-Based Design Platform](https://penpot.app/)
+

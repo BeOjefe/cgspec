@@ -26,10 +26,18 @@ Calibrate geometry, input ergonomics, and required states to the project's **Tar
 | **Profile C: Web Workspace** *(SaaS, dashboard, IDE)* | **Multi-Pane Viewport:** Header -> Left Multi-Root Explorer Rail -> Center Canvas -> Right Drawer. | `Cmd+K` bar, draggable `col-resize` splitters, click-to-fold rail, `32-40px` dense rows. | **7 States:** `Populated`, `Skeleton`, `Empty`, `Error`, `Denied 403`, `Offline`, `Filtered Zero`. | Full-viewport (`100vh`) workspace with state & role switcher. |
 | **Profile D: CLI / TUI** *(Terminal tool, daemon, SDK)* | **Command & Stream Topology:** Subcommand tree, flag matrix, split TUI panes, `stdout` vs `stderr`. | Pipeability, `--json` flag, TTY spinner vs quiet mode, exit codes. | **5 States:** `Success (0)`, `Help`, `Validation Error (1)`, `Auth/Net Error`, `Pipe Mode`. | Interactive terminal transcript / TUI simulator in HTML. |
 
-### 2.2 Stage 2 Execution Invariants (5-Tier Insulated Swarm)
+### 2.2 Stage 2 Execution Invariants (Proactive Discovery + 5-Tier Insulated Swarm)
+
+0. **Tier 0 — Proactive Reference Scouting & Multi-Archetype Proposals (Inversion of Design Burden):**
+   - **The Human Is NOT a UI Draftsman:** The user provided high-level intent (`01-INTENT.md`) and domain nouns/permissions/lifecycle flows (`02-OOUX.md`). The AI must **NEVER** dump a single lazy mockup and wait passively for the human to do the design thinking or bug-hunting.
+   - **Autonomous Web Scouting:** Before generating code, the AI must scour the internet (via web search, DevTools MCP, or design repositories) for 2–3 gold-standard real-world products matching the OOUX domain (e.g. GitHub for directory hierarchies, Linear for keyboard-first tables, Cloudflare for security vault keys, Supabase for data inspectors), capturing screenshots and extracting design DNA (macrostructure, typography pairings, color anchors, and layout density).
+   - **Multi-Archetype Presentation (2–3 Concrete Choices):** Present 2 to 3 distinct structural and aesthetic archetypes with side-by-side trade-offs and rationale mapped directly to the user's OOUX objects. The human's role is purely **executive editorial curation** (e.g. *"I want Archetype A's file tree paired with Archetype B's dark mode"*), not manual layout drafting.
+   - **Autonomous Monotonic Versioning:** File iterations strictly increment monotonically: $v(N+1) = \max(\text{existing}) + 1$. The agent **NEVER** asks the user what version number to write to or waits for permission to create the next file.
+
 1. **Main Agent Insulation (`cgspec-inspector` Only):**
    - **Never spawn multiple builders directly from the Main Agent** (which leaks raw subagent completions into the user's primary chat window) and **never spawn `type="research"` for builders or auditors**.
    - The Main Agent registers and invokes **ONLY ONE** child subagent: [`cgspec-inspector`](../../agents/cgspec-inspector.md) (`enable_write_tools=True`, `enable_subagent_tools=True`), passing cold factual paths (`01-INTENT.md`, `02-OOUX.md`, `03-EXPERIENCE.md`, `quality-rubric.md`).
+
 2. **Tier 2 Peer-to-Peer Builders (`cgspec-builder` $\times K$) + Output Token Limit Guard + Phase A Self-Verification:**
    - `cgspec-inspector` spawns $K$ [`cgspec-builder`](../../agents/cgspec-builder.md) agents (1 per screen or surface) and distributes a **Builder Peer Directory** via `send_message` so builders coordinate shared header chrome, CSS tokens, and cross-screen navigation links laterally.
    - **Output Token Limit Guard (`< 600` Lines per `write_to_file`):** Never emit a 1,500–2,500 line monolithic HTML file in a single `write_to_file` call (which hits the LLM output token limit). Either write modular per-screen files (`scr-01-<slug>.html`, `< 600` lines each) or, when incrementing `v(N-1) -> vN`, run `cp wireframe-v(N-1).html wireframe-vN.html` via `run_command` and apply surgical `replace_file_content` edits (`< 300` lines per call).
