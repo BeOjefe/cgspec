@@ -18,7 +18,7 @@ APPROVALS = (STATE_DIR / "approvals.json").as_posix()
 INBOX = "docs/00-INBOX.md"
 ENGINE = ENGINE_DIR.as_posix() + "/"
 ENGINE_BOOKKEEPING = {"manifest.json", "owned-files.json"}
-ADAPTER_PATHS = {".claude/settings.json", ".agents/hooks.json", ".github/workflows/cgspec.yml",
+ADAPTER_PATHS = {".claude/settings.json", ".agents/hooks.json", ".github/workflows/cgspec.yml", ".github/cgspec-select.sh",
                  ".cursor/rules/cgspec.mdc", ".gitignore", "AGENTS.md", "CLAUDE.md"}
 APPROVAL_FIELD = re.compile(tiers.FIELD % "Approval", re.M | re.I)
 

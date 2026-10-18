@@ -28,6 +28,7 @@ from _lib.adapters import unwire, wire  # noqa: E402
 from _lib.layout import GUI_PROFILES  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
+PLUGIN_SOURCE = "https://github.com/mrojefe/cgspec.git"
 OWNED = ENGINE_DIR / "owned-files.json"
 MANIFEST = ENGINE_DIR / "manifest.json"
 ARCHIVE = Path("docs/_cgspec/_archive/pre-cgspec")
@@ -197,6 +198,7 @@ def cmd_install(root: Path, args: argparse.Namespace) -> int:
                "path_classes": PATH_CLASSES, "tools": tools}
     if args.repo_prefix:
         project["repo_prefix"] = args.repo_prefix
+    project["plugin_source"] = args.plugin_source
     write_json(root / PROJECT_FILE, project)  # written last: its presence means "install finished"
     owned["created"][PROJECT_FILE.as_posix()] = sha256_file(root / PROJECT_FILE)
     write_json(root / OWNED, owned)
@@ -363,6 +365,7 @@ def build_parser() -> argparse.ArgumentParser:
                            choices=["single", "monorepo", "large-monorepo", "polyrepo-governance", "polyrepo-member"])
             p.add_argument("--tools", default="git", help="comma-separated: claude,antigravity,codex,cursor,git,ci")
             p.add_argument("--repo-prefix", default="")
+            p.add_argument("--plugin-source", default=PLUGIN_SOURCE, help="git URL CI downloads releases from")
     return parser
 
 

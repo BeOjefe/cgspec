@@ -46,13 +46,49 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: CGSpec governance (cannot be skipped)
+      - name: Pick the base and a trusted engine (never the engine inside this commit)
+        env:
+          EVENT_BASE: ${{{{ github.event.pull_request.base.sha || github.event.before }}}}
+          DEFAULT_BRANCH: ${{{{ github.event.repository.default_branch }}}}
         run: |
-          BASE="${{{{ github.event.pull_request.base.sha || github.event.before }}}}"
-          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{{commit}}" 2>/dev/null; then
-            BASE="$(git rev-list --max-parents=0 HEAD | tail -1)"
+          # Run the selection script as it was BEFORE this change, so a change cannot rewrite its own judge.
+          B="${{{{ github.event.pull_request.base.sha || github.event.before }}}}"
+          if [ -n "$B" ] && git cat-file -e "$B:.github/cgspec-select.sh" 2>/dev/null; then
+            git show "$B:.github/cgspec-select.sh" > "$RUNNER_TEMP/cgspec-select.sh"
+          else
+            cp .github/cgspec-select.sh "$RUNNER_TEMP/cgspec-select.sh"
           fi
-          python3 {hook} ci --base "$BASE" --tool git
+          sh "$RUNNER_TEMP/cgspec-select.sh"
+      - name: CGSpec governance (cannot be skipped)
+        run: python3 "$CGSPEC_RELEASE/engine/cgspec_hook.py" ci --root "$GITHUB_WORKSPACE" --base "$CGSPEC_BASE" --release-dir "$CGSPEC_RELEASE" --tool git
+"""
+SELECT = """#!/bin/sh
+# Installed by CGSpec. Chooses the range base and downloads the plugin release used to judge it.
+# Version = the newer of base and HEAD (no downgrade); source = the base's plugin_source (no redirect).
+set -eu
+BASE="${EVENT_BASE:-}"
+if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+  BASE=""
+  if [ -n "${DEFAULT_BRANCH:-}" ] && git fetch -q origin "$DEFAULT_BRANCH" 2>/dev/null; then
+    BASE="$(git merge-base HEAD FETCH_HEAD 2>/dev/null || true)"
+  fi
+fi
+read_at() { git show "$1:$2" 2>/dev/null || true; }
+field() { python3 -c "import json,sys; d=sys.stdin.read(); print(json.loads(d).get('$1','') if d.strip() else '')"; }
+HEAD_VERSION="$(read_at HEAD docs/_cgspec/01-engine/VERSION | tr -d '[:space:]')"
+BASE_VERSION=""; SOURCE=""
+if [ -n "$BASE" ]; then
+  BASE_VERSION="$(read_at "$BASE" docs/_cgspec/01-engine/VERSION | tr -d '[:space:]')"
+  SOURCE="$(read_at "$BASE" docs/_cgspec/project.json | field plugin_source)"
+fi
+[ -n "$SOURCE" ] || SOURCE="$(read_at HEAD docs/_cgspec/project.json | field plugin_source)"
+VERSION="$(printf '%s\\n%s\\n' "$BASE_VERSION" "$HEAD_VERSION" | grep . | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)"
+RELEASE="${RUNNER_TEMP:-/tmp}/cgspec-release"
+rm -rf "$RELEASE"
+git clone -q --depth 1 --branch "v$VERSION" "$SOURCE" "$RELEASE"
+echo "CGSPEC_BASE=$BASE" >> "$GITHUB_ENV"
+echo "CGSPEC_RELEASE=$RELEASE" >> "$GITHUB_ENV"
+echo "CGSpec: base ${BASE:-none}, release v$VERSION from $SOURCE"
 """
 CURSOR_RULE = """---
 description: CGSpec project rules
@@ -139,12 +175,15 @@ def wire(root: Path, tools: list[str], owned: dict) -> list[str]:
         else:
             notes.append("no .git folder: git hooks not installed (run install.py upgrade after git init)")
     if "ci" in tools:
-        rel = ".github/workflows/cgspec.yml"
-        ok, note = _write_new(root, rel, WORKFLOW.format(hook=HOOK))
-        notes.append(note)
-        if ok:
+        rel, select = ".github/workflows/cgspec.yml", ".github/cgspec-select.sh"
+        ok, note = _write_new(root, rel, WORKFLOW.format())
+        ok2, note2 = _write_new(root, select, SELECT, 0o755)
+        notes += [note, note2]
+        if ok and ok2:
             record["ci"] = rel
+            record["ci_select"] = select
             _freeze_workflow(root, rel)
+            _freeze_workflow(root, select)
     if "cursor" in tools:
         ok, note = _write_new(root, ".cursor/rules/cgspec.mdc", CURSOR_RULE)
         notes.append(note)
@@ -183,7 +222,7 @@ def unwire(root: Path, owned: dict) -> None:
                 write_json(path, data)
             else:
                 path.unlink()
-    for rel in record.get("git", []) + [record[k] for k in ("ci", "cursor") if k in record]:
+    for rel in record.get("git", []) + [record[k] for k in ("ci", "ci_select", "cursor") if k in record]:
         path = root / rel
         if path.is_file() and not path.is_symlink() and (MARK in path.read_text(errors="replace") or "CGSpec" in path.read_text(errors="replace")):
             os.chmod(path, 0o644)
