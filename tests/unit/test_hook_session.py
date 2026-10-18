@@ -67,6 +67,16 @@ class SessionTests(unittest.TestCase):
             say(self.root, text)
         self.assertEqual(self.approvals(), [])
 
+    def test_approval_exceeding_saved_excerpt_has_no_approval_id(self):
+        message = "approve SLICE-004" + " " * 190 + "and CHK-012"
+        self.assertEqual(say(self.root, message).returncode, 0)
+        self.assertIn("approve SLICE-004", self.inbox())
+        self.assertEqual(self.approvals(), [])
+
+    def test_multiline_approval_has_no_approval_id(self):
+        self.assertEqual(say(self.root, "approve SLICE-004\nMaybe later").returncode, 0)
+        self.assertEqual(self.approvals(), [])
+
     def test_memlog_approved_needs_a_real_approval_id(self):
         bad = run_script("memlog.py", "--root", str(self.root), "add", "--summary", "s", "--tags", "decision",
                          "--status", "Approved", "--approval-ref", "A-20261018-ffff")

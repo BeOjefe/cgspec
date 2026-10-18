@@ -11,6 +11,7 @@ from .common import STATE_DIR, new_id, sha256_text, utc_now, write_json
 INBOX = Path("docs/00-INBOX.md")
 APPROVALS = STATE_DIR / "approvals.json"
 MAX_INBOX_CHARS = 2000
+MAX_APPROVAL_CHARS = 200
 
 SECRETS = [
     ("private-key", re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----.*?(-----END [A-Z0-9 ]*PRIVATE KEY-----|\Z)", re.S)),
@@ -30,6 +31,7 @@ APPROVAL = re.compile(
     r"(?:ok\s+)?on valide|je valide|d'accord|on y va|c'est bon"
     r")\b(?!.*\?\s*$)")
 NEGATION = re.compile(r"(?i)\b(not|don't|do not|no|pas|never|jamais)\b")
+QUALIFICATION = re.compile(r"(?i)\b(if|unless|until|provided|subject\s+to|except|but|however|si|sauf|mais|after)\b")
 RECORD_ID = re.compile(r"\b(?:SLICE|ADR|CHK)-\d{3}\b", re.I)
 DIRECT_TARGET = re.compile(r"^(?:SLICE|ADR|CHK)-\d{3}\b", re.I)
 TEST_COMMAND = re.compile(r"^test[ -]command\b", re.I)
@@ -56,7 +58,11 @@ def approval_target(text: str) -> str | None:
     The commit gate must compare this with the record being changed. Capturing a
     generic acknowledgment in the inbox is not authorization for any record.
     """
-    if not is_approval(text):
+    # The committed excerpt has a 200-character limit. Longer or multi-line
+    # messages can hide a contradictory clause from the commit gate.
+    if (len(text) > MAX_APPROVAL_CHARS or len(text.strip().splitlines()) != 1 or
+            "?" in text or NEGATION.search(text) or QUALIFICATION.search(text) or
+            not is_approval(text)):
         return None
     first = text.strip().splitlines()[0]
     rest = first[APPROVAL.match(first).end():].strip()
@@ -77,7 +83,8 @@ def approval_target(text: str) -> str | None:
 def record(root: Path, prompt: str) -> tuple[str, str | None]:
     """Append the scrubbed prompt to the inbox; return (inbox id, approval id or None)."""
     clean = scrub(prompt)
-    one_line = " / ".join(part.strip() for part in clean.splitlines() if part.strip())[:MAX_INBOX_CHARS]
+    whole_line = " / ".join(part.strip() for part in clean.splitlines() if part.strip())
+    one_line = whole_line[:MAX_INBOX_CHARS]
     inbox_id = new_id("I")
     path = root / INBOX
     existing = path.read_text(encoding="utf-8") if path.is_file() else "# Inbox\n"
@@ -85,7 +92,8 @@ def record(root: Path, prompt: str) -> tuple[str, str | None]:
     with path.open("a", encoding="utf-8") as handle:
         handle.write(f"{sep}- {inbox_id} {utc_now()}: {one_line}\n")
     approval_id = None
-    if is_approval(prompt):
+    if (is_approval(prompt) and len(prompt) <= MAX_APPROVAL_CHARS and
+            len(whole_line) <= MAX_APPROVAL_CHARS and len(clean.strip().splitlines()) == 1):
         approvals_path = root / APPROVALS
         try:
             data = json.loads(approvals_path.read_text(encoding="utf-8"))

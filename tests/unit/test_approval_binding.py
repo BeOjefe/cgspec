@@ -27,7 +27,9 @@ class ApprovalBindingTests(unittest.TestCase):
             "approve SLICE-004 and CHK-012", "approve test command for SLICE-004",
             "approve SLICE-004 and the test command", "approve test command and decision: ship",
             "approve decision", "approve decision: ", "approve SLICE-004?",
-            "do not approve SLICE-004",
+            "do not approve SLICE-004", "approve SLICE-004. No, wait",
+            "approve SLICE-004 only if the tests pass", "approve SLICE-004\nBut not yet",
+            "approve SLICE-004" + " " * 190 + "and CHK-012",
         ):
             with self.subTest(words=words):
                 self.assertIsNone(approval_target(words))
