@@ -139,6 +139,10 @@ def cmd_add(root: Path, args: argparse.Namespace) -> int:
         from _lib.inbox import approval_exists
         if approval != "trailer" and not approval_exists(root, approval):
             raise CgspecError(f"approval {approval} is not in 07-state/approvals.json (only your own message creates one)")
+        if args.status == "Approved" and approval != "trailer":
+            target = f"decision:{' '.join(summary.split()).casefold()}"
+            if not approval_exists(root, approval, target):
+                raise CgspecError(f"approval {approval} does not name decision: {summary}")
     if args.status == "Approved" and not approval:
         # Spec 8: approvals come only from the user's message or commit trailer; the hook that
         # records them passes the reference, and CI verifies it exists.

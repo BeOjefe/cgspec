@@ -71,7 +71,7 @@ class SessionTests(unittest.TestCase):
         bad = run_script("memlog.py", "--root", str(self.root), "add", "--summary", "s", "--tags", "decision",
                          "--status", "Approved", "--approval-ref", "A-20261018-ffff")
         self.assertEqual(bad.returncode, 1)
-        say(self.root, "approved")
+        say(self.root, "approve decision: s")
         ref = self.approvals()[0]["id"]
         good = run_script("memlog.py", "--root", str(self.root), "add", "--summary", "s", "--tags", "decision",
                           "--status", "Approved", "--approval-ref", ref)

@@ -213,10 +213,22 @@ class MemlogHardeningTests(unittest.TestCase):
             make_project(root)
             self.assertEqual(add(root, "--status", "Approved").returncode, 1)
             write_json(root / "docs/_cgspec/07-state/approvals.json", {"schema": 1, "approvals": [
-                {"id": "A-20261018-aaaa", "at": "2026-10-18T00:00:00Z", "excerpt": "approved", "sha256": "0" * 64}]})
+                {"id": "A-20261018-aaaa", "at": "2026-10-18T00:00:00Z", "excerpt": "approve decision: s",
+                 "sha256": "0" * 64}]})
             ok = add(root, "--status", "Approved", "--approval-ref", "A-20261018-aaaa")
             self.assertEqual(ok.returncode, 0, ok.stderr)
             self.assertIn("- **Approval:** A-20261018-aaaa", (root / "docs/_memlog.md").read_text())
+
+    def test_unrelated_approval_cannot_create_approved_decision(self):
+        with TempDir() as root:
+            make_project(root)
+            write_json(root / "docs/_cgspec/07-state/approvals.json", {"schema": 1, "approvals": [
+                {"id": "A-20261018-aaaa", "at": "2026-10-18T00:00:00Z", "excerpt": "yes, rename README",
+                 "sha256": "0" * 64}]})
+            bad = add(root, "--status", "Approved", "--approval-ref", "A-20261018-aaaa")
+            self.assertEqual(bad.returncode, 1)
+            self.assertIn("decision: s", bad.stderr)
+            self.assertFalse((root / "docs/_memlog.md").exists())
 
     def test_read_only_ledger_reports_cleanly(self):
         with TempDir() as root:

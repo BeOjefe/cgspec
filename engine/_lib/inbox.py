@@ -98,9 +98,11 @@ def record(root: Path, prompt: str) -> tuple[str, str | None]:
     return inbox_id, approval_id
 
 
-def approval_exists(root: Path, approval_id: str) -> bool:
+def approval_exists(root: Path, approval_id: str, target: str | None = None) -> bool:
     try:
         data = json.loads((root / APPROVALS).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return False
-    return any(a.get("id") == approval_id for a in data.get("approvals", []))
+    return any(isinstance(a, dict) and a.get("id") == approval_id and
+               (target is None or approval_target(str(a.get("excerpt", ""))) == target)
+               for a in data.get("approvals", []))
