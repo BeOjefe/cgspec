@@ -343,6 +343,48 @@ def audit_html(html_path: pathlib.Path) -> tuple[list[str], list[str]]:
             "Jittering Technical Metrics (RES-002 / Nielsen H8): Found latency or token metric values without 'tabular-nums' or 'font-mono'. Numerical readouts should use tabular lining figures to prevent layout jittering during updates."
         )
 
+    # 19. Check for Gradient-Filled Heading Text (Vibe-Coded Tell #3 - RES-004 & JCarterJohnson/devibe_scan)
+    # Detects bg-clip-text text-transparent used on headings, which online users flag as an immediate AI slop tell
+    gradient_text_matches = re.findall(
+        r"(?:bg-clip-text\s+[^\"'`]*text-transparent|text-transparent\s+[^\"'`]*bg-clip-text|-webkit-background-clip:\s*text)",
+        content,
+        re.I,
+    )
+    if gradient_text_matches and "unslop-ignore" not in content:
+        errors.append(
+            f"Gradient Text Slop Violation (RES-004 / Vibe-Coded Tell #3): Detected gradient-filled text ({len(gradient_text_matches)} occurrences). Headings and body copy must use solid, high-contrast typography. Gradient body/heading text is a top cited aesthetic tell for low-effort AI prototypes."
+        )
+
+    # 20. Check for Unprompted Neon Glow Box Shadows (Vibe-Coded Tell #4 & DesignCode Invariant - RES-004)
+    # Detects high-radius uncalibrated neon glow box shadows (shadow-[0_0_... or box-shadow: 0 0 50px)
+    neon_glow_matches = re.findall(
+        r"(?:shadow-\[0_0_\d+px|drop-shadow-\[0_0_\d+px|box-shadow:\s*0\s+0\s+\d{2,}px)",
+        content,
+        re.I,
+    )
+    if neon_glow_matches and "unslop-ignore" not in content:
+        warnings.append(
+            f"Unprompted Neon Glow Slop (RES-004 / Vibe-Coded Tell #4): Detected disembodied neon glow shadow ({len(neon_glow_matches)} matches). Elevate surfaces using tonal background steps (#09090b -> #121316) and 1px tactile specular hairlines (border-white/10) rather than muddy neon drops."
+        )
+
+    # 21. Check for Untouched Stock shadcn Card Signature (Vibe-Coded Tell #1 - RES-004)
+    # Detects repeated instances of the verbatim default shadcn Card class string
+    stock_shadcn_card = "rounded-lg border bg-card text-card-foreground shadow-sm"
+    shadcn_count = content.count(stock_shadcn_card)
+    if shadcn_count >= 3 and "unslop-ignore" not in content:
+        warnings.append(
+            f"Stock shadcn Default Card Signature (RES-004 / Vibe-Coded Tell #1): Detected {shadcn_count} occurrences of untouched stock shadcn Card classes ('{stock_shadcn_card}'). Customize corner radii, neutral palette ramps, and border contrast to the specific project surface profile."
+        )
+
+    # 22. Check for 2026 'Tasteful Default' Convergence Trap (Vibe-Coded Tell #0 - RES-004)
+    # Flags the co-occurrence of cream backgrounds with serif display fonts, which users now flag as the Claude/Anthropic default
+    has_cream_bg = bool(re.search(r"#(?:faf8f5|f5f1e8|f3eee3|fdfbf7|f7f3ec|faf6ef)\b|\bbg-(?:stone|amber|orange)-(?:50|100)\b", content, re.I))
+    has_serif_head = bool(re.search(r"\b(?:Instrument\s*Serif|Fraunces|Playfair\s*Display|Cormorant|Spectral|DM\s*Serif)\b", content, re.I))
+    if has_cream_bg and has_serif_head and "unslop-ignore" not in content:
+        warnings.append(
+            "The 2026 'Tasteful Default' Convergence Trap (RES-004 / Vibe-Coded Tell #0): Detected co-occurrence of cream background with serif display heading. Trading 2024 purple gradients for 2026 Anthropic cream-serif-sage is replacing old slop with new slop unless this is an explicit, curated brand decision. Add '<!-- unslop-ignore -->' if this is an intentional project brand anchor."
+        )
+
     return errors, warnings
 
 
