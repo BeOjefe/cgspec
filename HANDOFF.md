@@ -36,9 +36,21 @@ Stdlib-only Python >= 3.10, no dependencies. Run all tests from the repo root:
 Independent adversarial reviews (a separate agent, not the author) were run after every change:
 engine round 1 NOT READY (17) -> fixed -> READY WITH FIXES -> fixed; enforcement round 1 NOT READY
 (2 blockers) -> fixed; round 2 NOT READY (approval reuse, agent-written trailer, select-script
-fallback, unbound test command) -> fixed in 9e6be76..e13a009. A final re-check of those fixes was
-running at handoff; its result is NOT recorded. First task: re-run an independent review of
-9e6be76..e13a009 and fix what it finds. Never self-certify; spec section 7.
+fallback, unbound test command) -> fixed in 9e6be76..e13a009. Final re-check of e13a009:
+READY WITH FIXES. Four open items, do these first (tests first):
+
+1. Approvals: an unrelated "yes"/"ok go" that names no record can be spent on any record in the
+   same commit (e.g. approve `Scope: **` or a weak `test_command`). Fix: accept an approval only
+   when the user's words name the record ("approve SLICE-004" / "approve test command"), or when
+   the hook bound it to a pending approval request shown to the user.
+2. Trailer: `approver_keys` is read from the commit being judged, so the agent can add its own key
+   in the same commit. Fix: read `approver_keys` from the base commit; a change to it needs the
+   user's signature or GitHub review.
+3. Select script (`engine/_lib/adapters.py` workflow): still runs the commit's own copy when the
+   fetch fails (`|| true`) and on a force push to the default branch. Fix: fail closed in both.
+4. Spec section 8 "what remains possible" must also list (1) and (2) until they are closed, and say
+   plainly that the guarantee holds only with the GitHub review rule on.
+Low: `find -iname '*.JSON' -delete` slips past the tool hook (best effort; commit hook/CI still check).
 
 ## Decisions the user made (do not reopen without asking)
 
