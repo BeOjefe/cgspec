@@ -30,11 +30,12 @@
     - **Tier 3 (`cgspec-unit-adversary` $\times K$ — Inner `while unit_verdict_i != PASS` Loop):** Each builder is audited by a dedicated, cold-facts-only [`cgspec-unit-adversary`](./agents/cgspec-unit-adversary.md) (wired with an **Adversary Peer Directory** via `send_message` to check cross-screen parity). Each pair loops (`Fix -> Phase A Self-Verify -> Re-Audit`) **while `unit_verdict_i != PASS`**.
     - **Tier 4 (`cgspec-chief-adversary` $\times 1$ — Outer `while global_verdict != PASS` Loop):** Once all $K$ Unit Adversaries return `PASS`, [`cgspec-chief-adversary`](./agents/cgspec-chief-adversary.md) audits the integrated multi-screen build across all spines. If `GLOBAL_VERDICT == FAIL`, defects route back to the swarm until `GLOBAL_VERDICT: PASS (0 defects)`.
     - **Tier 5 (Human Validation & Deep Root-Cause Interview):** Only after `GLOBAL_VERDICT: PASS` does the Main Agent present to the user. **If the user says "No":** the Main Agent never immediately re-runs `cgspec-inspector`; it first interviews the user to deeply understand *why*, updates `docs/.memlog.md` and spines (`01..03`), confirms with the user, and only then re-dispatches `cgspec-inspector`.
-11. **Law 11 — Disk-First Immediate Capture & 3-Bucket Triage:**
+11. **Law 11 — Disk-First Immediate Capture & 4-Bucket Triage:**
     Chat is ephemeral; disk is permanent truth. Before replying to multi-topic user feedback, triage and persist 100% of user input to disk **without derailing the active step**:
     - **Bucket A (Active Screen / Current Step):** Apply immediately to the active artifact/spine.
     - **Bucket B (Other Screens / Later UX Phases):** Record immediately in `docs/03-EXPERIENCE.md`, `docs/design/`, and `docs/.memlog.md` (do not code all screens at once).
     - **Bucket C (Backend / Future `v0.2+` Scope):** Record immediately in `docs/02-OOUX.md`, `docs/04-ARCHITECTURE.md`, or `docs/00-INBOX.md` (`Future Backlog v0.2+`).
+    - **Bucket D (Technical Spikes, Benchmarks & Framework Evaluations):** Record immediately in `docs/research/RES-NNN-<slug>.md` and register in `docs/00-INDEX.md` (Section 5). Never lose technical discussions or let them clutter raw feature inboxes.
     Always synchronize top diagrams and bottom tables within any modified spine, then run `python3 .cgspec/scripts/doctor.py --repo .` before concluding the turn.
 
 ---

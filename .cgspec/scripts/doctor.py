@@ -157,6 +157,21 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
             if st_disk == "Accepted" and adr_id not in memlog_content:
                 warnings.append(f"{adr_id} has Status: Accepted on disk but is not recorded in docs/.memlog.md")
 
+    # 4b. Check Research Spikes & Technical Investigations (docs/research/)
+    research_dir = docs_dir / "research"
+    if research_dir.exists():
+        res_files = list(research_dir.glob("RES-*.md"))
+        if res_files:
+            print(f"  [INFO] Found {len(res_files)} Research Spike(s) in docs/research/")
+            for res in sorted(res_files):
+                res_match = re.search(r"(RES-\d+)", res.name)
+                if res_match:
+                    res_id = res_match.group(1)
+                    if res_id not in index_content:
+                        warnings.append(f"{res_id} ({res.name}) is in docs/research/ but not registered in docs/00-INDEX.md")
+                    else:
+                        print(f"  [PASS] {res_id} registered in 00-INDEX.md")
+
     # 5. Check for Emojis in Spines
     for spine in expected_spines:
         spine_path = docs_dir / spine

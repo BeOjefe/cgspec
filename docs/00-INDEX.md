@@ -44,3 +44,12 @@
 | **[`ADR-004`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-004-arbitrary-multi-service-topologies-and-virtual-mounting.md)** | **Arbitrary Multi-Service Topologies, Virtual Mounting & Contract-First Interface Decoupling** | `[Accepted]` |
 | **[`ADR-005`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-005-hierarchical-adrs-and-documentation-scaling.md)** | **Hierarchical ADRs, Documentation Scaling & Multi-Tenant Scoping** | `[Accepted]` |
 
+---
+
+## 5. Technical Spikes & Research Compendiums (`docs/research/`)
+
+| Spike ID | Title & Investigation Focus | Status | Target Spine / Scope |
+| :--- | :--- | :--- | :--- |
+| **[`RES-001`](file:///home/ojefe/Documents/Project/cgspec/docs/research/RES-001-ui-design-systems-and-surface-profiles-benchmark.md)** | **UI Frameworks, Design Systems & Adaptive Surface Profiles Benchmark** | `[Concluded]` | [`03-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-EXPERIENCE.md) (Profiles A, B, C, D) |
+
+
