@@ -1,163 +1,33 @@
-# CGSpec (`cgspec`) — The AI-Native Software Engineering Methodology
+# CGSpec
 
-CGSpec is a first-principles specification engine and governance constitution designed specifically for the era of AI-native software development.
+CGSpec is a project method carried by the agent. You describe the goal, constraints and taste in ordinary language. The agent maps what exists, brings evidence and design references, implements bounded changes, runs checks, and records decisions and gaps. Machine checks enforce what they can; human judgment remains with you.
 
-Where traditional agile assumes human engineering squads and ad-hoc vibe-coding assumes single-prompt magic, **CGSpec establishes the engineering invariants, architectural spines, and phased design funnels that transform autonomous AI agents into disciplined, high-craft software engineering partners.**
+The canonical [method specification](docs/METHOD-v2.md) defines the contract, layout, design path, review rules, adoption flow and limits. The [short agent contract](engine/CONTRACT.md) is installed into each project. Skills under `skills/` load only for the work at hand. The engine under `engine/` is copied once into each project under `docs/_cgspec/01-engine/`.
 
----
+## Development status
 
-## The Core Philosophy: Invariants Over Vibes
+This `method-v2` branch is a candidate, not a published v2 release. The version marker is `2.0.0` for compatibility testing; the plugin release tag and its CI trust bootstrap are pending. The installer, doctor, ledger, hooks, source ingestion and v1 upgrade path are under test. Browser journeys, visual audit, prototype bundling and change impact checks still need implementation and review. A passing source check does not establish runtime behavior, design quality, or deployment readiness.
 
-AI models do not fail because they lack intelligence; they fail because they lack **bounded context, deterministic constraints, and sequential discipline**. Left to unstructured prompting, AI coding produces:
-- Premature backend implementation before human user experience is understood.
-- Visual convergence toward generic, soulless "AI slop" (purple gradients, bouncy cards, zero edge-case handling).
-- Disconnected database schemas that drift from real-world user workflows.
-- Hallucinated consensus and silent architectural debt.
+The current package has nine workflows: init, adopt, forge, ui-ux, council, slice, migrate, operate and team-review. `cgspec-pivot` is a compatibility alias. The eight role definitions support bounded team work; routine changes use only the workers that add value.
 
-CGSpec solves this through a non-linear, dual-spine architecture governed by strict engineering laws:
+## Try it in a disposable project
 
-```
-  Human Director / Architect
-              │
-              ▼
-   Stage 1: Intent & Brainstorming (docs/spines/01-INTENT.md, docs/spines/02-OOUX.md)
-              │
-              ▼
-   Stage 2: Design & Experience Discovery (docs/spines/03-EXPERIENCE.md, docs/prototypes/)
-              │
-              ▼
-   Stage 3: Physical Architecture & System Contracts (docs/spines/04-ARCHITECTURE.md, docs/adr/)
-              │
-              ▼
-   Stage 4: Milestone Slices & Delivery Roadmap (docs/spines/05-DELIVERY.md, docs/slices/)
-              │
-              ▼
-   Stage 5: Modular Coding & Implementation (src/domain, src/adapters)
-              │
-              ▼
-   Stage 6: Testing & Verification Gates (tests/, python3 docs/_cgspec/01-script/doctor.py)
-              │
-              ▼
-   Stage 7: CI/CD & Automated Delivery (.github/workflows/, containerization)
-              │
-              ▼
-   Stage 8: Follow-up, Rollout & Backlog Evolution (docs/_memlog.md, docs/00-INBOX.md)
+```bash
+mkdir -p /tmp/cgspec-example
+python3 engine/install.py install --root /tmp/cgspec-example --profile web-workspace --topology single --tools git
+python3 engine/doctor.py --root /tmp/cgspec-example
+python3 engine/install.py verify --root /tmp/cgspec-example
 ```
 
----
+`install.py upgrade --from-v1 --root <project>` produces a staged report before publication. It stops with a partial result where legacy material, links or decisions need review. Do not use `--apply` on a live project until the report, rollback and project ownership are settled.
 
-## Key Pillars of CGSpec
+For this plugin repository:
 
-### 1. Human Experience Precedes Architecture & Backend (Law 3)
-Software begins with human intent, mental models, and daily ergonomics. Technical implementation ("how": SQL tables, foreign keys, programming languages, ORMs, and servers) is strictly forbidden until the Day-in-the-Life walkthrough, spatial zoning, and interactive prototype are validated and approved.
-
-### 2. The 5-Stage Phased Design Locking Funnel (Law 10)
-High-craft user experience cannot be generated in a single prompt. Every screen advances through 5 locked, versioned stages:
-1. **Macro Spatial Zoning & Zero-Color Wireframe:** Low-fidelity partitioning across screen zones (Vertical Scroll Storyboard for Simple Websites, Thumb-Zone Stack for iOS/Android Mobile Apps, or Multi-Pane Viewport for Web Apps) with clean declarative diagram subgraphs (Mermaid `flowchart TB`, D2, PlantUML) in an Artifact. The human must see and approve where things live on screen before discussing micro-interactions. Zero colors, zero themes yet.
-2. **Tactile Ergonomics & Direct Manipulation:** Defining how hands navigate between zones and how editing/gestures operate inside the primary workspace (e.g. inline editing, bottom sheet detents, keyboard shortcuts).
-3. **Design Tokens & Aesthetic Direction:** Establishing typography hierarchy, atmospheric canvas texture, and a surgical signature brand anchor.
-4. **Proportional Component State Matrix:** Engineering for the full operational lifecycle (4 narrative/viewport states for Simple Websites, 7 mobile/touch states including `Keyboard Up` for iOS/Android, or 7 operational states for Web Workspaces).
-5. **Interactive Milestone Baseline Prototype:** Single-file, zero-build executable HTML (`.cgspec/prototypes/prototype-v0.1.html`) with live state switching.
-
-### 3. Hierarchical Peer Debate Council (`cgspec-council`)
-To prevent single-model sycophancy and blind spots, cross-cutting architectural and security choices are pressure-tested by a 3-agent peer council:
-- **Systems & Modularity Lens:** Enforcing clean boundaries, Ports & Adapters, and loose coupling.
-- **Adversarial Security & Edge Cases Lens:** Stress-testing race conditions, permission bypasses, memory limits, and fail-safe defaults.
-- **Pragmatic DX & Ship Speed Lens:** Fiercely eliminating speculative over-engineering and onboarding friction.
-The Council Supervisor coordinates the debate in an isolated side pane, keeping the human's primary chat 100% clean and free of debater spam.
-
-### 4. Atomic Architecture Decision Records (Law 7)
-Every significant technical choice must produce a formal ADR under `docs/adr/ADR-NNN-<slug>.md` and be registered in `docs/00-INDEX.md`. An agent is strictly forbidden from advancing a phase with "memlog-only" shortcuts.
-
-### 5. Automated Spec Integrity Hook (`cgspec doctor`)
-Specification drift is eliminated deterministically. The built-in doctor utility (`python3 .cgspec/scripts/doctor.py`) validates that all 6 spines exist, memory log entries maintain strict hash continuity (`M-001` .. `M-NNN`), all accepted ADRs are registered, and zero orphan concepts exist before any milestone is closed.
-
-### 6. Disk-First Immediate Capture (Law 11)
-Chat context is ephemeral and lost across compacting or session boundaries; disk is permanent truth. Whenever an idea, spark, decision, consensus, or user preference emerges during a turn, the agent must commit it to disk (`docs/00-INBOX.md`, `docs/.memlog.md`, or the active spine) in the exact same turn before concluding its execution. The human architect must never bear the burden of asking "did you write that down?".
-
----
-
-## Universal Modularity: 3 Macro Milestone Tiers, 4 Surface Profiles & Any-Stage Entry Gate
-
-CGSpec is designed to be fully modular and adaptable to **any project size, target platform (Simple Website, Mobile iOS/Android, Web App, CLI), and lifecycle entry point**:
-
-```
-+----------------------------------------------------------------------------------------------------------------+
-| TIER 1: BRAINSTORMED & LOCKED v0.1 INTENT (docs/01-INTENT.md, docs/02-OOUX.md)                                 |
-| - Active Thinking & Brainstorming: Is it interesting? Problem statement, mission, glossary, anti-goals.       |
-| - Day-in-the-Life Walkthrough: Realistic end-to-end human scenario from trigger to resolution.                 |
-| - Domain Mental Model: Sophia Prater OOUX nouns, object relationships, and explicit granular permissions.      |
-+----------------------------------------------------------------------------------------------------------------+
-| TIER 2: VALIDATED v0.1 DESIGN & EXPERIENCE (docs/03-EXPERIENCE.md, .cgspec/prototypes/)                   |
-| - Adaptive Surface Profile: Simple Website (Scroll Storyboard), Mobile iOS/Android (Thumb-Zone Stack),         |
-|   Web/Desktop Workspace (Multi-Pane), or CLI/TUI (Command Grammar).                                            |
-| - Zero-Color Macro Layout Wireframe (Mermaid / D2 / PlantUML subgraphs) -> Tactile Ergonomics & Tokens.        |
-| - Proportional State Matrix -> Interactive Executable Prototype (.cgspec/prototypes/prototype-v0.1.html). |
-+----------------------------------------------------------------------------------------------------------------+
-| TIER 3: ENGINEERED v0.1 FOUNDATION & DELIVERY (docs/04-ARCHITECTURE.md, docs/05-DELIVERY.md, docs/adr/)       |
-| - Physical Architecture: Hexagonal Ports & Adapters, physical DDL schemas, foreign keys, contracts, ADRs       |
-|   (or lightweight static content/asset spec for Simple Websites).                                              |
-| - Code Conventions & Preferences: Explicit human code preferences, selected libraries, formatting rules.       |
-| - Delivery Slices: Bounded vertical slices (SLICE-001..N), definition of done, AST ingestion gates.           |
-| - Code Management & CI/CD: Git templates (issues/PRs), pre-commit doctor hook, automated testing, docker.      |
-| - Follow-up & Backlog Evolution: Ship v0.1 -> roll over to Future Backlog (v0.2+) in docs/00-INBOX.md.          |
-+----------------------------------------------------------------------------------------------------------------+
+```bash
+python3 -m unittest discover -s tests -t .
+claude plugin validate . --strict
 ```
 
-### The 4 Any-Stage Entry Modes:
-1. **Mode A — Greenfield Creation (Simple Website, Mobile iOS/Android, or Web SaaS):** Traverse Tier 1 (Brainstorming) -> Tier 2 (Surface-Adapted UI/UX) -> Tier 3 (Architecture, CI/CD, Delivery).
-2. **Mode B — Headless / Backend / CLI (No GUI):** Execute Tier 1 (Intent & Nouns) -> skip GUI to define TUI/CLI command syntax & ergonomics -> execute Tier 3 (Architecture, Code, CI/CD).
-3. **Mode C — Brownfield Legacy Adoption (Existing Codebase):** Run `python3 .cgspec/scripts/ingest.py` (deterministic AST route & model parser) to generate `.cgspec/brownfield-manifest.json` -> reverse-derive `docs/02-OOUX.md` -> activate `doctor.py` integrity gate -> build bounded vertical slices (`cgspec-slice`) with zero disruption to legacy code.
-4. **Mode D — Mid-Flight Course Correction (Pivot / Migration):** Trigger `cgspec-pivot` to evaluate impact across Tier 1 (Adapter Swap), Tier 2 (Additive Scope Expansion), or Tier 3 (Total Soul Extraction).
+First installation of governance on a GitHub repository needs an owner-reviewed baseline before the CGSpec check can be required. The exact trust sequence and the limits of local hooks are in [section 8](docs/METHOD-v2.md#8-enforcement-engine). No local script proves a message came from the user when the agent controls the same shell.
 
----
-
-## Repository Structure (Model 1 Spines + Visible First-Class Records + Underscore Engine)
-
-All specifications, architectural decisions, slice contracts, and internal tooling are organized cleanly:
-
-```
-.
-├── AGENTS.md                  # Universal Autopilot Constitution (Applies across all AI agents)
-├── CLAUDE.md                  # DRY 1-line pointer to AGENTS.md
-├── CHANGELOG.md               # Versioned methodology evolutions
-├── skills/                    # Distributable Portable Skills (Package Plugin)
-│   ├── cgspec-init/           # Setup, docs/_cgspec engine vault, and brownfield ingestion
-│   ├── cgspec-forge/          # Stage 1 active thinking, intent & ORCA object map compiler
-│   ├── cgspec-ui-ux/          # Stage 2 dual-spine UI & UX compiler (Simple Site, iOS/Android, Web, CLI)
-│   ├── cgspec-council/        # Supervised 3-agent hierarchical debate council
-│   ├── cgspec-slice/          # Bounded vertical slice builder (Ports & Adapters)
-│   └── cgspec-pivot/          # 3-tier course-correction and migration engine
-└── docs/                      # The Specification Hub
-    ├── 00-INDEX.md            # Live project state, ADR registry, and slice roadmap
-    ├── 00-INBOX.md            # Spark parking lot for out-of-scope ideas (v0.2+)
-    ├── README.md              # Documentation navigation hub
-    ├── _memlog.md             # Append-only chronological decision ledger
-    ├── spines/                # The 5 Living Core Spines (Law 3 Pure)
-    │   ├── 01-INTENT.md       # Problem definition, intent, scope, and day-in-the-life
-    │   ├── 02-OOUX.md         # Sophia Prater domain mental model, nouns, and 6 permissions
-    │   ├── 03-EXPERIENCE.md   # Adaptive zoning, design tokens, state matrix
-    │   ├── 04-ARCHITECTURE.md # Ports & adapters, system topologies, physical DDL schemas
-    │   └── 05-DELIVERY.md     # Bounded vertical slices, verification gates, AST ingestion
-    ├── adr/                   # Permanent Architecture Decision Records (ADR-001..NNN)
-    ├── slices/                # Bounded Vertical Slice Delivery Contracts (SLICE-001..NNN)
-    ├── prototypes/            # Zero-build interactive HTML wireframes (SCR-01..SCR-NNN)
-    └── _cgspec/               # Visible centralized CGSpec engine (Indexed by ripgrep)
-        ├── 01-script/         # doctor.py, visual_audit.py, ingest.py, memlog.py
-        ├── 02-research/       # RES-NNN-... technical spikes & benchmarks
-        ├── 03-council/        # COUNCIL-NNN-... debate logs & transcripts
-        └── _archive/          # Superseded spines, retired v1 docs, old drafts
-```
-
----
-
-## Universal Multi-Agent Compatibility
-
-CGSpec is 100% vendor-agnostic. It works identically across:
-- **Anthropic Claude Code**
-- **OpenAI Codex & ChatGPT**
-- **Cursor & Windsurf**
-- **Google Antigravity & Gemini CLI**
-- **Hermes / Open-Source Local Agents**
-
-Zero proprietary lock-in. All instructions, constraints, and skills live directly inside your Git repository as clean, portable Markdown and Python scripts.
+CortexGate is optional and independent of CGSpec; using this method does not require that service.

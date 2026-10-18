@@ -7,12 +7,12 @@ from __future__ import annotations
 
 GUI_PROFILES = {"website", "web-workspace", "mobile", "small"}
 
-SPINES = ["01-INTENT", "02-DOMAIN", "03-EXPERIENCE", "04-ARCHITECTURE", "05-DELIVERY"]
+SPINES = ["01-INTENT", "02-OOUX", "03-EXPERIENCE", "04-ARCHITECTURE", "05-DELIVERY"]
 
 # Spine needed once any part of the product has reached this stage (spec 4).
 SPINE_REQUIRED_FROM = {
     "01-INTENT": "design",
-    "02-DOMAIN": "design",
+    "02-OOUX": "design",
     "03-EXPERIENCE": "architecture",
     "04-ARCHITECTURE": "milestones",
     "05-DELIVERY": "coding",
@@ -107,7 +107,7 @@ SKIP_WALK = {".git", "node_modules", ".cgspec-scratch", ".venv", "venv", "__pyca
 # The description line each spine template carries; a spine holding only this is empty.
 SPINE_TEMPLATE_TEXT = {
     "01-INTENT": "Why this exists, for whom, goal type, anti-goals, v0.1 scope.",
-    "02-DOMAIN": "OOUX nouns with attributes, relations, hierarchy and permissions.",
+    "02-OOUX": "OOUX nouns with attributes, relations, hierarchy and permissions.",
     "03-EXPERIENCE": "Tasks, screens, flows, design layer status per screen (or API/CLI behavior when headless).",
     "04-ARCHITECTURE": "System context, containers, components, data model, contracts, budgets, threat model; links to ADRs.",
     "05-DELIVERY": "Slices in order, CI/CD, releases, runbooks, observation.",

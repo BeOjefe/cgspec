@@ -119,7 +119,7 @@ class DoctorTests(unittest.TestCase):
 
     def test_links_to_urls_and_anchors_are_fine(self):
         spine = self.root / "docs/spines/01-INTENT.md"
-        spine.write_text("# Intent\n\n[a](https://example.com) [b](#top) [c](02-DOMAIN.md#nouns) `[x](nope.md)`\n")
+        spine.write_text("# Intent\n\n[a](https://example.com) [b](#top) [c](02-OOUX.md#nouns) `[x](nope.md)`\n")
         self.assertPasses()
 
     def test_edited_frozen_snapshot_fails(self):
@@ -303,7 +303,7 @@ class DoctorHardeningTests(DoctorTests):
         spines = self.root / "docs/spines"
         (spines / "my file.md").write_text("x\n")
         (spines / "f(1).md").write_text("x\n")
-        ok = "[a](<my file.md>) [b](my%20file.md) [c](f(1).md) [d][ref]\n\n[ref]: 02-DOMAIN.md\n"
+        ok = "[a](<my file.md>) [b](my%20file.md) [c](f(1).md) [d][ref]\n\n[ref]: 02-OOUX.md\n"
         (spines / "01-INTENT.md").write_text("# Intent\n\n" + ok)
         result = doctor(self.root)
         self.assertNotIn("E-LINK", result.stdout)
@@ -357,7 +357,7 @@ class DoctorRecheckTests(unittest.TestCase):
         text = ("# Intent\n\nMEOCE helps retail investors in Casablanca read BRVM and BVC market data quickly, "
                 "with plain explanations and alerts they can trust.\n")
         (self.root / "docs/spines/01-INTENT.md").write_text(text)
-        (self.root / "docs/spines/02-DOMAIN.md").write_text(
+        (self.root / "docs/spines/02-OOUX.md").write_text(
             "# Domain\n\nNouns: Instrument (ticker, market, sector), Quote (price, time), Watchlist (owner, "
             "instruments), Alert (rule, channel). A Watchlist belongs to one User.\n")
         self.no_errors()
