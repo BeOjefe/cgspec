@@ -7,8 +7,8 @@ description: Stage 4–7 Atomic Vertical Slice Builder. Use when generating boun
 
 ## 1. Contract (Inputs -> Outputs)
 - **Stage:** `4–7. Milestones, Coding, Testing & CI/CD` (Inherits all global laws from [`AGENTS.md`](../../AGENTS.md)).
-- **Requires:** Approved `01-INTENT.md`, `02-OOUX.md`, `03-EXPERIENCE.md` (with verified prototype), `04-ARCHITECTURE.md`, and `docs/.cgspec/04-adr/*.md`.
-- **Produces:** Bounded slice contract (`docs/.cgspec/06-slice/SLICE-NNN-<slug>.md`), modular production code + tests, and updated `docs/05-DELIVERY.md` + `docs/00-INDEX.md`.
+- **Requires:** Approved `docs/spines/01-INTENT.md`, `02-OOUX.md`, `03-EXPERIENCE.md` (with verified prototype), `04-ARCHITECTURE.md`, and `docs/adr/*.md`.
+- **Produces:** Bounded slice contract (`docs/slices/SLICE-NNN-<slug>.md`), modular production code + tests, and updated `docs/spines/05-DELIVERY.md` + `docs/00-INDEX.md`.
 
 ---
 
@@ -20,7 +20,7 @@ description: Stage 4–7 Atomic Vertical Slice Builder. Use when generating boun
 ---
 
 ## 3. Workflow (5-Tier Insulated Swarm)
-1. **Draft Slice Contract (`docs/.cgspec/06-slice/SLICE-NNN-<slug>.md`):**
+1. **Draft Slice Contract (`docs/slices/SLICE-NNN-<slug>.md`):**
    - Define target OOUX nouns, actor permissions, exact files in scope, Port/Adapter interfaces, and test/UI state acceptance criteria.
 2. **Dispatch Tier 1 Swarm Supervisor (`cgspec-inspector`):**
    - Main Agent spawns **ONLY ONE** child subagent: [`cgspec-inspector`](../../agents/cgspec-inspector.md) (never spawning multiple builders directly in root chat, and never spawning `type="research"` for builders/adversaries).
@@ -29,9 +29,9 @@ description: Stage 4–7 Atomic Vertical Slice Builder. Use when generating boun
    - **Inner Loop (Tier 3):** Each `Builder_i` is audited by a dedicated, cold-facts-only [`cgspec-unit-adversary`](../../agents/cgspec-unit-adversary.md) (coordinating laterally with peer Unit Adversaries via `send_message`) **while `unit_verdict_i != PASS`**.
    - **Outer Loop (Tier 4):** Once all $K$ Unit Adversaries return `PASS`, [`cgspec-chief-adversary`](../../agents/cgspec-chief-adversary.md) audits the integrated slice across all spines **while `global_verdict != PASS`**.
 4. **Tier 5 Human Validation & Deep Root-Cause Interview (`If User Says No`):**
-   - If the user rejects any part of the slice, the Main Agent conducts a deep coaching interview to uncover the root cause, updates `docs/.memlog.md` and affected spines (`01..05`), confirms with the user, and only then re-invokes `cgspec-inspector`.
+   - If the user rejects any part of the slice, the Main Agent conducts a deep coaching interview to uncover the root cause, updates `docs/_memlog.md` and affected spines (`01..05`), confirms with the user, and only then re-invokes `cgspec-inspector`.
 
 ---
 
 ## 4. Exit Gate
-Confirm all $K$ Unit Adversaries + `cgspec-chief-adversary` returned `GLOBAL_VERDICT: PASS (0 defects)`, log `SLICE-NNN` completion to `docs/.memlog.md`, update `00-INDEX.md` and `05-DELIVERY.md`, and run `python3 docs/.cgspec/01-script/doctor.py --repo . --strict-emojis`.
+Confirm all $K$ Unit Adversaries + `cgspec-chief-adversary` returned `GLOBAL_VERDICT: PASS (0 defects)`, log `SLICE-NNN` completion to `docs/_memlog.md`, update `00-INDEX.md` and `docs/spines/05-DELIVERY.md`, and run `python3 docs/_cgspec/01-script/doctor.py --repo . --strict-emojis`.

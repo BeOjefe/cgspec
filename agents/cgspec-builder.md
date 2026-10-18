@@ -46,10 +46,10 @@ You are **strictly forbidden** from reporting completion to `cgspec-inspector` u
     ```
   - If `visual_audit.py` exits non-zero (e.g., Unicode emojis, non-icon-only panel toggles, split-brain dual breadcrumbs, raw `#` markdown in headings, missing states, or sibling version clobbering), fix your HTML immediately and re-run until `EXIT 0`.
 - **Gate A2 — Visual Self-Inspection via `view_file`:**
-  - Call `view_file` on **every generated PNG screenshot** (`1440x900`, `1180x800`, `375x812`, plus interactive state captures) and inspect them with your own eyes against `.cgspec/references/quality-rubric.md`.
+  - Call `view_file` on **every generated PNG screenshot** (`1440x900`, `1180x800`, `375x812`, plus interactive state captures) and inspect them with your own eyes against `skills/cgspec-ui-ux/references/quality-rubric.md`.
   - Verify zero clipped text, zero overlapping controls, stationary panel toggles, and clean visual hierarchy.
 - **Gate A3 — Canonical Spine Verification (`01-INTENT.md` & `02-OOUX.md`):**
-  - Re-read `docs/01-INTENT.md`, `docs/02-OOUX.md`, and `docs/03-EXPERIENCE.md`. Confirm every `v0.1` OOUX object attribute, state badge, and CTA assigned to your screen is visibly rendered and interactive.
+  - Re-read `docs/spines/01-INTENT.md`, `docs/spines/02-OOUX.md`, and `docs/spines/03-EXPERIENCE.md`. Confirm every `v0.1` OOUX object attribute, state badge, and CTA assigned to your screen is visibly rendered and interactive.
 
 ## 3. Factual Output Contract to `cgspec-inspector`
 Reply in `< 25 lines` containing ONLY:

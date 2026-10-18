@@ -1,14 +1,14 @@
 # Playbook 05: Implementation Review & Fidelity Audit
 
 ## Purpose
-Guide the human architect and AI agent through the final verification stage of the Experience Cycle: auditing the implemented production frontend against the approved prototype (`docs/.cgspec/05-prototype/prototype-v0.1.html`) and the specification in `docs/03-EXPERIENCE.md`.
+Guide the human architect and AI agent through the final verification stage of the Experience Cycle: auditing the implemented production frontend against the approved prototype (`docs/prototypes/prototype-v0.1.html`) and the specification in `docs/spines/03-EXPERIENCE.md`.
 
 ---
 
 ## Operating Invariants
 
 1. **Verify Against the Spec, Not Memory:**
-   - Always compare the live production code or UI build directly against the approved prototype and `docs/03-EXPERIENCE.md`.
+   - Always compare the live production code or UI build directly against the approved prototype and `docs/spines/03-EXPERIENCE.md`.
 2. **Audit Beyond the Happy Path:**
    - Production bugs frequently lurk in non-happy states: missing loading skeletons, unhandled network disconnects, awkward word-wrapping on long names.
    - Test all 7 operational states in the live implementation.

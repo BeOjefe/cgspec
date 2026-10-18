@@ -38,6 +38,6 @@ Guide the human architect and AI agent through Phase 3 and Phase 4 of the Experi
 ---
 
 ## Deliverables & Disk Updates
-- Record tokens and styling rules in `docs/03-EXPERIENCE.md` under `## 2. Design Tokens & Visual Direction`.
+- Record tokens and styling rules in `docs/spines/03-EXPERIENCE.md` under `## 2. Design Tokens & Visual Direction`.
 - If testing two aesthetic directions, render comparative HTML cards in an Artifact with identical layout and dummy data.
 - Append agreed visual choices to `.memlog.md`.

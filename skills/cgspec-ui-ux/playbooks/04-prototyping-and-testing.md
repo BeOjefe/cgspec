@@ -1,17 +1,17 @@
 # Playbook 04: Model States & Build Evaluated Milestone Prototype
 
 ## Purpose
-Guide Phase 5 of the Experience Cycle: modeling the required lifecycle states for the active **Surface Profile** (`Profile A..D` in [`SKILL.md`](../SKILL.md)), building the zero-build single-file HTML prototype (`docs/.cgspec/05-prototype/prototype-v0.1.html`), and verifying it via `visual_audit.py` + headless browser screenshots.
+Guide Phase 5 of the Experience Cycle: modeling the required lifecycle states for the active **Surface Profile** (`Profile A..D` in [`SKILL.md`](../SKILL.md)), building the zero-build single-file HTML prototype (`docs/prototypes/prototype-v0.1.html`), and verifying it via `visual_audit.py` + headless browser screenshots.
 
 ---
 
 ## Step-by-Step Procedure
 
-### Step 4.1: Draft the Proportional State Matrix (`docs/03-EXPERIENCE.md`)
+### Step 4.1: Draft the Proportional State Matrix (`docs/spines/03-EXPERIENCE.md`)
 Model the required states from [`SKILL.md` Section 2.1](../SKILL.md) at both screen and component level (never force database auth/offline states onto a static Profile A website).
 
 ### Step 4.2: Build `prototype-v0.1.html` (Dual-Target Save)
-Write a self-contained single-file HTML prototype (Tailwind CSS + geometric SVG icons, zero build step) to both `<appDataDir>/brain/<conversation-id>/prototype-v0.1.html` (`UserFacing: true`) and `docs/.cgspec/05-prototype/prototype-v0.1.html`, including a compact top-right state switcher matching the active Surface Profile:
+Write a self-contained single-file HTML prototype (Tailwind CSS + geometric SVG icons, zero build step) to both `<appDataDir>/brain/<conversation-id>/prototype-v0.1.html` (`UserFacing: true`) and `docs/prototypes/prototype-v0.1.html`, including a compact top-right state switcher matching the active Surface Profile:
 
 #### Profile A (Simple / Narrative Website — 4 States):
 ```html
@@ -49,6 +49,6 @@ Write a self-contained single-file HTML prototype (Tailwind CSS + geometric SVG 
 ```
 
 ### Step 4.3: Run Closed-Loop Visual Audit & Lock Baseline
-1. Run `python3 docs/.cgspec/01-script/visual_audit.py docs/.cgspec/05-prototype/prototype-v0.1.html --screenshot-dir /tmp/cgspec-shots`.
+1. Run `python3 docs/_cgspec/01-script/visual_audit.py docs/prototypes/prototype-v0.1.html --screenshot-dir /tmp/cgspec-shots`.
 2. Inspect captured desktop (`1440x900`) and compact (`375x812`) screenshots via `view_file` against [`references/quality-rubric.md`](../references/quality-rubric.md).
-3. Update `docs/03-EXPERIENCE.md` and `docs/.memlog.md` once the user approves the prototype.
+3. Update `docs/spines/03-EXPERIENCE.md` and `docs/.memlog.md` once the user approves the prototype.

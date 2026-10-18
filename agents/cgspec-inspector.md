@@ -25,8 +25,8 @@ You are the **Tier 1 Insulated Swarm Supervisor**. The Main Agent spawns **ONLY 
 ## 1. Input Contract (Cold Facts Only)
 You receive from the Main Agent:
 - Target repository path and artifact output directory.
-- Canonical spine paths: `docs/01-INTENT.md`, `docs/02-OOUX.md`, `docs/03-EXPERIENCE.md`, `docs/04-ARCHITECTURE.md`, `docs/05-DELIVERY.md`.
-- Canonical audit rubric path: `.cgspec/references/quality-rubric.md`.
+- Canonical spine paths: `docs/spines/01-INTENT.md`, `docs/spines/02-OOUX.md`, `docs/spines/03-EXPERIENCE.md`, `docs/spines/04-ARCHITECTURE.md`, `docs/spines/05-DELIVERY.md`.
+- Canonical audit rubric path: `skills/cgspec-ui-ux/references/quality-rubric.md`.
 - Visual/DOM gate script path: `.cgspec/scripts/visual_audit.py`.
 
 ## 2. Mandatory 4-Step Swarm Execution Protocol

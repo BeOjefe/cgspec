@@ -1,0 +1,64 @@
+# Project Memory Log (.memlog.md)
+> Append-only chronological log. Canonical spines (`00-INDEX.md` .. `05-DELIVERY.md`) are derived from this log.
+
+### [M-001] 2026-10-17T08:20:36Z | tags: lock,init | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Initialized CGSpec framework vault
+
+### [M-002] 2026-10-17T08:20:42Z | tags: lock,adr | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** ADR-001: Autonomous Autopilot Governance Model
+
+### [M-003] 2026-10-17T08:20:42Z | tags: lock,adr | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** ADR-002: Sophia Prater OOUX Information Architecture
+
+### [M-004] 2026-10-17T08:20:42Z | tags: lock,adr | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** ADR-003: Ports and Adapters Modular Architecture
+
+### [M-005] 2026-10-17T08:20:42Z | tags: lock,adr | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** ADR-004: Anti-Slop Visual Design System Tokens
+
+### [M-006] 2026-10-17T08:20:42Z | tags: lock,adr | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** ADR-005: Dual-Track Greenfield and Brownfield Ingestion Engine
+
+### [M-007] 2026-10-17T12:02:00Z | tags: lock,ux,architecture | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Refounded cgspec-ux with 5 playbooks, 5 templates, and codified Design Stash Protocol for mid-work scope pivots
+
+### [M-008] 2026-10-17T13:32:00Z | tags: lock,ux,architecture,centralization | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Expanded cgspec-ui-ux across 4 Surface Profiles (Simple Website, Mobile iOS/Android, Web Workspace, CLI/TUI) and centralized all scripts, prototypes, and council logs inside .cgspec/ for zero root workspace pollution
+
+### [M-009] 2026-10-17T14:58:00Z | tags: lock,ux,qa,architecture | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Added Closed-Loop Visual Self-Critique (visual_audit.py, gstack/BMAD pattern), 6 Structural UI Coherence Laws, Phase Fidelity Ceiling (1 screen at a time), and 3-Bucket Triage Gate to prevent Stage 2 drift while preserving 100% of user input on disk
+
+### [M-010] 2026-10-17T15:29:21Z | tags: lock,arch,ux | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Enforced 3-Tier DRY Progressive Disclosure, unified 4-section Skill Schema across all 6 skills, eradicated duplicate cgspec-ux tree, and added Law 7 (Zero Schema Identifier Leakage) & Law 8 (Capability-Driven UI Hiding) to visual_audit.py and quality-rubric.md
+- **Details:** Reduced total instruction lines across AGENTS.md + skills from 1,436 lines to 766 lines (-47%) by eliminating global rule repetition inside SKILL.md files and centralizing the 8 Structural UI Coherence Laws in references/quality-rubric.md.
+
+### [M-011] 2026-10-17T16:06:05Z | tags: anthropic-skill-standard,visual-audit-v2,cron-monitor,dry | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Aligned all 6 SKILL.md frontmatters to Anthropic Use-When trigger standard, upgraded visual_audit.py with HTML Unicode emoji ban, stationary icon panel toggle check, and split-brain dual breadcrumb detector, and scheduled active 5-minute monitoring cron.
+
+### [M-012] 2026-10-17T16:37:15Z | tags: adversarial-critic-loop,phase-a-b-gate,visual-audit,ux | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Codified the 2-Phase Verification Gate: Phase A (Builder exhaustive self-verification via visual_audit.py + multi-viewport/state screenshots) followed by Phase B (Facts-Only Independent Adversarial Critic subagent while(verdict != PASS) loop before showing work to user).
+
+### [M-013] 2026-10-18T00:35:00Z | tags: research-registry,bucket-d,ui-benchmarks,doctor-hook | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Formalized the Technical Spikes & Research Registry (`docs/research/RES-NNN-<slug>.md`), expanded Law 11 to 4-Bucket Triage (adding Bucket D to prevent loss of technical investigations and benchmarks), added RES-001 (UI Frameworks & Design Systems Benchmark mapped to Stage 2 Surface Profiles), and wired research registration into doctor.py.
+
+### [M-014] 2026-10-18T01:55:00Z | tags: anti-slop,constrained-ui,puck,hallmark,deterministic-gates | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Codified RES-002 (Anti-AI-Slop Architecture, Constrained Generative UI & Deterministic Quality Gates) based on Puck and Together AI Hallmark research, upgraded visual_audit.py with deterministic anti-slop checks (Check 15: AI purple/indigo gradient clichés, Check 16: disembodied dark shadows without 1px hairlines, Check 17: multi-state skeleton/empty architecture, Check 18: tabular numerals on technical metrics), and re-tuned live testbed monitor cron to 20 minutes with a 3-consecutive-idle auto-stop threshold.
+
+### [M-015] 2026-10-18T07:25:00Z | tags: research-citations,mermaid,res-003,tier-0-proactive,design-inversion | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Added primary citations to RES-001, converted RES-002 architecture diagram to standard flowchart TD Mermaid, authored RES-003 (Frontier Agentic Design Skills benchmark: Impeccable, Hallmark, TasteSkill, UI/UX Pro Max, Puck), and codified Tier 0 Proactive Reference Scouting & Multi-Archetype Proposals into cgspec-ui-ux and Law 10.
+- **Details:** Addressed the Inversion of Design Burden: human acts as executive curator rather than UI draftsman or bug-hunter; AI autonomously scouts real-world exemplars, extracts design DNA, presents 2-3 concrete archetypes with trade-offs before wireframing, and adheres to monotonic versioning $v(N+1) = \max + 1$.
+
+### [M-016] 2026-10-18T07:45:00Z | tags: vibe-coded-tells,anti-slop,designcode,visual-audit-v3,res-004 | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Authored RES-004 (Empirical Vibe-Coded Tells, unslop-ui/code/text, and DesignCode High-Craft Ergonomics), and upgraded visual_audit.py with Checks 19-22.
+- **Details:** Synthesized the 3.2M-post Arctic Shift Reddit dataset from JCarterJohnson/vibecoded-design-tells and Meng To's DesignCode ecosystem (aura.build, taste-skill, getdesign.md, impeccable.style). Upgraded visual_audit.py with Check 19 (gradient-filled heading text), Check 20 (unprompted neon glow shadows), Check 21 (stock shadcn card signatures), and Check 22 (the 2026 cream-serif-sage tasteful default trap). Registered RES-004 in 00-INDEX.md with 0 doctor errors.
+
+### [M-017] 2026-10-18T09:50:00Z | tags: v02-label,templates,monorepo,monorepo-big,polyrepo,federated-docs | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Corrected version label to Reformed CGSpec v0.2 across 00-INDEX.md and doctor.py, and generated 3 production-ready project templates (monorepo, monorepo_big, polyrepo).
+- **Details:** User flagged that claiming v2 was premature during active pre-1.0 development; adjusted all documentation and doctor.py detection to Reformed CGSpec v0.2 (Law 3 Pure) and Legacy v0.1. Created cgspec_template/ containing 3 starter archetypes: monorepo/ (single-file spines), monorepo_big/ (sprouted directory spines with cell division), and polyrepo/ (federated docs mesh with Consumer-Driven Contracts and two-tier ADRs). All 3 template archetypes verified with doctor.py (0 errors).
+
+
+
+### [M-018] 2026-10-18T11:29:34Z | tags: topology,refactor,model-1,spines,adr,slices,visibility | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Reformed CGSpec v0.2 Topology Refactoring: Adopted Model 1 (docs/spines/), Visible ADRs (docs/adr/), Visible Slices (docs/slices/), and Underscore Engine (docs/_cgspec/)
+- **Details:** Eliminated hidden dot-file blindness by converting .cgspec to _cgspec, .archive to _archive, and .memlog.md to _memlog.md (allowing ripgrep, IDEs, and ls to index all engineering decisions). Grouped core spines under docs/spines/ and promoted ADRs and slices to first-class visible directories in docs/. Synchronized doctor.py, memlog.py, ingest.py, all 6 skills, and all 3 template archetypes.
+

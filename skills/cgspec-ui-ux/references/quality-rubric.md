@@ -1,6 +1,6 @@
 # CGSpec Experience Quality Rubric & 8 Structural UI Coherence Laws
 
-This file is the **single canonical source of truth** for visual and structural verification (`docs/.cgspec/01-script/visual_audit.py` + headless browser screenshot inspection via `view_file`).
+This file is the **single canonical source of truth** for visual and structural verification (`docs/_cgspec/01-script/visual_audit.py` + headless browser screenshot inspection via `view_file`).
 
 ---
 
@@ -71,7 +71,7 @@ html, body { height: 100%; min-height: 100vh; margin: 0; overflow: hidden; displ
 ## Part 2: Phase A — Builder Exhaustive Self-Verification (Mandatory First Gate)
 
 Before spawning the Adversarial Critic subagent, the Builder (Main Agent) must do **everything possible** to verify its own work:
-1. **Static & DOM Gate:** Run `python3 docs/.cgspec/01-script/visual_audit.py <file.html> --screenshot-dir <dir>` and `python3 docs/.cgspec/01-script/doctor.py --repo . --strict-emojis` until `0 errors`.
+1. **Static & DOM Gate:** Run `python3 docs/_cgspec/01-script/visual_audit.py <file.html> --screenshot-dir <dir>` and `python3 docs/_cgspec/01-script/doctor.py --repo . --strict-emojis` until `0 errors`.
 2. **Multi-Viewport & Interactive Manipulation:** Capture headless Chrome screenshots across Desktop (`1440x900`), Laptop (`1180x800` — checking that header buttons like `Edit` and panel toggles never clip or overflow when sidebars are open), and Compact (`375x812`), plus every interactive state (`Default Preview`, `Markdown Edit Mode`, `Diff Mode + Toggle Back`, `Folder Overview`, `Full Repo Read-Only Code View`, `Drawer Closed`, and every active screen/role).
 3. **Self-Inspection Against Skills & Good Practices:** View every captured PNG via `view_file` and verify all 8 Structural UI Coherence Laws above.
 
@@ -91,7 +91,7 @@ Factual Inputs:
 - Candidate HTML: <absolute/path/to/wireframe-vN.html>
 - Captured State Screenshots: <absolute/paths/to/screenshots/*.png>
 - Locked Domain Spines: docs/01-INTENT.md, docs/02-OOUX.md, docs/03-EXPERIENCE.md
-- Quality Rubric & Auditor: skills/cgspec-ui-ux/references/quality-rubric.md, docs/.cgspec/01-script/visual_audit.py
+- Quality Rubric & Auditor: skills/cgspec-ui-ux/references/quality-rubric.md, docs/_cgspec/01-script/visual_audit.py
 
 Audit Checklist (Test & View Every State):
 1. Run visual_audit.py and view every screenshot via view_file (and capture additional states/widths such as 1180x800 if needed).

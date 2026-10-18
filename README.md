@@ -20,28 +20,28 @@ CGSpec solves this through a non-linear, dual-spine architecture governed by str
   Human Director / Architect
               │
               ▼
-   Stage 1: Intent & Brainstorming (docs/01-INTENT.md, docs/02-OOUX.md)
+   Stage 1: Intent & Brainstorming (docs/spines/01-INTENT.md, docs/spines/02-OOUX.md)
               │
               ▼
-   Stage 2: Design & Experience Discovery (docs/03-EXPERIENCE.md, docs/design/)
+   Stage 2: Design & Experience Discovery (docs/spines/03-EXPERIENCE.md, docs/prototypes/)
               │
               ▼
-   Stage 3: Physical Architecture & System Contracts (docs/04-ARCHITECTURE.md, docs/adr/)
+   Stage 3: Physical Architecture & System Contracts (docs/spines/04-ARCHITECTURE.md, docs/adr/)
               │
               ▼
-   Stage 4: Milestone Slices & Delivery Roadmap (docs/05-DELIVERY.md, docs/00-INDEX.md)
+   Stage 4: Milestone Slices & Delivery Roadmap (docs/spines/05-DELIVERY.md, docs/slices/)
               │
               ▼
    Stage 5: Modular Coding & Implementation (src/domain, src/adapters)
               │
               ▼
-   Stage 6: Testing & Verification Gates (tests/, python3 .cgspec/scripts/doctor.py)
+   Stage 6: Testing & Verification Gates (tests/, python3 docs/_cgspec/01-script/doctor.py)
               │
               ▼
    Stage 7: CI/CD & Automated Delivery (.github/workflows/, containerization)
               │
               ▼
-   Stage 8: Follow-up, Rollout & Backlog Evolution (docs/.memlog.md, docs/00-INBOX.md)
+   Stage 8: Follow-up, Rollout & Backlog Evolution (docs/_memlog.md, docs/00-INBOX.md)
 ```
 
 ---
@@ -112,9 +112,9 @@ CGSpec is designed to be fully modular and adaptable to **any project size, targ
 
 ---
 
-## Repository Structure (Pure docs/ Spines + Numbered docs/.cgspec Engine)
+## Repository Structure (Model 1 Spines + Visible First-Class Records + Underscore Engine)
 
-All internal CGSpec tooling, research, debate logs, ADRs, prototypes, and slices are organized inside the hidden `docs/.cgspec/` engine directory using strictly singular, numbered subfolders:
+All specifications, architectural decisions, slice contracts, and internal tooling are organized cleanly:
 
 ```
 .
@@ -122,29 +122,31 @@ All internal CGSpec tooling, research, debate logs, ADRs, prototypes, and slices
 ├── CLAUDE.md                  # DRY 1-line pointer to AGENTS.md
 ├── CHANGELOG.md               # Versioned methodology evolutions
 ├── skills/                    # Distributable Portable Skills (Package Plugin)
-│   ├── cgspec-init/           # Setup, docs/.cgspec engine vault, and brownfield ingestion
+│   ├── cgspec-init/           # Setup, docs/_cgspec engine vault, and brownfield ingestion
 │   ├── cgspec-forge/          # Stage 1 active thinking, intent & ORCA object map compiler
 │   ├── cgspec-ui-ux/          # Stage 2 dual-spine UI & UX compiler (Simple Site, iOS/Android, Web, CLI)
 │   ├── cgspec-council/        # Supervised 3-agent hierarchical debate council
 │   ├── cgspec-slice/          # Bounded vertical slice builder (Ports & Adapters)
 │   └── cgspec-pivot/          # 3-tier course-correction and migration engine
-└── docs/                      # The Pure Canonical Spines + docs/.cgspec Engine
+└── docs/                      # The Specification Hub
     ├── 00-INDEX.md            # Live project state, ADR registry, and slice roadmap
     ├── 00-INBOX.md            # Spark parking lot for out-of-scope ideas (v0.2+)
-    ├── 01-INTENT.md           # Problem definition, intent, scope, and day-in-the-life
-    ├── 02-OOUX.md             # Sophia Prater domain mental model, nouns, and 6 permissions
-    ├── 03-EXPERIENCE.md       # Adaptive zoning, design tokens, state matrix, prototype links
-    ├── 04-ARCHITECTURE.md     # Ports & adapters, system topologies, physical DDL schemas
-    ├── 05-DELIVERY.md         # Bounded vertical slices, verification gates, AST ingestion
-    ├── .memlog.md             # Append-only chronological decision ledger
-    └── .cgspec/               # Hidden centralized CGSpec engine (Strictly Singular + .archive)
+    ├── README.md              # Documentation navigation hub
+    ├── _memlog.md             # Append-only chronological decision ledger
+    ├── spines/                # The 5 Living Core Spines (Law 3 Pure)
+    │   ├── 01-INTENT.md       # Problem definition, intent, scope, and day-in-the-life
+    │   ├── 02-OOUX.md         # Sophia Prater domain mental model, nouns, and 6 permissions
+    │   ├── 03-EXPERIENCE.md   # Adaptive zoning, design tokens, state matrix
+    │   ├── 04-ARCHITECTURE.md # Ports & adapters, system topologies, physical DDL schemas
+    │   └── 05-DELIVERY.md     # Bounded vertical slices, verification gates, AST ingestion
+    ├── adr/                   # Permanent Architecture Decision Records (ADR-001..NNN)
+    ├── slices/                # Bounded Vertical Slice Delivery Contracts (SLICE-001..NNN)
+    ├── prototypes/            # Zero-build interactive HTML wireframes (SCR-01..SCR-NNN)
+    └── _cgspec/               # Visible centralized CGSpec engine (Indexed by ripgrep)
         ├── 01-script/         # doctor.py, visual_audit.py, ingest.py, memlog.py
         ├── 02-research/       # RES-NNN-... technical spikes & benchmarks
         ├── 03-council/        # COUNCIL-NNN-... debate logs & transcripts
-        ├── 04-adr/            # ADR-NNN-... accepted decision records
-        ├── 05-prototype/      # wireframe-vN.html, prototype-v0.1.html & stash/
-        ├── 06-slice/          # SLICE-NNN-... vertical implementation contracts
-        └── .archive/          # Superseded spines, retired v1 docs, old drafts
+        └── _archive/          # Superseded spines, retired v1 docs, old drafts
 ```
 
 ---

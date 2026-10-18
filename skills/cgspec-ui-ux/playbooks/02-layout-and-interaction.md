@@ -75,12 +75,12 @@ flowchart TB
 
 ### Step 2.3: Build `wireframe-v1.html` & Run Closed-Loop Visual Self-Critique
 1. **Dual-Target Versioned Save:**
-   - Write to `<appDataDir>/brain/<conversation-id>/wireframe-v1.html` (`ArtifactMetadata: { UserFacing: true }`) for live side-pane rendering, AND copy to `docs/.cgspec/05-prototype/wireframe-v1.html`.
+   - Write to `<appDataDir>/brain/<conversation-id>/wireframe-v1.html` (`ArtifactMetadata: { UserFacing: true }`) for live side-pane rendering, AND copy to `docs/prototypes/wireframe-v1.html`.
    - Scope strictly to **1 focal screen** (`SCR-01`) and keep uninterviewed micro-controls out of Phase 2.
 2. **Closed-Loop Self-Critique Gate (Before Asking User):**
-   - Run `python3 docs/.cgspec/01-script/visual_audit.py docs/.cgspec/05-prototype/wireframe-v1.html --screenshot-dir /tmp/cgspec-shots`.
+   - Run `python3 docs/_cgspec/01-script/visual_audit.py docs/prototypes/wireframe-v1.html --screenshot-dir /tmp/cgspec-shots`.
    - Capture screenshots across `Default`, `Secondary Tab`, and `Diff/Modal/Drawer` states (via `visual_audit.py` or `chrome-devtools-mcp`), inspect them with `view_file`, and fix any violation of the **8 Structural UI Coherence Laws** in [`references/quality-rubric.md`](../references/quality-rubric.md).
 
 ### Step 2.4: Lock the Spatial Hypothesis
 - Present the verified wireframe Artifact and declarative diagram to the user and ask them to choose via `ask_question`.
-- Record the approved layout in `docs/03-EXPERIENCE.md` (updating both top diagrams and bottom tables in sync), `docs/design/decisions/UXD-NNN.md`, and `docs/.memlog.md`.
+- Record the approved layout in `docs/spines/03-EXPERIENCE.md` (updating both top diagrams and bottom tables in sync), `docs/design/decisions/UXD-NNN.md`, and `docs/.memlog.md`.

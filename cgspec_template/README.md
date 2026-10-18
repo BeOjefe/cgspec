@@ -16,9 +16,9 @@ cgspec_template/
 
 | Template Flavor | Best For | Spine Topology | ADR & Slice Isolation |
 | :--- | :--- | :--- | :--- |
-| **[`monorepo/`](./monorepo/)** | Greenfield startups, SaaS MVPs, single-team applications (`< 500` spec lines per spine). | Single-file living spines (`docs/01-INTENT.md` through `docs/05-DELIVERY.md`). | Central `04-adr/` and `06-slice/` inside `docs/.cgspec/`. |
-| **[`monorepo_big/`](./monorepo_big/)** | Enterprise platforms, complex systems (`> 500` spec lines or multi-squad development). | Sprouted directory spines (`docs/01-INTENT/` through `docs/05-DELIVERY/` with `INDEX.md`). | Modular sub-documents per noun, schema, and milestone. |
-| **[`polyrepo/`](./polyrepo/)** | Distributed multi-repo ecosystems (e.g. Next.js web + FastAPI backend + Airflow pipelines in separate Git repos). | Central governance repo + local service `docs/` and local ADRs. | Two-tier ADRs (Global vs Service-Local) + Consumer-Driven Contracts. |
+| **[`monorepo/`](./monorepo/)** | Greenfield startups, SaaS MVPs, single-team applications (`< 500` spec lines per spine). | Grouped living spines (`docs/spines/01-INTENT.md` .. `05-DELIVERY.md`). | Visible first-class `docs/adr/` and `docs/slices/`. |
+| **[`monorepo_big/`](./monorepo_big/)** | Enterprise platforms, complex systems (`> 500` spec lines or multi-squad development). | Sprouted directory spines (`docs/spines/01-INTENT/` .. `05-DELIVERY/`). | Modular sub-documents per noun, schema, and milestone. |
+| **[`polyrepo/`](./polyrepo/)** | Distributed multi-repo ecosystems (e.g. Next.js web + FastAPI backend + Airflow pipelines in separate Git repos). | Central governance repo + local service `docs/spines/` and local ADRs. | Two-tier ADRs (Global `docs/adr/` vs Service-Local `docs/adr/`) + Consumer-Driven Contracts. |
 
 ---
 
@@ -29,7 +29,7 @@ cgspec_template/
 cp -r cgspec_template/monorepo/AGENTS.md /path/to/your-project/
 cp -r cgspec_template/monorepo/docs /path/to/your-project/
 cd /path/to/your-project/
-python3 docs/.cgspec/01-script/doctor.py --repo . --strict-emojis
+python3 docs/_cgspec/01-script/doctor.py --repo . --strict-emojis
 ```
 
 ### Option B: Enterprise Monorepo (Sprouted Spines)
@@ -37,7 +37,7 @@ python3 docs/.cgspec/01-script/doctor.py --repo . --strict-emojis
 cp -r cgspec_template/monorepo_big/AGENTS.md /path/to/enterprise-project/
 cp -r cgspec_template/monorepo_big/docs /path/to/enterprise-project/
 cd /path/to/enterprise-project/
-python3 docs/.cgspec/01-script/doctor.py --repo . --strict-emojis
+python3 docs/_cgspec/01-script/doctor.py --repo . --strict-emojis
 ```
 
 ### Option C: Federated Polyrepo
@@ -47,10 +47,10 @@ cp -r cgspec_template/polyrepo/central-governance/AGENTS.md /path/to/management-
 cp -r cgspec_template/polyrepo/central-governance/docs /path/to/management-repo/
 
 # 2. Ingest existing physical polyrepos into the central manifest
-python3 docs/.cgspec/01-script/ingest.py /path/to/frontend-repo --subsystem frontend
-python3 docs/.cgspec/01-script/ingest.py /path/to/backend-repo  --subsystem backend
-python3 docs/.cgspec/01-script/ingest.py /path/to/data-repo     --subsystem data-pipelines
+python3 docs/_cgspec/01-script/ingest.py /path/to/frontend-repo --subsystem frontend
+python3 docs/_cgspec/01-script/ingest.py /path/to/backend-repo  --subsystem backend
+python3 docs/_cgspec/01-script/ingest.py /path/to/data-repo     --subsystem data-pipelines
 
 # 3. Verify cross-service health
-python3 docs/.cgspec/01-script/doctor.py --repo /path/to/management-repo --strict-emojis
+python3 docs/_cgspec/01-script/doctor.py --repo /path/to/management-repo --strict-emojis
 ```

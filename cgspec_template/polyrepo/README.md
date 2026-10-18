@@ -19,31 +19,22 @@ flowchart TD
     subgraph CentralGovernance["central-governance/ (Global Source of Truth)"]
         direction TB
         G_INDEX["docs/00-INDEX.md (Virtual Mounting Table across all repos)"]
-        G_INTENT["docs/01-INTENT.md (Product Purpose, Anti-Goals, Global SOP)"]
-        G_OOUX["docs/02-OOUX.md (Canonical Domain Nouns & Permissions)"]
-        G_ADR["docs/.cgspec/04-adr/ (Global ADRs: JWT standard, crypto, event bus)"]
+        G_SPINES["docs/spines/ (01-INTENT, 02-OOUX, 03-EXPERIENCE, 04-ARCH, 05-DELIVERY)"]
+        G_ADR["docs/adr/ (Global Tier 1 ADRs: JWT standard, crypto, event bus)"]
+        G_MEM["docs/_memlog.md (System-Wide Milestone Ledger)"]
     end
 
     subgraph ServiceRepos["Independent Polyrepos (Decentralized Authoring & Deployments)"]
         direction TB
-        subgraph RepoFrontend["services/frontend-web/ (Next.js / Vite)"]
-            F_DOCS["Local docs/ & Local ADRs (e.g. Tailwind v4, Zustand)"]
-            F_PORT["Consumer Port Interface & Mock Adapter"]
-        end
-
-        subgraph RepoBackend["services/backend-api/ (FastAPI / Go / Node)"]
-            B_DOCS["Local docs/ & Local ADRs (e.g. SQLAlchemy, Redis)"]
-            B_ADAPT["Provider Adapter fulfilling Consumer Port"]
-        end
-
-        subgraph RepoData["services/data-pipelines/ (Airflow / dbt)"]
-            D_DOCS["Local docs/ & Local ADRs (e.g. CeleryExecutor, S3)"]
-            D_DAG["Airflow DAGs implementing OOUX Data Lifecycles"]
+        subgraph RepoSatellite["service-satellite-template/ (Instantiated per Service)"]
+            S_DOCS["Local docs/00-INDEX.md & docs/_memlog.md"]
+            S_SPINES["Local docs/spines/ (Bounded Service Context & Flows)"]
+            S_ADR["Local docs/adr/ (Tier 2 Service ADRs: tech choices)"]
+            S_SLC["Local docs/slices/ (Bounded Service Delivery Contracts)"]
         end
     end
 
     CentralGovernance -->|"ADR-004 Virtual Mounting"| ServiceRepos
-    RepoFrontend <-.->|"Consumer-Driven Contract (SLICE-NNN)"| RepoBackend
 ```
 
 ---
@@ -51,8 +42,8 @@ flowchart TD
 ## 2. The 3 Architectural Mechanisms
 
 ### Mechanism 1: Two-Tier Hierarchical ADRs (ADR-005)
-- **Tier 1 (Global System ADRs in `central-governance/docs/.cgspec/04-adr/`):** Decisions that bind all repositories (e.g. `ADR-001: Ed25519 Token Signing`, `ADR-002: PostgreSQL 16 Baseline`, `ADR-003: Hexagonal Port Boundary Standard`).
-- **Tier 2 (Service-Local ADRs in `services/<repo>/docs/.cgspec/04-adr/`):** Decisions strictly internal to that service (e.g. `ADR-001: Use TanStack Query in frontend-web`, `ADR-001: Use Celery in data-pipelines`). Backend and data teams are not burdened with frontend styling decisions.
+- **Tier 1 (Global System ADRs in `central-governance/docs/adr/`):** Decisions that bind all repositories (e.g. `ADR-001: Ed25519 Token Signing`, `ADR-002: PostgreSQL 16 Baseline`, `ADR-003: Hexagonal Port Boundary Standard`).
+- **Tier 2 (Service-Local ADRs in `services/<repo>/docs/adr/`):** Decisions strictly internal to that service (e.g. `ADR-001: Use TanStack Query in frontend-web`, `ADR-001: Use Celery in data-pipelines`). Backend and data teams are not burdened with frontend styling decisions.
 
 ### Mechanism 2: Consumer-Driven Contracts via Hexagonal Ports (ADR-004)
 Services never depend on each other's live infrastructure during development or unit testing:
@@ -66,9 +57,9 @@ The central orchestrator runs deterministic AST scanning across all physical rep
 
 ```bash
 # Ingest all repositories into the central governance manifest
-python3 docs/.cgspec/01-script/ingest.py ../services/frontend-web  --subsystem frontend
-python3 docs/.cgspec/01-script/ingest.py ../services/backend-api   --subsystem backend
-python3 docs/.cgspec/01-script/ingest.py ../services/data-pipelines --subsystem data-pipelines
+python3 docs/_cgspec/01-script/ingest.py ../services/frontend-web  --subsystem frontend
+python3 docs/_cgspec/01-script/ingest.py ../services/backend-api   --subsystem backend
+python3 docs/_cgspec/01-script/ingest.py ../services/data-pipelines --subsystem data-pipelines
 ```
 
 ---
@@ -82,22 +73,21 @@ polyrepo/
 │   ├── AGENTS.md                 # Global Constitutional Laws 1-11
 │   └── docs/
 │       ├── 00-INDEX.md           # Master Compass & Virtual Mounting Table
-│       ├── 01-INTENT.md          # Global Product Vision & Anti-Goals
-│       ├── 02-OOUX.md            # Canonical Domain Nouns & Permissions Matrix
-│       ├── 03-EXPERIENCE.md      # Shared Design Tokens & Spatial Shells
-│       ├── 04-ARCHITECTURE.md    # Physical Topology & Inter-Service Event Bus
-│       ├── 05-DELIVERY.md        # Cross-Service Milestone Roadmaps
-│       ├── .memlog.md            # System-Wide Milestone Ledger
-│       └── .cgspec/              # Global ADRs, scripts, and research
+│       ├── README.md             # Docs Hub Overview
+│       ├── _memlog.md            # System-Wide Milestone Ledger
+│       ├── spines/               # Global Spines (01-INTENT .. 05-DELIVERY)
+│       ├── adr/                  # Global Tier 1 ADRs
+│       ├── slices/               # Cross-Service Milestone Delivery Contracts
+│       └── _cgspec/              # Central Tooling, Research & Councils
 │
-└── services/                     # Physically Independent Git Repositories
-    ├── frontend-web/             # Git Repo 1 (Frontend Application)
-    │   ├── AGENTS.md             # Local Service Guidelines
-    │   └── docs/                 # Local docs & Service ADRs
-    ├── backend-api/              # Git Repo 2 (Backend Service)
-    │   ├── AGENTS.md             # Local Service Guidelines
-    │   └── docs/                 # Local docs & Service ADRs
-    └── data-pipelines/           # Git Repo 3 (Airflow DAGs & Data Models)
-        ├── AGENTS.md             # Local Service Guidelines
-        └── docs/                 # Local docs & Service ADRs
+└── service-satellite-template/   # Generic Blueprint for Any Satellite Service (1..N)
+    ├── AGENTS.md                 # Service-Local Autopilot Guidelines
+    └── docs/
+        ├── 00-INDEX.md           # Service Local Compass
+        ├── README.md             # Local Docs Hub Overview
+        ├── _memlog.md            # Local Milestone Ledger
+        ├── spines/               # Bounded Service Domain Spines (01..05)
+        ├── adr/                  # Service-Local Tier 2 ADRs
+        ├── slices/               # Service-Local Slice Contracts
+        └── _cgspec/              # Local Doctor & Memlog Scripts
 ```

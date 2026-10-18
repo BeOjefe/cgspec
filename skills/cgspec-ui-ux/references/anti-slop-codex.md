@@ -48,7 +48,7 @@ When left unguided, AI models converge toward statistical averages ("AI Slop"). 
    - `Critical / Error`: Rose (`text-rose-400 bg-rose-500/10 border-rose-500/20`)
    - `Neutral / Idle`: Zinc (`text-zinc-400 bg-zinc-800 border-zinc-700`)
 8. **Zero Build Dependency Portable HTML:**
-   - Prototypes in `docs/.cgspec/05-prototype/` must be 100% self-contained single HTML files runnable directly in any browser without requiring `npm install` or bundlers (using Tailwind CDN + Lucide Icons script).
+   - Prototypes in `docs/prototypes/` must be 100% self-contained single HTML files runnable directly in any browser without requiring `npm install` or bundlers (using Tailwind CDN + Lucide Icons script).
 
 ---
 

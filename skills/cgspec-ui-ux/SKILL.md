@@ -7,10 +7,10 @@ description: Stage 2 Dual-Spine UI & UX Compilation Engine. Use when designing s
 
 ## 1. Contract (Inputs -> Outputs)
 - **Stage:** `2. Design & Experience` (Inherits all global laws from [`AGENTS.md`](../../AGENTS.md)).
-- **Requires:** Approved `docs/01-INTENT.md` and `docs/02-OOUX.md`.
+- **Requires:** Approved `docs/spines/01-INTENT.md` and `docs/spines/02-OOUX.md`.
 - **Produces:**
-  - **UX Deliverables (`docs/03-EXPERIENCE/` or `docs/.cgspec/02-research/`):** Task brief, mechanism reference analysis, tactile interaction decisions.
-  - **UI Deliverables (`docs/03-EXPERIENCE.md` & `docs/.cgspec/05-prototype/`):** Declarative spatial wireframes, versioned HTML wireframes (`wireframe-v1.html..vN.html`), design tokens, state matrix, and milestone prototype (`prototype-v0.1.html`).
+  - **UX Deliverables (`docs/spines/03-EXPERIENCE/` or `docs/_cgspec/02-research/`):** Task brief, mechanism reference analysis, tactile interaction decisions.
+  - **UI Deliverables (`docs/spines/03-EXPERIENCE.md` & `docs/prototypes/`):** Declarative spatial wireframes, versioned HTML wireframes (`wireframe-v1.html..vN.html`), design tokens, state matrix, and milestone prototype (`prototype-v0.1.html`).
 
 ---
 
@@ -29,27 +29,27 @@ Calibrate geometry, input ergonomics, and required states to the project's **Tar
 ### 2.2 Stage 2 Execution Invariants (Proactive Discovery + 5-Tier Insulated Swarm)
 
 0. **Tier 0 — Proactive Reference Scouting & Multi-Archetype Proposals (Inversion of Design Burden):**
-   - **The Human Is NOT a UI Draftsman:** The user provided high-level intent (`01-INTENT.md`) and domain nouns/permissions/lifecycle flows (`02-OOUX.md`). The AI must **NEVER** dump a single lazy mockup and wait passively for the human to do the design thinking or bug-hunting.
+   - **The Human Is NOT a UI Draftsman:** The user provided high-level intent (`docs/spines/01-INTENT.md`) and domain nouns/permissions/lifecycle flows (`docs/spines/02-OOUX.md`). The AI must **NEVER** dump a single lazy mockup and wait passively for the human to do the design thinking or bug-hunting.
    - **Autonomous Web Scouting:** Before generating code, the AI must scour the internet (via web search, DevTools MCP, or design repositories) for 2–3 gold-standard real-world products matching the OOUX domain (e.g. GitHub for directory hierarchies, Linear for keyboard-first tables, Cloudflare for security vault keys, Supabase for data inspectors), capturing screenshots and extracting design DNA (macrostructure, typography pairings, color anchors, and layout density).
    - **Multi-Archetype Presentation (2–3 Concrete Choices):** Present 2 to 3 distinct structural and aesthetic archetypes with side-by-side trade-offs and rationale mapped directly to the user's OOUX objects. The human's role is purely **executive editorial curation** (e.g. *"I want Archetype A's file tree paired with Archetype B's dark mode"*), not manual layout drafting.
    - **Autonomous Monotonic Versioning:** File iterations strictly increment monotonically: $v(N+1) = \max(\text{existing}) + 1$. The agent **NEVER** asks the user what version number to write to or waits for permission to create the next file.
 
 1. **Main Agent Insulation (`cgspec-inspector` Only):**
    - **Never spawn multiple builders directly from the Main Agent** (which leaks raw subagent completions into the user's primary chat window) and **never spawn `type="research"` for builders or auditors**.
-   - The Main Agent registers and invokes **ONLY ONE** child subagent: [`cgspec-inspector`](../../agents/cgspec-inspector.md) (`enable_write_tools=True`, `enable_subagent_tools=True`), passing cold factual paths (`01-INTENT.md`, `02-OOUX.md`, `03-EXPERIENCE.md`, `quality-rubric.md`).
+   - The Main Agent registers and invokes **ONLY ONE** child subagent: [`cgspec-inspector`](../../agents/cgspec-inspector.md) (`enable_write_tools=True`, `enable_subagent_tools=True`), passing cold factual paths (`docs/spines/01-INTENT.md`, `02-OOUX.md`, `03-EXPERIENCE.md`, `quality-rubric.md`).
 
 2. **Tier 2 Peer-to-Peer Builders (`cgspec-builder` $\times K$) + Output Token Limit Guard + Phase A Self-Verification:**
    - `cgspec-inspector` spawns $K$ [`cgspec-builder`](../../agents/cgspec-builder.md) agents (1 per screen or surface) and distributes a **Builder Peer Directory** via `send_message` so builders coordinate shared header chrome, CSS tokens, and cross-screen navigation links laterally.
    - **Output Token Limit Guard (`< 600` Lines per `write_to_file`):** Never emit a 1,500–2,500 line monolithic HTML file in a single `write_to_file` call (which hits the LLM output token limit). Either write modular per-screen files (`scr-01-<slug>.html`, `< 600` lines each) or, when incrementing `v(N-1) -> vN`, run `cp wireframe-v(N-1).html wireframe-vN.html` via `run_command` and apply surgical `replace_file_content` edits (`< 300` lines per call).
-   - Builders write strictly to disk in `docs/.cgspec/05-prototype/` (never dumping raw HTML into chat messages) and execute **Phase A Exhaustive Self-Verification** (`visual_audit.py` exit `0` + `view_file` inspection of `1440x900`, `1180x800`, and `375x812` PNGs + `01-INTENT`/`02-OOUX` check) before notifying `cgspec-inspector`.
+   - Builders write strictly to disk in `docs/prototypes/` (never dumping raw HTML into chat messages) and execute **Phase A Exhaustive Self-Verification** (`visual_audit.py` exit `0` + `view_file` inspection of `1440x900`, `1180x800`, and `375x812` PNGs + `01-INTENT`/`02-OOUX` check) before notifying `cgspec-inspector`.
 3. **Tier 3 Peer-to-Peer Unit Adversaries (`cgspec-unit-adversary` $\times K$) — Inner `while (unit_verdict_i != PASS)` Loop:**
-   - `cgspec-inspector` pairs each `Builder_i` with a dedicated [`cgspec-unit-adversary`](../../agents/cgspec-unit-adversary.md) given **cold facts only** (file path, screenshot paths, `01..03` spines, `quality-rubric.md`) and an **Adversary Peer Directory** (`send_message`) to verify cross-screen parity.
+   - `cgspec-inspector` pairs each `Builder_i` with a dedicated [`cgspec-unit-adversary`](../../agents/cgspec-unit-adversary.md) given **cold facts only** (file path, screenshot paths, `docs/spines/` 01..03 spines, `quality-rubric.md`) and an **Adversary Peer Directory** (`send_message`) to verify cross-screen parity.
    - Each `(Builder_i, Unit Adversary_i)` pair loops (`Fix -> Phase A Self-Verify -> Re-Audit`) **while `unit_verdict_i != PASS`**.
 4. **Tier 4 Chief Global Adversarial Gatekeeper (`cgspec-chief-adversary` $\times 1$) — Outer `while (global_verdict != PASS)` Loop:**
    - Only when **all $K$ Unit Adversaries** report `PASS (0 defects)` does `cgspec-inspector` invoke [`cgspec-chief-adversary`](../../agents/cgspec-chief-adversary.md) to audit the integrated multi-screen build, end-to-end user journeys, and version non-destruction (`v1..vN`). If `GLOBAL_VERDICT == FAIL`, `cgspec-inspector` routes defects back to the swarm until `GLOBAL_VERDICT: PASS (0 defects)`.
 5. **Tier 5 Human Validation & Deep Root-Cause Interview (`If User Says No`):**
-   - Only after `GLOBAL_VERDICT: PASS` does `cgspec-inspector` return to the Main Agent to present the verified build (`UserFacing: true` in `<appDataDir>/brain/<conversation-id>/wireframe-vN.html` + `docs/.cgspec/05-prototype/wireframe-vN.html`).
-   - **If the user says "No" or rejects any aspect:** The Main Agent **MUST NOT** immediately re-run `cgspec-inspector`. It must first interview the user to deeply understand *why*, record the root cause in `docs/.memlog.md`, update `01-INTENT.md` / `02-OOUX.md` / `03-EXPERIENCE.md`, confirm the updated spine with the user, and only then re-invoke `cgspec-inspector`.
+   - Only after `GLOBAL_VERDICT: PASS` does `cgspec-inspector` return to the Main Agent to present the verified build (`UserFacing: true` in `<appDataDir>/brain/<conversation-id>/wireframe-vN.html` + `docs/prototypes/wireframe-vN.html`).
+   - **If the user says "No" or rejects any aspect:** The Main Agent **MUST NOT** immediately re-run `cgspec-inspector`. It must first interview the user to deeply understand *why*, record the root cause in `docs/_memlog.md`, update `docs/spines/01-INTENT.md` / `02-OOUX.md` / `03-EXPERIENCE.md`, confirm the updated spine with the user, and only then re-invoke `cgspec-inspector`.
 
 ---
 
@@ -65,11 +65,11 @@ Load only the playbook and references for the active step:
 ---
 
 ## 4. Exit Gate
-Before presenting any wireframe/prototype or entering Stage 3 (`04-ARCHITECTURE.md`), confirm:
+Before presenting any wireframe/prototype or entering Stage 3 (`docs/spines/04-ARCHITECTURE.md`), confirm:
 1. **Phase A Self-Verification:** `visual_audit.py` + `doctor.py --strict-emojis` (`0 errors`) + multi-state screenshots inspected via `view_file`.
 2. **Inner & Outer Adversarial Loops:** All $K$ [`cgspec-unit-adversary`](../../agents/cgspec-unit-adversary.md) agents returned `UNIT_VERDICT: PASS (0 defects)` AND [`cgspec-chief-adversary`](../../agents/cgspec-chief-adversary.md) returned `GLOBAL_VERDICT: PASS (0 defects)`.
-3. **Human Lock:** Explicit user approval recorded in `docs/.memlog.md`.
+3. **Human Lock:** Explicit user approval recorded in `docs/_memlog.md`.
 ```bash
-python3 docs/.cgspec/01-script/visual_audit.py docs/.cgspec/05-prototype/prototype-v0.1.html --screenshot-dir /tmp/cgspec-shots
-python3 docs/.cgspec/01-script/doctor.py --repo . --strict-emojis
+python3 docs/_cgspec/01-script/visual_audit.py docs/prototypes/prototype-v0.1.html --screenshot-dir /tmp/cgspec-shots
+python3 docs/_cgspec/01-script/doctor.py --repo . --strict-emojis
 ```
