@@ -1,45 +1,14 @@
 ---
 name: cgspec-init
-description: Stage 0 Workspace Initializer & Brownfield AST Ingestor. Use when starting a new CGSpec project, initializing AGENTS.md and docs/00..05 spines, or onboarding an existing legacy codebase/monorepo via ingest.py.
+description: Install, verify, update, or uninstall the CGSpec v2 package and tool adapters in a project. For an existing unadopted project, use cgspec-adopt first.
 ---
 
-# cgspec-init
+# Initialize CGSpec
 
-## 1. Contract (Inputs -> Outputs)
-- **Stage:** `0. Initialization & Brownfield Ingestion` (Inherits all global laws from [`AGENTS.md`](../../AGENTS.md)).
-- **Requires:** New repository (Greenfield) OR existing legacy codebase/monorepo (Brownfield).
-- **Produces:** `AGENTS.md`, `CLAUDE.md` (1-line pointer), `docs/_memlog.md`, `docs/00-INDEX.md`, `docs/spines/` (`01..05`), `docs/adr/`, `docs/slices/`, `docs/prototypes/`, and `docs/_cgspec/` (`01-script/`, `02-research/`, `03-council/`, `_archive/`), plus `docs/_cgspec/brownfield-manifest.json` and `docs/adr/ADR-000-legacy-baseline-adoption.md` for Brownfield.
+Read the [agent contract](../../engine/CONTRACT.md) and the installed `docs/_cgspec/project.json` if present. This skill manages the package; project discovery and content migration belong to `cgspec-adopt`.
 
----
+For a new project, identify its profile (`website`, `web-workspace`, `mobile`, `cli`, `headless`, `small`), topology (`single`, `monorepo`, `large-monorepo`, `polyrepo-governance`, `polyrepo-member`), and tools actually present. Use the plugin copy of `engine/install.py` and its `--help` to confirm syntax. The current install command is `python3 engine/install.py install --root <path> --profile <profile> --topology <topology> [--tools <comma-separated-tools>]`. Install only into the authorized repository. The installer owns generated files and has an uninstall manifest; inspect conflicts before acting on a nonempty tree.
 
-## 2. Stage-Specific Rules
-1. **Non-Destructive Legacy Adoption:** Never delete existing project docs or code. Move scattered legacy notes into `docs/_cgspec/_archive/`.
-2. **AST-First Brownfield Extraction:** On existing codebases, never guess domain nouns from filenames alone; run `ingest.py` to extract routes, models, and schemas deterministically before populating `docs/spines/02-OOUX.md`.
-3. **Specification Hub Topology:** Structure `docs/` with grouped living spines (`docs/spines/`), visible architecture decisions (`docs/adr/`), vertical slice contracts (`docs/slices/`), interactive wireframes (`docs/prototypes/`), and visible engine tooling (`docs/_cgspec/`).
+For an installed v2 project, run `python3 engine/install.py verify --root <path>` before `upgrade` or `uninstall`. `upgrade` refreshes the vendored engine; `uninstall` removes only unchanged owned files. Check `docs/_cgspec/01-engine/` and adapter wiring after the action, then run `python3 docs/_cgspec/01-engine/doctor.py --root <path>`. Record any adapter or CI capability that could not be verified. GitHub branch protection and remote approval settings require their own evidence; file creation alone does not activate them.
 
----
-
-## 3. Workflow
-1. **Detect Mode & Topology:**
-   - Inspect workspace for existing code (`src/`, `app/`, `packages/`) and topology configs (`pnpm-workspace.yaml`, `Cargo.toml`, `pyproject.toml`). If ambiguous, ask via `ask_question` (Monorepo vs Multi-Service Hub vs Single Service).
-2. **Run Brownfield AST Ingestion (Existing Codebases Only):**
-   ```bash
-   python3 docs/_cgspec/01-script/ingest.py .
-   ```
-   Distill high-level domain entities from `docs/_cgspec/brownfield-manifest.json` into `docs/spines/02-OOUX.md` (zero raw SQL) and record the existing stack freeze in `docs/adr/ADR-000-legacy-baseline-adoption.md`.
-3. **Install Constitution & Engine (`docs/_cgspec/`):**
-   - Write root `AGENTS.md` and 1-line `CLAUDE.md` (`Read and strictly follow all instructions in [./AGENTS.md](./AGENTS.md).`).
-   - Create `docs/_cgspec/` with strictly singular numbered directories:
-     - `docs/_cgspec/01-script/` (`doctor.py`, `memlog.py`, `ingest.py`, `visual_audit.py`)
-     - `docs/_cgspec/02-research/` (`README.md`, `RES-NNN-...`)
-     - `docs/_cgspec/03-council/` (`COUNCIL-NNN-...`)
-     - `docs/_cgspec/_archive/`
-4. **Scaffold Reformed v0.2 Spines & First-Class Records:**
-   - Initialize `docs/_memlog.md` (`M-001`), `docs/00-INDEX.md`, `docs/README.md`.
-   - Scaffold `docs/spines/` (`01-INTENT.md`, `02-OOUX.md`, `03-EXPERIENCE.md`, `04-ARCHITECTURE.md`, `05-DELIVERY.md`).
-   - Scaffold `docs/adr/` (`ADR-001-template.md`), `docs/slices/` (`SLICE-001-template.md`), and `docs/prototypes/`.
-
----
-
-## 4. Exit Gate
-Run `python3 docs/_cgspec/01-script/doctor.py --repo . --strict-emojis` and confirm `0 errors` before handing off to [`cgspec-forge`](../cgspec-forge/SKILL.md).
+A v1 layout is an adoption upgrade: route to `cgspec-adopt` for a path map, rollback and content checks before updating the version marker.

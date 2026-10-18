@@ -1,33 +1,12 @@
 ---
 name: cgspec-forge
-description: Stage 1 Product Brainstorming & ORCA Object Map Compiler. Use when defining problem statements, product vision, actors, anti-goals, day-in-the-life flows (01-INTENT.md), or Sophia Prater ORCA domain nouns, permissions, and relationships (02-OOUX.md).
+description: Turn a new product idea or feature request into researched intent, actors, scope, and an object model before design or build.
 ---
 
-# cgspec-forge
+# Forge product intent
 
-## 1. Contract (Inputs -> Outputs)
-- **Stage:** `1. Brainstorming & Intent` (Inherits all global laws from [`AGENTS.md`](../../AGENTS.md)).
-- **Requires:** Initialized CGSpec vault (`docs/00-INDEX.md` and `docs/spines/`) and user product vision.
-- **Produces:** Locked `docs/spines/01-INTENT.md` (problem, actors, anti-goals, day-in-the-life flow), locked `docs/spines/02-OOUX.md` (ORCA objects, `erDiagram` relationships, permissions, conceptual attributes), and `docs/00-INBOX.md` (`Future Backlog v0.2+`).
+Read the [agent contract](../../engine/CONTRACT.md) and relevant existing spines. Determine the goal type: money, learning, personal, or client. For a money goal, research who pays, competing options, price, demand evidence and risks in `docs/_cgspec/02-research/RES-NNN-<slug>.md`, with source links and dated facts. State uncertainty; do not invent market validation.
 
----
+Write `docs/spines/01-INTENT.md` with the goal, actors, real tasks, anti-goals, v0.1 boundary and parked ideas. Write `02-OOUX.md` with nouns, attributes, relations, hierarchy, permissions and important states. Trace each actor task to its nouns; check that none are orphaned. In a larger project, update only the relevant spine parts and links rather than rewriting all of them.
 
-## 2. Stage-Specific Rules
-1. **Zero Premature UI or Physical Schema:** Do not draw screen layouts, pick colors, or write SQL/ORM types in Stage 1. Focus strictly on *why we build* (`docs/spines/01-INTENT.md`) and *what domain nouns exist* (`docs/spines/02-OOUX.md`).
-2. **Noun Foraging Before Verbs (ORCA Sequence):** Isolate core domain objects first, map their cardinality (`1:1`, `1:N`, `M:N`), attach actor permissions (`Owner` + `read | invoke | propose_edit | write | share | admin`), and list conceptual attributes.
-3. **v0.1 Scope Firewall:** Challenge feature creep immediately. Park any non-essential `v0.2+` idea in `docs/00-INBOX.md` before it bloats the `v0.1` object map.
-
----
-
-## 3. Workflow
-1. **Anchor Problem & Day-in-the-Life (`docs/spines/01-INTENT.md`):**
-   - Interview the user on the core frustration, target functional actors, target Surface Profile (`A: Website`, `B: Mobile`, `C: Web Workspace`, `D: CLI`), strict anti-goals, and end-to-end Day-in-the-Life narrative.
-2. **Compile ORCA Object Map (`docs/spines/02-OOUX.md`):**
-   - Extract the canonical nouns from the narrative, render the conceptual `erDiagram`, and define the CTA/permission matrix and conceptual attributes for each noun.
-3. **Sync & Persist:**
-   - Record each locked decision in `docs/_memlog.md`, write `docs/adr/ADR-NNN-<slug>.md` if a cross-cutting domain invariant is established, and update `docs/00-INDEX.md`.
-
----
-
-## 4. Exit Gate
-Confirm explicit user approval of `docs/spines/01-INTENT.md` and `docs/spines/02-OOUX.md`, run `python3 docs/_cgspec/01-script/doctor.py --repo . --strict-emojis`, and hand off to [`cgspec-ui-ux`](../cgspec-ui-ux/SKILL.md).
+Show the user a concise, concrete interpretation and only the decisions that change product direction. Apply clear corrections directly. Log significant delegated choices and their reversibility through `memlog.py`. The user should not need to know CGSpec stages to express an idea.
