@@ -395,7 +395,7 @@ flowchart TB
 | AI tool | What it supports | Fallback |
 | --- | --- | --- |
 | Claude Code | All events above, including compaction; helpers can start their own helpers (3 levels) | — |
-| Antigravity | Session start, before/after tool, stop; no compaction event | Checkpoint after every batch |
+| Antigravity | Session start, before/after tool, stop (blocks with a JSON decision); no compaction event and no user-message event, so inbox and approval capture are not available there | Checkpoint after every batch |
 | Codex | No hooks | Git hooks + CI; checkpoint after every batch |
 | Cursor | Rules file | Git hooks + CI |
 
