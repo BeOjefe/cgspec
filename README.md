@@ -112,23 +112,23 @@ CGSpec is designed to be fully modular and adaptable to **any project size, targ
 
 ---
 
-## Repository Structure (Zero Root Workspace Pollution)
+## Repository Structure (Pure docs/ Spines + Numbered docs/.cgspec Engine)
 
-All internal CGSpec tooling, scripts, prototypes, and council logs are centralized inside the hidden `.cgspec/` engine directory, keeping the project root 100% focused on the user's product:
+All internal CGSpec tooling, research, debate logs, ADRs, prototypes, and slices are organized inside the hidden `docs/.cgspec/` engine directory using strictly singular, numbered subfolders:
 
 ```
 .
 ├── AGENTS.md                  # Universal Autopilot Constitution (Applies across all AI agents)
 ├── CLAUDE.md                  # DRY 1-line pointer to AGENTS.md
 ├── CHANGELOG.md               # Versioned methodology evolutions
-├── skills/
-│   ├── cgspec-init/           # Monorepo/polyrepo setup, .cgspec vault, and brownfield ingestion
+├── skills/                    # Distributable Portable Skills (Package Plugin)
+│   ├── cgspec-init/           # Setup, docs/.cgspec engine vault, and brownfield ingestion
 │   ├── cgspec-forge/          # Stage 1 active thinking, intent & ORCA object map compiler
 │   ├── cgspec-ui-ux/          # Stage 2 dual-spine UI & UX compiler (Simple Site, iOS/Android, Web, CLI)
 │   ├── cgspec-council/        # Supervised 3-agent hierarchical debate council
 │   ├── cgspec-slice/          # Bounded vertical slice builder (Ports & Adapters)
 │   └── cgspec-pivot/          # 3-tier course-correction and migration engine
-└── docs/                      # The 5 Canonical Spines + Centralized .cgspec Engine Vault
+└── docs/                      # The Pure Canonical Spines + docs/.cgspec Engine
     ├── 00-INDEX.md            # Live project state, ADR registry, and slice roadmap
     ├── 00-INBOX.md            # Spark parking lot for out-of-scope ideas (v0.2+)
     ├── 01-INTENT.md           # Problem definition, intent, scope, and day-in-the-life
@@ -137,11 +137,14 @@ All internal CGSpec tooling, scripts, prototypes, and council logs are centraliz
     ├── 04-ARCHITECTURE.md     # Ports & adapters, system topologies, physical DDL schemas
     ├── 05-DELIVERY.md         # Bounded vertical slices, verification gates, AST ingestion
     ├── .memlog.md             # Append-only chronological decision ledger
-    ├── adr/                   # Formal Architecture Decision Records (ADR-NNN)
-    └── .cgspec/               # Hidden centralized CGSpec engine (zero root clutter)
-        ├── scripts/           # memlog.py, doctor.py, ingest.py
-        ├── prototypes/        # prototype-v0.1.html & stash/
-        └── council/           # Isolated multi-agent debate workspaces
+    └── .cgspec/               # Hidden centralized CGSpec engine (Strictly Singular + .archive)
+        ├── 01-script/         # doctor.py, visual_audit.py, ingest.py, memlog.py
+        ├── 02-research/       # RES-NNN-... technical spikes & benchmarks
+        ├── 03-council/        # COUNCIL-NNN-... debate logs & transcripts
+        ├── 04-adr/            # ADR-NNN-... accepted decision records
+        ├── 05-prototype/      # wireframe-vN.html, prototype-v0.1.html & stash/
+        ├── 06-slice/          # SLICE-NNN-... vertical implementation contracts
+        └── .archive/          # Superseded spines, retired v1 docs, old drafts
 ```
 
 ---

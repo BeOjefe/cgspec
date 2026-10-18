@@ -3,9 +3,20 @@
 CGSpec Doctor (Spec Linter & Integrity Hook)
 Validates repository invariants, spine integrity, ADR registrations, and memory log continuity.
 
+Canonical 3-Zone Architecture:
+  <root>/docs/                     -> Pure Specification Spines (00..05, .memlog.md)
+  <root>/docs/.cgspec/             -> Numbered Engine Space (Strictly Singular + .archive):
+    01-script/                     -> Tooling (doctor.py, visual_audit.py, ingest.py, memlog.py)
+    02-research/                   -> Technical Spikes & Benchmarks (RES-NNN-...)
+    03-council/                    -> Multi-Agent Debate Logs & Transcripts
+    04-adr/                        -> Architecture Decision Records (ADR-NNN-...)
+    05-prototype/                  -> Interactive HTML Wireframes & Prototypes
+    06-slice/                      -> Vertical Implementation Contracts (SLICE-NNN-...)
+    .archive/                      -> Superseded Spines, Drafts & Provenance
+
 Usage:
-  python3 .cgspec/scripts/doctor.py [project-root]
-  python3 .cgspec/scripts/doctor.py --repo [project-root]
+  python3 docs/.cgspec/01-script/doctor.py [project-root]
+  python3 docs/.cgspec/01-script/doctor.py --repo [project-root]
 """
 
 import sys
@@ -22,6 +33,16 @@ EMOJI_PATTERN = re.compile(
     r"[\u2190-\u21ff]"           # Arrows
 )
 
+CANONICAL_ENGINE_DIRS = [
+    "01-script",
+    "02-research",
+    "03-council",
+    "04-adr",
+    "05-prototype",
+    "06-slice",
+    ".archive",
+]
+
 def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
     errors = []
     warnings = []
@@ -34,7 +55,38 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
     print(f"CGSpec Doctor: Inspecting {project_root.resolve()}")
     print("-" * 60)
 
-    # 1. Verify Core Spines (Auto-detect Reformed CGSpec v2 vs Legacy v1)
+    # 1. Structural Invariant: Eradicate Legacy .working and Verify docs/.cgspec Engine
+    legacy_working = docs_dir / ".working"
+    if legacy_working.exists():
+        errors.append(
+            "Forbidden legacy directory 'docs/.working/' detected! "
+            "CGSpec Invariant: All working state must live in 'docs/.cgspec/03-council/' and 'docs/.cgspec/05-prototype/'."
+        )
+
+    root_cgspec = project_root / ".cgspec"
+    if root_cgspec.exists() and not root_cgspec.is_symlink():
+        # If it's a consumer repo or standalone, flag that .cgspec belongs inside docs/
+        if (docs_dir / ".cgspec").exists() and root_cgspec != (docs_dir / ".cgspec"):
+            warnings.append(
+                "Duplicate root '.cgspec/' directory detected. The canonical engine directory is 'docs/.cgspec/'. "
+                "Remove root '.cgspec/' once migration to 'docs/.cgspec/' is complete."
+            )
+
+    cgspec_dir = docs_dir / ".cgspec"
+    if cgspec_dir.exists():
+        print("  [PASS] Engine Location: docs/.cgspec/ (inside docs/)")
+        # Check singular naming consistency inside docs/.cgspec/
+        for sub in cgspec_dir.iterdir():
+            if sub.is_dir() and not sub.name.startswith("."):
+                name = sub.name
+                if name.endswith("s") and not name.endswith("ss"):
+                    warnings.append(
+                        f"Plural naming detected in 'docs/.cgspec/{name}'. "
+                        "CGSpec Invariant: Engine directories must use strictly singular nouns "
+                        "('01-script', '02-research', '03-council', '04-adr', '05-prototype', '06-slice', '.archive')."
+                    )
+
+    # 2. Verify Core Spines (Auto-detect Reformed CGSpec v2 vs Legacy v1)
     if (docs_dir / "01-INTENT.md").exists():
         version_label = "Reformed CGSpec v2 (Law 3 Pure)"
         expected_spines = [
@@ -66,7 +118,7 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
             status = "file" if spine_path.exists() else "sprouted dir"
             print(f"  [PASS] Spine docs/{spine} ({status})")
 
-    # 2. Check 00-INDEX.md Registration Completeness
+    # 3. Check 00-INDEX.md Registration Completeness
     index_file = docs_dir / "00-INDEX.md"
     index_content = ""
     if index_file.exists():
@@ -75,13 +127,13 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
             if spine != "00-INDEX.md" and spine not in index_content:
                 errors.append(f"docs/00-INDEX.md does not tabulate core spine: docs/{spine}")
 
-    # 3. Check Memory Log Continuity & Parity (supports docs/.memlog.md or .cgspec/memlog.md)
+    # 4. Check Memory Log Continuity & Parity (supports docs/.memlog.md or docs/.cgspec/memlog.md)
     memlog_file = docs_dir / ".memlog.md"
-    if not memlog_file.exists() and (docs_dir / ".cgspec" / "memlog.md").exists():
-        memlog_file = docs_dir / ".cgspec" / "memlog.md"
+    if not memlog_file.exists() and (cgspec_dir / "memlog.md").exists():
+        memlog_file = cgspec_dir / "memlog.md"
     memlog_entries = []
     if not memlog_file.exists():
-        errors.append("Missing docs/.memlog.md (or .cgspec/memlog.md)")
+        errors.append("Missing docs/.memlog.md (or docs/.cgspec/memlog.md)")
     else:
         content = memlog_file.read_text(encoding="utf-8")
         entry_matches = list(re.finditer(r"###\s*\[?(M-\d+)\]?", content))
@@ -106,13 +158,16 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
                         (docs_dir / "00-INDEX.md").write_text(index_content, encoding="utf-8")
                         print(f"  [SYNC] Auto-updated docs/00-INDEX.md memlog counter -> {new_span}")
 
-    # 4. Check ADR Consistency & Bidirectional Parity
-    adr_dir = docs_dir / "adr"
+    # 5. Check ADR Consistency & Bidirectional Parity (supports docs/.cgspec/04-adr/ or legacy docs/adr/)
+    adr_dir = cgspec_dir / "04-adr"
     if not adr_dir.exists():
-        warnings.append("No docs/adr/ directory found")
+        adr_dir = docs_dir / "adr"
+    
+    if not adr_dir.exists():
+        warnings.append("No ADR directory found (expected 'docs/.cgspec/04-adr/' or 'docs/adr/')")
     else:
         adr_files = list(adr_dir.glob("ADR-*.md"))
-        print(f"  [INFO] Found {len(adr_files)} ADR files in docs/adr/")
+        print(f"  [INFO] Found {len(adr_files)} ADR files in {adr_dir.relative_to(project_root)}")
         memlog_content = memlog_file.read_text(encoding="utf-8") if memlog_file.exists() else ""
 
         for adr in sorted(adr_files):
@@ -138,8 +193,6 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
                 else:
                     warnings.append(f"{adr_id} ({adr_name}, Status: {st_disk}) is drafted on disk but not yet registered in docs/00-INDEX.md")
             else:
-                # Check status parity in 00-INDEX.md
-                # Look for line mentioning adr_id
                 for line in index_content.splitlines():
                     if adr_id in line:
                         if "Accepted" in line and st_disk != "Accepted":
@@ -157,22 +210,25 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
             if st_disk == "Accepted" and adr_id not in memlog_content:
                 warnings.append(f"{adr_id} has Status: Accepted on disk but is not recorded in docs/.memlog.md")
 
-    # 4b. Check Research Spikes & Technical Investigations (docs/research/)
-    research_dir = docs_dir / "research"
+    # 6. Check Research Spikes & Technical Investigations (supports docs/.cgspec/02-research/ or docs/research/)
+    research_dir = cgspec_dir / "02-research"
+    if not research_dir.exists():
+        research_dir = docs_dir / "research"
+
     if research_dir.exists():
         res_files = list(research_dir.glob("RES-*.md"))
         if res_files:
-            print(f"  [INFO] Found {len(res_files)} Research Spike(s) in docs/research/")
+            print(f"  [INFO] Found {len(res_files)} Research Spike(s) in {research_dir.relative_to(project_root)}")
             for res in sorted(res_files):
                 res_match = re.search(r"(RES-\d+)", res.name)
                 if res_match:
                     res_id = res_match.group(1)
                     if res_id not in index_content:
-                        warnings.append(f"{res_id} ({res.name}) is in docs/research/ but not registered in docs/00-INDEX.md")
+                        warnings.append(f"{res_id} ({res.name}) is in research registry but not registered in docs/00-INDEX.md")
                     else:
                         print(f"  [PASS] {res_id} registered in 00-INDEX.md")
 
-    # 5. Check for Emojis in Spines
+    # 7. Check for Emojis in Spines
     for spine in expected_spines:
         spine_path = docs_dir / spine
         if spine_path.exists():
@@ -186,14 +242,14 @@ def run_doctor(project_root: Path, strict_emojis: bool = False) -> int:
                 else:
                     warnings.append(msg)
 
-    # 6. Check AGENTS.md Constitution Parity (11 Laws + Closed-Loop Visual Self-Critique)
+    # 8. Check AGENTS.md Constitution Parity (11 Laws + Closed-Loop Visual Self-Critique)
     agents_file = project_root / "AGENTS.md"
     if not agents_file.exists():
         warnings.append("Missing AGENTS.md at project root")
     else:
         agents_text = agents_file.read_text(encoding="utf-8")
         if "Law 11" not in agents_text:
-            warnings.append("AGENTS.md is outdated (missing Law 11: Disk-First Immediate Capture & 3-Bucket Triage)")
+            warnings.append("AGENTS.md is outdated (missing Law 11: Disk-First Immediate Capture & 4-Bucket Triage)")
         else:
             print("  [PASS] AGENTS.md Constitution Parity (11 Core Coach Laws active)")
 

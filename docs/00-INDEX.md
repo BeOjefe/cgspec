@@ -34,22 +34,22 @@
 
 ---
 
-## 4. Accepted Architecture Decision Records (`docs/adr/`)
+## 4. Accepted Architecture Decision Records (`docs/.cgspec/04-adr/`)
 
 | ADR | Title & Invariant | Status |
 | :--- | :--- | :--- |
-| **[`ADR-001`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-001-first-principles-spec-driven-sdlc-architecture.md)** | **First-Principles Architecture of the CGSpec Specification Engine** | `[Accepted]` |
-| **[`ADR-002`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-002-monorepo-vs-polyrepo-and-db-migrations.md)** | **Adaptive Monorepo vs. Multi-Repo (Polyrepo) & Database Migration Architecture** | `[Accepted]` |
-| **[`ADR-003`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-003-supervised-peer-council-architecture.md)** | **Supervised 3-Agent Peer Debate Council Architecture** | `[Accepted]` |
-| **[`ADR-004`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-004-arbitrary-multi-service-topologies-and-virtual-mounting.md)** | **Arbitrary Multi-Service Topologies, Virtual Mounting & Contract-First Interface Decoupling** | `[Accepted]` |
-| **[`ADR-005`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-005-hierarchical-adrs-and-documentation-scaling.md)** | **Hierarchical ADRs, Documentation Scaling & Multi-Tenant Scoping** | `[Accepted]` |
+| **[`ADR-001`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/04-adr/ADR-001-first-principles-spec-driven-sdlc-architecture.md)** | **First-Principles Architecture of the CGSpec Specification Engine** | `[Accepted]` |
+| **[`ADR-002`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/04-adr/ADR-002-monorepo-vs-polyrepo-and-db-migrations.md)** | **Adaptive Monorepo vs. Multi-Repo (Polyrepo) & Database Migration Architecture** | `[Accepted]` |
+| **[`ADR-003`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/04-adr/ADR-003-supervised-peer-council-architecture.md)** | **Supervised 3-Agent Peer Debate Council Architecture** | `[Accepted]` |
+| **[`ADR-004`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/04-adr/ADR-004-arbitrary-multi-service-topologies-and-virtual-mounting.md)** | **Arbitrary Multi-Service Topologies, Virtual Mounting & Contract-First Interface Decoupling** | `[Accepted]` |
+| **[`ADR-005`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/04-adr/ADR-005-hierarchical-adrs-and-documentation-scaling.md)** | **Hierarchical ADRs, Documentation Scaling & Multi-Tenant Scoping** | `[Accepted]` |
 
 ---
 
-## 5. Technical Spikes & Research Compendiums (`docs/research/`)
+## 5. Technical Spikes & Research Compendiums (`docs/.cgspec/02-research/`)
 
 | Spike ID | Title & Investigation Focus | Status | Target Spine / Scope |
 | :--- | :--- | :--- | :--- |
-| **[`RES-001`](file:///home/ojefe/Documents/Project/cgspec/docs/research/RES-001-ui-design-systems-and-surface-profiles-benchmark.md)** | **UI Frameworks, Design Systems & Adaptive Surface Profiles Benchmark** | `[Concluded]` | [`03-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-EXPERIENCE.md) (Profiles A, B, C, D) |
+| **[`RES-001`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/02-research/RES-001-ui-design-systems-and-surface-profiles-benchmark.md)** | **UI Frameworks, Design Systems & Adaptive Surface Profiles Benchmark** | `[Concluded]` | [`03-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-EXPERIENCE.md) (Profiles A, B, C, D) |
 
 

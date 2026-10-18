@@ -8,7 +8,7 @@ description: Stage 1 Product Brainstorming & ORCA Object Map Compiler. Use when 
 ## 1. Contract (Inputs -> Outputs)
 - **Stage:** `1. Brainstorming & Intent` (Inherits all global laws from [`AGENTS.md`](../../AGENTS.md)).
 - **Requires:** Initialized CGSpec vault (`docs/00..05`) and user product vision.
-- **Produces:** Locked `docs/01-INTENT.md` (problem, actors, anti-goals, day-in-the-life flow), locked `docs/02-OOUX.md` (ORCA objects, `erDiagram` relationships, permissions,conceptual attributes), and `docs/00-INBOX.md` (`Future Backlog v0.2+`).
+- **Produces:** Locked `docs/01-INTENT.md` (problem, actors, anti-goals, day-in-the-life flow), locked `docs/02-OOUX.md` (ORCA objects, `erDiagram` relationships, permissions, conceptual attributes), and `docs/00-INBOX.md` (`Future Backlog v0.2+`).
 
 ---
 
@@ -25,9 +25,9 @@ description: Stage 1 Product Brainstorming & ORCA Object Map Compiler. Use when 
 2. **Compile ORCA Object Map (`docs/02-OOUX.md`):**
    - Extract the canonical nouns from the narrative, render the conceptual `erDiagram`, and define the CTA/permission matrix and conceptual attributes for each noun.
 3. **Sync & Persist:**
-   - Record each locked decision in `docs/.memlog.md`, write `docs/adr/ADR-NNN-<slug>.md` if a cross-cutting domain invariant is established, and update `docs/00-INDEX.md`.
+   - Record each locked decision in `docs/.memlog.md`, write `docs/.cgspec/04-adr/ADR-NNN-<slug>.md` if a cross-cutting domain invariant is established, and update `docs/00-INDEX.md`.
 
 ---
 
 ## 4. Exit Gate
-Confirm explicit user approval of `docs/01-INTENT.md` and `docs/02-OOUX.md`, run `python3 .cgspec/scripts/doctor.py --repo . --strict-emojis`, and hand off to [`cgspec-ui-ux`](../cgspec-ui-ux/SKILL.md).
+Confirm explicit user approval of `docs/01-INTENT.md` and `docs/02-OOUX.md`, run `python3 docs/.cgspec/01-script/doctor.py --repo . --strict-emojis`, and hand off to [`cgspec-ui-ux`](../cgspec-ui-ux/SKILL.md).

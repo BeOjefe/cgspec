@@ -346,7 +346,7 @@ def ingest_codebase(target_dir: Path, subsystem: Optional[str] = None, live_sche
     print(f"  [METRIC] Distilled {len(distilled)} high-level OOUX business nouns")
 
     # Generate ADR-000 baseline freeze
-    adr_dir = target_dir / "docs" / "adr"
+    adr_dir = target_dir / "docs" / ".cgspec" / "04-adr"
     adr_dir.mkdir(parents=True, exist_ok=True)
     adr_000 = adr_dir / "ADR-000-legacy-baseline-adoption.md"
     if not adr_000.exists():
@@ -354,7 +354,7 @@ def ingest_codebase(target_dir: Path, subsystem: Optional[str] = None, live_sche
 
 - **Status:** Accepted
 - **Date:** {datetime.now(timezone.utc).strftime('%Y-%m-%d')}
-- **Context:** Reverse-engineered via `.cgspec/scripts/ingest.py` (AST Ingestion Engine).
+- **Context:** Reverse-engineered via `docs/.cgspec/01-script/ingest.py` (AST Ingestion Engine).
 
 ---
 
@@ -364,7 +364,7 @@ def ingest_codebase(target_dir: Path, subsystem: Optional[str] = None, live_sche
 - **Discovered Endpoints:** {len(all_endpoints)} routes
 - **Discovered Models & Tables:** {len(all_models)} models, {len(all_tables)} tables
 - **Distilled OOUX Nouns:** {', '.join(n['noun'] for n in distilled[:10])}{'...' if len(distilled) > 10 else ''}
-- **Deterministic Manifest:** `.cgspec/brownfield-manifest.json`
+- **Deterministic Manifest:** `docs/.cgspec/brownfield-manifest.json`
 
 ## 2. Invariants & Decision
 1. **Legacy Baseline Freeze:** Existing routes and tables are codified as the immutable baseline.
@@ -372,7 +372,7 @@ def ingest_codebase(target_dir: Path, subsystem: Optional[str] = None, live_sche
 3. **Law 3 Compliance:** All future features strictly follow CGSpec vertical slices (`Stage 1 Intent -> Stage 2 UI/UX -> Stage 3 Architecture -> Stage 4 Slices`).
 """
         adr_000.write_text(adr_content, encoding="utf-8")
-        print(f"  [PASS] Baseline freeze ADR created: docs/adr/{adr_000.name}")
+        print(f"  [PASS] Baseline freeze ADR created: docs/.cgspec/04-adr/{adr_000.name}")
 
     print("-" * 60)
     print("SUCCESS: Deterministic codebase ingestion complete. Zero context window dilution.")
