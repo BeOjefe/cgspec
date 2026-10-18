@@ -41,36 +41,36 @@ AI UI Slop is not merely a lack of visual appeal; it is a structural architectur
 
 To eliminate AI slop without human micromanagement, CGSpec adopts a **Dual-Pillar Architecture**:
 
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│                        AI GENERATIVE UI WORKFLOW                       │
-└────────────────────────────────────────────────────────────────────────┘
-                                    │
-       PILLAR 1: CONSTRAINED UI (Puck Model)
-       AI acts as an ASSEMBLER of registered primitives, NOT a freeform synthesizer
-       ┌──────────────────────────────┴──────────────────────────────┐
-       ▼                                                             ▼
-┌───────────────────────────────┐             ┌────────────────────────────────┐
-│ Predefined Component Registry │             │ Typed Schema Validation (Zod)  │
-│ Only approved UI components   │             │ Props, nesting limits, layout  │
-│ (Hero, DataGrid, VaultDrawer) │             │ boundaries strictly validated  │
-└───────────────────────────────┘             └────────────────────────────────┘
-                                    │
-                                    ▼
-       PILLAR 2: DETERMINISTIC VERIFICATION GATES (Hallmark & CGSpec Model)
-       Zero-trust programmatic static analysis before any human review
-       ┌──────────────────────────────┴──────────────────────────────┐
-       ▼                                                             ▼
-┌───────────────────────────────┐             ┌────────────────────────────────┐
-│   Phase A: Static DOM Gates   │             │ Phase B: Adversarial Critic    │
-│   (visual_audit.py AST/DOM)   │             │ Independent subagent verifying │
-│   - 0 duplicate controls      │             │ visual ergonomics, states &    │
-│   - 0 purple gradient slop    │             │ WCAG contrast without code edit│
-│   - 0 disembodied dark shadow │             └────────────────────────────────┘
-│   - 0 phantom DOM IDs (H5)    │
-│   - 100% full-bleed viewport  │
-└───────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph S0["AI Generative UI Workflow"]
+        Workflow["Natural Language Prompt or UI Brief"]
+    end
+
+    Workflow --> P1
+
+    subgraph P1["Pillar 1: Constrained UI (Puck Architecture)"]
+        P1Desc["AI Acts as Orchestrator of Registered Primitives, Not Freeform Synthesizer"]
+        Registry["Predefined Component Registry: Approved Primitives (Hero, DataGrid, VaultDrawer)"]
+        Schema["Typed Schema Validation (Zod / JSON Schema): Strict Props, Nesting Limits & Boundaries"]
+        P1Desc --> Registry
+        P1Desc --> Schema
+    end
+
+    Registry --> P2
+    Schema --> P2
+
+    subgraph P2["Pillar 2: Deterministic Quality Gates (Hallmark & CGSpec Architecture)"]
+        P2Desc["Zero-Trust Programmatic Static Analysis Before Human Review"]
+        PhaseA["Phase A: Deterministic DOM Gates (visual_audit.py AST/DOM Checks)"]
+        PhaseB["Phase B: Facts-Only Adversarial Critic (Independent Subagent Verification)"]
+        P2Desc --> PhaseA
+        PhaseA --> PhaseB
+    end
+
+    PhaseB --> Ship["Verified Production Artifact (Human Lock Ready)"]
 ```
+
 
 ### Pillar 1: Constrained Generative UI (The Puck Architecture)
 As demonstrated by Puck, unbounded code synthesis always degrades over time. CGSpec operationalizes constrained UI through:

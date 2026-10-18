@@ -52,6 +52,7 @@
 | :--- | :--- | :--- | :--- |
 | **[`RES-001`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/02-research/RES-001-ui-design-systems-and-surface-profiles-benchmark.md)** | **UI Frameworks, Design Systems & Adaptive Surface Profiles Benchmark** | `[Concluded]` | [`03-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-EXPERIENCE.md) (Profiles A, B, C, D) |
 | **[`RES-002`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/02-research/RES-002-anti-slop-constrained-ui-and-deterministic-gates.md)** | **Anti-AI-Slop Architecture, Constrained Generative UI & Deterministic Quality Gates** | `[Concluded]` | [`03-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-EXPERIENCE.md), `visual_audit.py` |
+| **[`RES-003`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/02-research/RES-003-agentic-design-skills-and-anti-slop-frontier.md)** | **Frontier Agentic Design Skills & Anti-Slop Ecosystem Benchmark** | `[Concluded]` | [`03-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-EXPERIENCE.md), `cgspec-ui-ux` |
 
 
 
