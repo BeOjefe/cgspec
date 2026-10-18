@@ -199,6 +199,32 @@ class UpgradeV1Tests(unittest.TestCase):
             self.assertEqual(report["verdict"], "PARTIAL")
             self.assertEqual(snapshot_tree(root), before)
 
+    def test_existing_code_gets_unapproved_legacy_baseline(self):
+        import hashlib
+        with TempDir() as root:
+            old_project(root)
+            source = root / "src/main.py"
+            source.parent.mkdir()
+            source.write_text("print('original')\n")
+            result, report = upgrade(root, "--apply")
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            baseline = json.loads((root / "docs/_cgspec/07-state/legacy-baseline.json").read_text())
+            self.assertEqual(baseline["files"]["src/main.py"]["sha256"], hashlib.sha256(source.read_bytes()).hexdigest())
+            slice_text = (root / "docs/slices/SLICE-000-baseline.md").read_text()
+            self.assertIn("**Status:** Draft", slice_text)
+            self.assertIn("legacy-baseline.json", slice_text)
+            self.assertEqual(doctor(root).returncode, 0, doctor(root).stdout)
+
+    def test_existing_agent_rules_need_semantic_mapping(self):
+        with TempDir() as root:
+            old_project(root)
+            (root / "AGENTS.md").write_text("# Project rules\nNever deploy without review.\n")
+            before = snapshot_tree(root)
+            result, report = upgrade(root, "--apply")
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("AGENTS.md", str(report["unresolved"]))
+            self.assertEqual(snapshot_tree(root), before)
+
 
 if __name__ == "__main__":
     unittest.main()

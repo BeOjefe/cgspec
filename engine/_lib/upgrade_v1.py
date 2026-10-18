@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 
 from . import layout as L
-from .common import PROJECT_FILE, sha256_file
+from .common import PROJECT_FILE, sha256_file, utc_now, write_json
 
 JOURNAL = Path(".cgspec-upgrade-v1")
 ARCHIVE = Path("docs/_cgspec/_archive/upgrade-v1")
@@ -105,7 +105,30 @@ def _rewrite(stage: Path, report: dict) -> None:
             report["rewritten"].append(path.relative_to(stage).as_posix())
 
 
+def _legacy_baseline(stage: Path, original: dict[str, bytes], report: dict) -> None:
+    state = stage / "docs/_cgspec/07-state/legacy-baseline.json"
+    slice_path = stage / "docs/slices/SLICE-000-baseline.md"
+    if state.exists() or slice_path.exists():
+        report["unresolved"].append("existing legacy baseline or SLICE-000 needs a reviewed merge")
+        return
+    entries = {}
+    for rel, data in original.items():
+        if rel in {"AGENTS.md", "CLAUDE.md", ".gitignore"}:
+            continue
+        if rel.startswith("docs/") and not rel.startswith("docs/prototypes/"):
+            continue
+        entries[rel] = {"sha256": digest(data), "lines": data.count(b"\n") + int(bool(data) and not data.endswith(b"\n"))}
+    write_json(state, {"schema": 1, "created": utc_now(), "files": entries})
+    slice_path.parent.mkdir(parents=True, exist_ok=True)
+    slice_path.write_text("# SLICE-000: Legacy baseline\n\n- **Status:** Draft\n\n"
+                          f"{len(entries)} pre-existing files are listed with hashes in "
+                          "[legacy-baseline.json](../_cgspec/07-state/legacy-baseline.json). "
+                          "This snapshot grants no approval to edit them; use a new approved slice.\n")
+    report["legacy_files"] = len(entries)
+
+
 def _prepare(stage: Path, options: dict, report: dict) -> None:
+    original = files(stage)
     scripts = stage / "docs/_cgspec/01-script"
     if scripts.exists():
         legacy = [p for p in scripts.rglob("*") if p.is_file() and p.name != ".gitkeep"]
@@ -123,14 +146,20 @@ def _prepare(stage: Path, options: dict, report: dict) -> None:
     for old, new in MOVES.items():
         _move(stage, old, new, report)
     _rewrite(stage, report)
-    from install import cmd_install
-    from doctor import main as doctor_main
+    from install import cmd_install, plugin_root
+    from doctor import fix as doctor_fix, main as doctor_main
     import argparse
+    for rel in ("AGENTS.md", "CLAUDE.md"):
+        old, template = stage / rel, plugin_root() / "templates/base" / rel
+        if old.is_file() and old.read_bytes() != template.read_bytes():
+            report["unresolved"].append(f"legacy agent instructions need semantic mapping: {rel}")
     args = argparse.Namespace(profile=options["profile"], topology=options["topology"],
                               tools=options["tools"], repo_prefix=options["repo_prefix"],
                               plugin_source=options["plugin_source"])
     with contextlib.redirect_stdout(io.StringIO()):
         cmd_install(stage, args)
+    _legacy_baseline(stage, original, report)
+    doctor_fix(stage, options["profile"])
     capture = io.StringIO()
     with contextlib.redirect_stdout(capture):
         status = doctor_main(["--root", str(stage), "--json"])
