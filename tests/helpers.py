@@ -68,3 +68,24 @@ def claude_payload(root: Path, tool: str, **tool_input) -> dict:
             tool_input[key] = str(root / tool_input[key])
     return {"session_id": "s1", "cwd": str(root), "hook_event_name": "PreToolUse",
             "tool_name": tool, "tool_input": tool_input}
+
+
+def git(root: Path, *args: str, check: bool = True):
+    result = subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=t@example.com",
+                             "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", *args],
+                            cwd=root, capture_output=True, text=True)
+    if check and result.returncode != 0:
+        raise AssertionError(f"git {' '.join(args)} failed: {result.stderr}")
+    return result
+
+
+def git_project(root: Path, profile: str = "web-workspace") -> None:
+    """Installed project in a git repo with one initial commit."""
+    git(root, "init", "-q", "-b", "main")
+    install(root, profile)
+    (root / "src").mkdir(exist_ok=True)
+    (root / "src/a.ts").write_text("export const a = 1;\n")
+    (root / "src/login").mkdir(exist_ok=True)
+    (root / "src/login/form.ts").write_text("export const f = 1;\n")
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "init")
