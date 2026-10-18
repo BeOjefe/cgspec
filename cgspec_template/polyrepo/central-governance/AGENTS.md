@@ -58,6 +58,7 @@
     - `docs/_cgspec/_archive/` (superseded spines, drafts, legacy v1 artifacts)
 - **Explicit Functional Actors & Capability-Driven UI:** Never use fictional persona names (`Sam`, `Maya`) or abstract tier codes (`L1/L2`). Use functional roles (`Organization Owner`, `Project Lead`, `Developer`, `Auditor`) and explicit permissions (`Owner` + `read | invoke | propose_edit | write | share | admin`). In UIs, hide actions the current role cannot perform instead of rendering disabled/conflicting buttons or debug role badges, and never leak `snake_case` schema identifiers into user-facing labels.
 - **Topological Neutrality & Ports/Adapters:** Support Monorepo and Polyrepo equally (inspect workspace first or ask via `ask_question`; never force polyrepo overhead). Enforce strict Ports & Adapters isolation (`uv` for Python, `bun`/`pnpm` for TypeScript/JS).
+- **Universal Multi-AI Lifecycle Hooks (`cgspec_hook.py`):** Enforces Law 3 (slice contract precedes code), Law 10 (strict zero emojis), and Law 11 (disk capture & zero drift) deterministically across all AI coding assistants (Antigravity via `.agents/hooks.json`, Claude Code via `CLAUDE.md`, Cursor via `.cursorrules`, and native Git via `.githooks/pre-commit`). Run `python3 docs/_cgspec/01-script/cgspec_hook.py install` to activate.
 
 ---
 

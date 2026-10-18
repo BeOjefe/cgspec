@@ -62,3 +62,7 @@
 - **Summary:** Reformed CGSpec v0.2 Topology Refactoring: Adopted Model 1 (docs/spines/), Visible ADRs (docs/adr/), Visible Slices (docs/slices/), and Underscore Engine (docs/_cgspec/)
 - **Details:** Eliminated hidden dot-file blindness by converting .cgspec to _cgspec, .archive to _archive, and .memlog.md to _memlog.md (allowing ripgrep, IDEs, and ls to index all engineering decisions). Grouped core spines under docs/spines/ and promoted ADRs and slices to first-class visible directories in docs/. Synchronized doctor.py, memlog.py, ingest.py, all 6 skills, and all 3 template archetypes.
 
+### [M-019] 2026-10-18T12:55:45Z | tags: hooks,multi-ai,enforcement,git-hooks | owner: @jeanfranck | perms: read,invoke,propose_edit
+- **Summary:** Implemented Universal Multi-AI Lifecycle Hooks (cgspec_hook.py) for Antigravity, Claude Code, Cursor, and Git Pre-Commit
+- **Details:** Added cgspec_hook.py supporting Antigravity JSON lifecycle events (SessionStart, PreToolUse, PostToolUse, Stop), native Git pre-commit hooks, standalone pre-flight CI checks, and automated installation. Synchronized .agents/hooks.json, .githooks/pre-commit, .cursorrules, and CLAUDE.md across living repository and all 4 template archetypes.
+

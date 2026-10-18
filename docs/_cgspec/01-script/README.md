@@ -33,3 +33,17 @@ Headless Chromium test runner that checks interactive prototypes against 65+ det
 ```bash
 python3 docs/_cgspec/01-script/visual_audit.py docs/prototypes/wireframe.html --screenshot-dir /tmp/shots
 ```
+
+### 5. `cgspec_hook.py` (Universal Multi-AI Lifecycle Hook & Quality Gate)
+Universal cross-agent lifecycle adapter supporting Antigravity (`.agents/hooks.json`), Claude Code (`CLAUDE.md`), Cursor (`.cursorrules`), and native Git Pre-Commit hooks (`.githooks/pre-commit`).
+```bash
+# Automated setup across Git, Antigravity, and all AI tools
+python3 docs/_cgspec/01-script/cgspec_hook.py install
+
+# Git pre-commit verification (runs on every git commit)
+python3 docs/_cgspec/01-script/cgspec_hook.py git-pre-commit
+
+# Standalone pre-flight check for CI/CD or agents
+python3 docs/_cgspec/01-script/cgspec_hook.py check
+```
+
