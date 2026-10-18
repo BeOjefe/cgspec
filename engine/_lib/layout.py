@@ -53,7 +53,7 @@ GUI_DIRS = ["docs/prototypes", "docs/prototypes/_snapshots", "docs/prototypes/_v
 # Everything allowed directly inside docs/ and docs/_cgspec/; anything else is an error.
 ALLOWED_IN_DOCS = {
     "00-INDEX.md", "00-INBOX.md", "00-REGISTRY.md", "_memlog.md", ".memlog.lock",
-    "spines", "adrs", "slices", "prototypes", "_cgspec", "METHOD-v2.md",
+    "spines", "adrs", "slices", "prototypes", "_cgspec",
 }
 ALLOWED_IN_CGSPEC = {
     "project.json", "01-engine", "02-research", "03-councils", "04-checks",
@@ -79,4 +79,24 @@ RES_NAME = r"^RES-\d{3}-[a-z0-9][a-z0-9-]*\.md$"
 COUNCIL_NAME = r"^COUNCIL-\d{3}-[a-z0-9][a-z0-9-]*$"
 RUN_NAME = r"^R-\d{8}-[0-9a-f]{4}$"
 
-SCRIPT_SUFFIXES = {".py", ".js", ".mjs", ".cjs", ".ts", ".sh", ".bash", ".ps1", ".rb"}
+# Compared case-insensitively. Executable bit or a "#!" first line also marks a script.
+SCRIPT_SUFFIXES = {
+    ".py", ".pyw", ".ipynb", ".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".sh", ".bash", ".zsh",
+    ".fish", ".ps1", ".psm1", ".bat", ".cmd", ".rb", ".pl", ".php", ".lua", ".r", ".jl", ".go", ".rs",
+}
+# Browser code that may live inside a prototype screen folder (docs/prototypes/<screen>/).
+PROTOTYPE_ASSET_SUFFIXES = {".js", ".mjs"}
+# Outside docs/, scripts are expected under the code and tests path classes; these are also fine.
+CONFIG_GLOBS = ["*.config.*", "**/*.config.*", ".github/**", ".husky/**", "**/.*rc.*", "**/.*rc",
+                "**/conftest.py", "**/setup.py", "**/noxfile.py", "**/manage.py"]
+SKIP_WALK = {".git", "node_modules", ".cgspec-scratch", ".venv", "venv", "__pycache__", "dist", "build",
+             ".next", ".nuxt", ".svelte-kit", "target", "vendor", ".tox", ".mypy_cache", ".pytest_cache"}
+
+# The description line each spine template carries; a spine holding only this is empty.
+SPINE_TEMPLATE_TEXT = {
+    "01-INTENT": "Why this exists, for whom, goal type, anti-goals, v0.1 scope.",
+    "02-DOMAIN": "OOUX nouns with attributes, relations, hierarchy and permissions.",
+    "03-EXPERIENCE": "Tasks, screens, flows, design layer status per screen (or API/CLI behavior when headless).",
+    "04-ARCHITECTURE": "System context, containers, components, data model, contracts, budgets, threat model; links to ADRs.",
+    "05-DELIVERY": "Slices in order, CI/CD, releases, runbooks, observation.",
+}

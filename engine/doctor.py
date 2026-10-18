@@ -40,23 +40,39 @@ def load_stages(root: Path) -> dict:
         return {}
 
 
+def load_legacy(root: Path) -> set[str]:
+    try:
+        data = json.loads((root / STATE_DIR / "legacy-baseline.json").read_text(encoding="utf-8"))
+        return set(data.get("files", {})) if isinstance(data, dict) else set()
+    except (OSError, ValueError):
+        return set()
+
+
 def run_checks(root: Path) -> list[C.Finding]:
     project = load_project(root)
     profile = project.get("profile", "") if isinstance(project, dict) else ""
+    classes = project.get("path_classes", {}) if isinstance(project, dict) else {}
+    checks = [
+        ("project", lambda: C.project(root, project)),
+        ("layout", lambda: C.layout(root, profile)),
+        ("symlinks", lambda: C.symlinks(root)),
+        ("state", lambda: C.state_files(root)),
+        ("spines", lambda: C.spines(root, load_stages(root))),
+        ("links", lambda: C.links(root)),
+        ("records", lambda: C.records(root)),
+        ("index", lambda: C.index(root)),
+        ("frozen", lambda: C.frozen(root)),
+        ("scripts", lambda: C.scripts(root, classes if isinstance(classes, dict) else {}, load_legacy(root))),
+        ("engine", lambda: C.engine_integrity(root, verify_engine)),
+        ("memlog", lambda: C.memlog(root, parse_memlog)),
+        ("evidence", lambda: C.blocked(root)),
+    ]
     findings: list[C.Finding] = []
-    findings += C.project(root, project)
-    findings += C.layout(root, profile)
-    findings += C.symlinks(root)
-    findings += C.state_files(root)
-    findings += C.spines(root, load_stages(root))
-    findings += C.links(root)
-    findings += C.records(root)
-    findings += C.index(root)
-    findings += C.frozen(root)
-    findings += C.scripts(root)
-    findings += C.engine_integrity(root, verify_engine)
-    findings += C.memlog(root, parse_memlog)
-    findings += C.blocked(root)
+    for name, check in checks:
+        try:
+            findings += list(check())
+        except Exception as exc:  # one broken check must not hide the others
+            findings.append(C.Finding("E-INTERNAL", name, f"check crashed: {exc!r}"))
     return findings
 
 
@@ -99,8 +115,8 @@ def fix(root: Path, profile: str) -> list[str]:
         except json.JSONDecodeError:
             entries = []
         for entry in entries:
-            target = root / entry.get("path", "")
-            if target.is_file() and target.stat().st_mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH):
+            target = C.inside(root, str(entry.get("path", "")))
+            if target is not None and target.is_file() and target.stat().st_mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH):
                 os.chmod(target, target.stat().st_mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
                 done.append(f"made read-only {entry['path']}")
     return done

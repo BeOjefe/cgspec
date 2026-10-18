@@ -230,3 +230,96 @@ class DoctorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DoctorHardeningTests(DoctorTests):
+    """Regressions from the step-2 independent review."""
+
+    def test_template_text_without_marker_is_still_empty(self):
+        for spine in (self.root / "docs/spines").glob("*.md"):
+            spine.write_text(spine.read_text().replace("<!-- cgspec:empty -->\n", ""))
+        set_stage(self.root, "coding")
+        self.assertFails("E-SPINE-EMPTY")
+
+    def test_unknown_stage_value_is_an_error(self):
+        set_stage(self.root, "Coding")
+        self.assertFails("E-SCHEMA")
+
+    def test_unlisted_snapshot_fails(self):
+        (self.root / "docs/prototypes/_snapshots/home-v2.html").write_text("<html>sneaky</html>")
+        self.assertFails("E-FROZEN-UNLISTED")
+
+    def test_frozen_path_outside_root_is_rejected_and_never_touched(self):
+        victim = self.root.parent / f"{self.root.name}-victim.txt"
+        victim.write_text("outside\n")
+        os.chmod(victim, 0o644)
+        try:
+            path = self.root / "docs/_cgspec/07-state/frozen.json"
+            data = json.loads(path.read_text())
+            data["entries"].append({"path": f"../{victim.name}", "sha256": hashlib.sha256(b"outside\n").hexdigest(),
+                                    "kind": "snapshot", "added": "2026-10-18T00:00:00Z", "reason": "escape"})
+            write_json(path, data)
+            self.assertFails("E-SCHEMA", "--fix")
+            self.assertTrue(victim.stat().st_mode & 0o200, "--fix must not chmod outside the project")
+        finally:
+            victim.unlink()
+
+    def test_unregistered_script_variants_fail(self):
+        for name in ("gen.PY", "gen.pyw", "notebook.ipynb", "run.BAT"):
+            with self.subTest(name=name):
+                target = self.root / "docs/prototypes" / name
+                target.write_text("x\n")
+                self.assertFails("E-SCRIPT-UNREGISTERED")
+                target.unlink()
+
+    def test_extensionless_shebang_script_fails(self):
+        target = self.root / "docs/prototypes/regen"
+        target.write_text("#!/usr/bin/env python3\nprint('x')\n")
+        self.assertFails("E-SCRIPT-UNREGISTERED")
+
+    def test_prototype_browser_js_is_allowed(self):
+        screen = self.root / "docs/prototypes/home"
+        screen.mkdir()
+        (screen / "index.html").write_text("<html></html>")
+        (screen / "components.js").write_text("export const x = 1;\n")
+        self.assertPasses()
+
+    def test_script_outside_allowed_places_warns(self):
+        (self.root / "tools").mkdir()
+        (self.root / "tools/hack.py").write_text("print('x')\n")
+        result = self.assertPasses()
+        self.assertIn("W-SCRIPT-OUTSIDE", result.stdout)
+
+    def test_nested_folder_in_records_fails(self):
+        (self.root / "docs/adrs/sub").mkdir()
+        (self.root / "docs/adrs/sub/anything.md").write_text("x\n")
+        self.assertFails("E-LAYOUT-UNKNOWN")
+
+    def test_method_doc_not_allowed_in_projects(self):
+        (self.root / "docs/METHOD-v2.md").write_text("x\n")
+        self.assertFails("E-LAYOUT-UNKNOWN")
+
+    def test_link_variants(self):
+        spines = self.root / "docs/spines"
+        (spines / "my file.md").write_text("x\n")
+        (spines / "f(1).md").write_text("x\n")
+        ok = "[a](<my file.md>) [b](my%20file.md) [c](f(1).md) [d][ref]\n\n[ref]: 02-DOMAIN.md\n"
+        (spines / "01-INTENT.md").write_text("# Intent\n\n" + ok)
+        result = doctor(self.root)
+        self.assertNotIn("E-LINK", result.stdout)
+        for bad in ("[a](<missing file.md>)", "[c][r]\n\n[r]: ./nope.md", '<a href="gone.html">x</a>'):
+            with self.subTest(bad=bad):
+                (spines / "01-INTENT.md").write_text("# Intent\n\n" + bad + "\n")
+                self.assertFails("E-LINK")
+
+    def test_one_bad_file_does_not_hide_other_findings(self):
+        (self.root / "docs/adrs/ADR-001-bad.md").write_bytes(b"\xff\xfe\x00 not utf8")
+        (self.root / "docs/random.md").write_text("x\n")
+        result = self.assertFails("E-ENCODING")
+        self.assertIn("E-LAYOUT-UNKNOWN", result.stdout)
+        self.assertNotIn("internal error", result.stderr)
+
+    def test_malformed_engine_manifest_is_a_finding(self):
+        write_json(self.root / "docs/_cgspec/01-engine/manifest.json", {"schema": 1, "files": []})
+        result = self.assertFails("E-ENGINE-HASH")
+        self.assertNotIn("Traceback", result.stderr)

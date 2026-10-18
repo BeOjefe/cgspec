@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import unittest
@@ -131,3 +132,98 @@ class InstallTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class InstallHardeningTests(unittest.TestCase):
+    def test_tampered_owned_list_cannot_delete_user_files(self):
+        import hashlib
+        with TempDir() as root:
+            project = root / "proj"
+            project.mkdir()
+            install(project)
+            (project / "src").mkdir()
+            user_file = project / "src/main.py"
+            user_file.write_text("print('mine')\n")
+            outside = root / "victim.txt"
+            outside.write_text("outside\n")
+            owned_path = project / "docs/_cgspec/01-engine/owned-files.json"
+            owned = json.loads(owned_path.read_text())
+            for rel, f in (("src/main.py", user_file), ("../victim.txt", outside)):
+                owned["created"][rel] = hashlib.sha256(f.read_bytes()).hexdigest()
+            owned_path.write_text(json.dumps(owned))
+            result = run_script("install.py", "uninstall", "--root", str(project))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(user_file.exists())
+            self.assertTrue(outside.exists())
+            self.assertIn("ignored", result.stdout)
+
+    def test_refuses_to_write_through_symlinks(self):
+        with TempDir() as root:
+            project = root / "proj"
+            project.mkdir()
+            outside = root / "notes.md"
+            outside.write_text("my notes\n")
+            os.symlink(outside, project / "AGENTS.md")
+            result = install(project)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("symlink", result.stderr)
+            self.assertEqual(outside.read_text(), "my notes\n")
+
+    def test_edited_replaced_file_is_kept_on_uninstall(self):
+        with TempDir() as root:
+            (root / "AGENTS.md").write_text("old rules\n")
+            install(root)
+            (root / "AGENTS.md").write_text((root / "AGENTS.md").read_text() + "\nnew rule added later\n")
+            result = run_script("install.py", "uninstall", "--root", str(root))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("new rule added later", (root / "AGENTS.md").read_text())
+            self.assertIn("kept", result.stdout)
+            self.assertTrue((root / "docs/_cgspec/_archive/pre-cgspec/AGENTS.md").exists())
+
+    def test_missing_archive_is_reported_not_crashed(self):
+        with TempDir() as root:
+            (root / "AGENTS.md").write_text("old rules\n")
+            install(root)
+            (root / "docs/_cgspec/_archive/pre-cgspec/AGENTS.md").unlink()
+            result = run_script("install.py", "uninstall", "--root", str(root))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("Traceback", result.stderr)
+            self.assertIn("archive missing", result.stdout)
+
+    def test_upgrade_refuses_downgrade_without_force(self):
+        with TempDir() as root:
+            install(root)
+            pj = root / "docs/_cgspec/project.json"
+            data = json.loads(pj.read_text())
+            data["cgspec_version"] = "9.0.0"
+            pj.write_text(json.dumps(data))
+            result = run_script("install.py", "upgrade", "--root", str(root))
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("downgrade", result.stderr)
+            self.assertEqual(run_script("install.py", "upgrade", "--root", str(root), "--force").returncode, 0)
+
+    def test_upgrade_adds_missing_template_files_without_overwriting(self):
+        with TempDir() as root:
+            install(root)
+            (root / "docs/00-INBOX.md").unlink()
+            spine = root / "docs/spines/01-INTENT.md"
+            spine.write_text("# Intent\n\nuser text\n")
+            result = run_script("install.py", "upgrade", "--root", str(root))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue((root / "docs/00-INBOX.md").exists())
+            self.assertEqual(spine.read_text(), "# Intent\n\nuser text\n")
+
+    def test_interrupted_install_can_be_rerun(self):
+        with TempDir() as root:
+            install(root)
+            (root / "docs/_cgspec/project.json").unlink()
+            (root / "docs/_cgspec/01-engine/owned-files.json").unlink()
+            result = install(root)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(doctor(root).returncode, 0)
+            self.assertEqual(run_script("install.py", "uninstall", "--root", str(root)).returncode, 0)
+
+    def test_lock_file_is_git_ignored(self):
+        with TempDir() as root:
+            install(root)
+            self.assertIn("docs/.memlog.lock", (root / ".gitignore").read_text())

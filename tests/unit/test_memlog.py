@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 import re
 import stat
+import subprocess
+import sys
 import threading
 import unittest
 from pathlib import Path
@@ -110,21 +112,32 @@ class MemlogTests(unittest.TestCase):
             add(root)
             self.assertEqual(stat.S_IMODE(log.stat().st_mode), 0o640)
 
-    def test_stale_lock_is_recovered_but_fresh_lock_blocks(self):
+    def test_leftover_lock_file_does_not_block(self):
+        # A crashed writer leaves the file but no OS lock; the next writer proceeds.
         with TempDir() as root:
             make_project(root)
             lock = root / "docs/.memlog.lock"
             lock.parent.mkdir(parents=True, exist_ok=True)
             lock.write_text("999999")
-            old = lock.stat().st_mtime - 3600
-            os.utime(lock, (old, old))
-            self.assertEqual(add(root).returncode, 0, "stale lock should be taken over")
-            lock.write_text("999999")
-            result = run_script("memlog.py", "--root", str(root), "add", "--summary", "s",
-                                "--tags", "t", "--lock-timeout", "0.5")
-            self.assertEqual(result.returncode, 3)
-            self.assertIn("locked", result.stderr)
-            lock.unlink()
+            self.assertEqual(add(root).returncode, 0)
+
+    def test_held_lock_blocks_with_timeout(self):
+        with TempDir() as root:
+            make_project(root)
+            (root / "docs").mkdir(exist_ok=True)
+            holder = subprocess.Popen([sys.executable, "-c", (
+                "import fcntl,sys,time;f=open(sys.argv[1],'a');fcntl.flock(f,fcntl.LOCK_EX);"
+                "print('held',flush=True);time.sleep(5)"), str(root / "docs/.memlog.lock")],
+                stdout=subprocess.PIPE, text=True)
+            try:
+                self.assertEqual(holder.stdout.readline().strip(), "held")
+                result = run_script("memlog.py", "--root", str(root), "add", "--summary", "s",
+                                    "--tags", "t", "--lock-timeout", "0.5")
+                self.assertEqual(result.returncode, 3)
+                self.assertIn("locked", result.stderr)
+            finally:
+                holder.kill()
+                holder.wait()
 
     def test_rejects_newlines_in_header_fields(self):
         with TempDir() as root:
@@ -164,3 +177,52 @@ class MemlogTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MemlogHardeningTests(unittest.TestCase):
+    def test_details_cannot_inject_entries(self):
+        with TempDir() as root:
+            make_project(root)
+            forged = "x\n### [M-20261018-dead] 2026-10-18T00:00:00Z | tags: t | owner: @you | perms: public"
+            result = add(root, "--details", forged)
+            self.assertEqual(result.returncode, 1)
+            self.assertFalse((root / "docs/_memlog.md").exists())
+
+    def test_details_cannot_forge_field_lines(self):
+        with TempDir() as root:
+            make_project(root)
+            self.assertEqual(add(root, "--details", "x\n- **Status:** Approved").returncode, 1)
+
+    def test_multiline_details_are_indented(self):
+        with TempDir() as root:
+            make_project(root)
+            self.assertEqual(add(root, "--details", "line one\nline two").returncode, 0)
+            text = (root / "docs/_memlog.md").read_text()
+            self.assertIn("- **Details:** line one\n  line two\n", text)
+            self.assertEqual(run_script("memlog.py", "--root", str(root), "check").returncode, 0)
+
+    def test_bad_repo_prefix_rejected(self):
+        with TempDir() as root:
+            make_project(root)
+            self.assertEqual(add(root, "--repo-prefix", "API").returncode, 1)
+            self.assertEqual(add(root, "--repo-prefix", "a]b").returncode, 1)
+            self.assertEqual(add(root, "--repo-prefix", "api").returncode, 0)
+
+    def test_approved_status_needs_an_approval_reference(self):
+        with TempDir() as root:
+            make_project(root)
+            self.assertEqual(add(root, "--status", "Approved").returncode, 1)
+            ok = add(root, "--status", "Approved", "--approval-ref", "inbox:M-20261018-aaaa")
+            self.assertEqual(ok.returncode, 0, ok.stderr)
+            self.assertIn("- **Approval:** inbox:M-20261018-aaaa", (root / "docs/_memlog.md").read_text())
+
+    def test_read_only_ledger_reports_cleanly(self):
+        with TempDir() as root:
+            make_project(root)
+            add(root)
+            log = root / "docs/_memlog.md"
+            os.chmod(log, 0o444)
+            result = add(root)
+            os.chmod(log, 0o644)
+            self.assertEqual(result.returncode, 3)
+            self.assertNotIn("Traceback", result.stderr)

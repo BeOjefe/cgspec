@@ -1,33 +1,83 @@
 {
-  "title": "docs/_cgspec/04-checks/manifest.json — registered, user-approved project checks",
+  "title": "docs/_cgspec/04-checks/manifest.json \u2014 registered, user-approved project checks",
   "type": "object",
-  "required": ["schema", "checks"],
+  "required": [
+    "schema",
+    "checks"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schema": {"const": 1},
+    "schema": {
+      "const": 1
+    },
     "checks": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "path", "sha256", "command", "applies_to", "approval", "added"],
+        "required": [
+          "id",
+          "path",
+          "sha256",
+          "command",
+          "applies_to",
+          "approval",
+          "added"
+        ],
         "additionalProperties": false,
         "properties": {
-          "id": {"type": "string", "pattern": "^CHK-\\d{3}$"},
-          "path": {"type": "string", "pattern": "^docs/_cgspec/04-checks/"},
-          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-          "command": {"type": "array", "minItems": 1, "items": {"type": "string"}},
-          "applies_to": {"type": "array", "items": {"type": "string"}},
-          "description": {"type": "string"},
-          "approval": {
-            "type": "object",
-            "required": ["source", "ref", "at"],
-            "properties": {
-              "source": {"enum": ["message-hook", "commit-trailer"]},
-              "ref": {"type": "string"},
-              "at": {"type": "string"}
+          "id": {
+            "type": "string",
+            "pattern": "^CHK-\\d{3}$"
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^docs/_cgspec/04-checks/(?!.*(^|/)\\.\\.(/|$))[^\\\\]+$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "command": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
             }
           },
-          "added": {"type": "string"}
+          "applies_to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string"
+          },
+          "approval": {
+            "type": "object",
+            "required": [
+              "source",
+              "ref",
+              "at"
+            ],
+            "properties": {
+              "source": {
+                "enum": [
+                  "message-hook",
+                  "commit-trailer"
+                ]
+              },
+              "ref": {
+                "type": "string"
+              },
+              "at": {
+                "type": "string"
+              }
+            }
+          },
+          "added": {
+            "type": "string"
+          }
         }
       }
     }

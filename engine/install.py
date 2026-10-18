@@ -30,7 +30,7 @@ OWNED = ENGINE_DIR / "owned-files.json"
 MANIFEST = ENGINE_DIR / "manifest.json"
 ARCHIVE = Path("docs/_cgspec/_archive/pre-cgspec")
 REPLACEABLE = {"AGENTS.md", "CLAUDE.md"}
-GITIGNORE_LINES = [".cgspec-scratch/"]
+GITIGNORE_LINES = [".cgspec-scratch/", "docs/.memlog.lock"]
 SKIP_NAMES = {"__pycache__", ".pytest_cache", "owned-files.json", "manifest.json"}
 
 PATH_CLASSES = {
@@ -87,14 +87,86 @@ def copy_engine(root: Path) -> dict[str, str]:
     return hashes
 
 
-def template_dirs(profile: str, topology: str) -> list[Path]:
+def template_files(profile: str, topology: str) -> tuple[dict[str, Path], list[str]]:
+    """Files (rel -> source) and folders the templates create for this profile and topology."""
     base = plugin_root() / "templates"
-    dirs = [base / "base"]
-    if profile in GUI_PROFILES:
-        dirs.append(base / "gui")
+    layers = [base / "base"] + ([base / "gui"] if profile in GUI_PROFILES else [])
     if (base / topology).is_dir():
-        dirs.append(base / topology)
-    return dirs
+        layers.append(base / topology)
+    files: dict[str, Path] = {}
+    dirs: list[str] = []
+    for layer in layers:
+        for src in sorted(layer.rglob("*")):
+            rel = src.relative_to(layer).as_posix()
+            if src.is_dir():
+                dirs.append(rel)
+            else:
+                files[rel] = src
+    return files, dirs
+
+
+def safe_target(root: Path, rel: str) -> Path:
+    """Resolve rel under root, refusing absolute paths, '..' and any symlink on the way."""
+    parts = Path(rel).parts
+    if Path(rel).is_absolute() or ".." in parts or not parts:
+        raise CgspecError(f"refusing unsafe path: {rel}")
+    current = root
+    for part in parts:
+        current = current / part
+        if current.is_symlink():
+            raise CgspecError(f"refusing to write through a symlink: {current.relative_to(root)}")
+    return current
+
+
+def place_file(root: Path, rel: str, src: Path, owned: dict) -> None:
+    dst = safe_target(root, rel)
+    if dst.exists():
+        if sha256_file(dst) == sha256_file(src):
+            owned["created"].setdefault(rel, sha256_file(dst))  # resumed install
+            return
+        if rel not in REPLACEABLE:
+            return  # never overwrite project files
+        archive = safe_target(root, (ARCHIVE / rel).as_posix())
+        archive.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(dst, archive)
+        owned["replaced"][rel] = (ARCHIVE / rel).as_posix()
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, dst)
+    owned["created"][rel] = sha256_file(dst)
+
+
+def place_templates(root: Path, profile: str, topology: str, owned: dict) -> None:
+    files, dirs = template_files(profile, topology)
+    for rel in [*files, *dirs]:
+        safe_target(root, rel)  # check everything before writing anything
+    for rel in dirs:
+        target = root / rel
+        if not target.exists():
+            target.mkdir(parents=True)
+            owned["dirs"].append(rel)
+    for rel, src in files.items():
+        place_file(root, rel, src, owned)
+
+
+def update_gitignore(root: Path, owned: dict) -> None:
+    gitignore = safe_target(root, ".gitignore")
+    text = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
+    added = [line for line in GITIGNORE_LINES if line not in text.splitlines()]
+    if not added:
+        return
+    if text and not text.endswith("\n"):
+        text += "\n"
+    if not gitignore.exists():
+        owned["created"][".gitignore"] = ""
+    gitignore.write_text(text + "\n".join(added) + "\n", encoding="utf-8")
+    owned["gitignore_added"] = sorted(set(owned.get("gitignore_added", [])) | set(added))
+    if ".gitignore" in owned["created"]:
+        owned["created"][".gitignore"] = sha256_file(gitignore)
+
+
+def new_owned() -> dict:
+    return {"schema": 1, "cgspec_version": version(), "installed_at": utc_now(),
+            "created": {}, "dirs": [], "replaced": {}, "gitignore_added": []}
 
 
 def cmd_install(root: Path, args: argparse.Namespace) -> int:
@@ -108,68 +180,31 @@ def cmd_install(root: Path, args: argparse.Namespace) -> int:
         raise CgspecError(f"CGSpec {current} is installed; run 'install.py upgrade' to move to {version()}")
     if args.topology.startswith("polyrepo") and not args.repo_prefix:
         raise CgspecError("polyrepo topologies need --repo-prefix")
-
-    owned = {"schema": 1, "cgspec_version": version(), "installed_at": utc_now(),
-             "created": {}, "dirs": [], "replaced": {}, "gitignore_added": []}
-
-    for tdir in template_dirs(args.profile, args.topology):
-        for src in sorted(tdir.rglob("*")):
-            rel = src.relative_to(tdir).as_posix()
-            dst = root / rel
-            if src.is_dir():
-                if not dst.exists():
-                    dst.mkdir(parents=True)
-                    owned["dirs"].append(rel)
-                continue
-            if dst.exists():
-                if rel not in REPLACEABLE:
-                    continue  # never overwrite project files
-                archive = root / ARCHIVE / rel
-                archive.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(dst, archive)
-                owned["replaced"][rel] = (ARCHIVE / rel).as_posix()
-            else:
-                for parent in reversed(dst.relative_to(root).parents[:-1]):
-                    if not (root / parent).exists():
-                        (root / parent).mkdir()
-                        owned["dirs"].append(parent.as_posix())
-            shutil.copyfile(src, dst)
-            owned["created"][rel] = sha256_file(dst)
-
-    engine_existed = (root / ENGINE_DIR).exists()
-    copy_engine(root)
-    if not engine_existed:
+    safe_target(root, PROJECT_FILE.as_posix())
+    owned = read_json(root / OWNED) if (root / OWNED).is_file() else new_owned()  # resume
+    place_templates(root, args.profile, args.topology, owned)
+    if not (root / ENGINE_DIR).exists():
         owned["dirs"].append(ENGINE_DIR.as_posix())
-
+    copy_engine(root)
+    update_gitignore(root, owned)
+    write_json(root / OWNED, owned)
     project = {"schema": 1, "cgspec_version": version(), "profile": args.profile, "topology": args.topology,
                "path_classes": PATH_CLASSES, "tools": sorted(set(args.tools.split(",")) - {""})}
     if args.repo_prefix:
         project["repo_prefix"] = args.repo_prefix
-    write_json(root / PROJECT_FILE, project)
-    owned["created"][PROJECT_FILE.as_posix()] = sha256_file(root / PROJECT_FILE)
-
-    gitignore = root / ".gitignore"
-    lines = gitignore.read_text(encoding="utf-8").splitlines() if gitignore.exists() else []
-    added = [line for line in GITIGNORE_LINES if line not in lines]
-    if added:
-        text = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
-        if text and not text.endswith("\n"):
-            text += "\n"
-        gitignore.write_text(text + "\n".join(added) + "\n", encoding="utf-8")
-        owned["gitignore_added"] = added
-        if not lines:
-            owned["created"][".gitignore"] = sha256_file(gitignore)
-
-    write_json(root / OWNED, owned)
+    write_json(root / PROJECT_FILE, project)  # written last: its presence means "install finished"
     print(f"installed CGSpec {version()} ({args.profile}, {args.topology}) in {root}")
     return EXIT_OK
 
 
 def verify_engine(root: Path) -> list[str]:
     manifest = read_json(root / MANIFEST)
+    files = manifest.get("files") if isinstance(manifest, dict) else None
+    if not isinstance(files, dict):
+        return ["engine manifest has no 'files' map"]
     target = root / ENGINE_DIR
     problems = []
-    for rel, digest in manifest.get("files", {}).items():
+    for rel, digest in files.items():
         path = target / rel
         if not path.is_file():
             problems.append(f"missing engine file: {rel}")
@@ -177,7 +212,7 @@ def verify_engine(root: Path) -> list[str]:
             problems.append(f"engine file is a symlink: {rel}")
         elif sha256_file(path) != digest:
             problems.append(f"engine file changed: {rel}")
-    listed = set(manifest.get("files", {})) | {"manifest.json", "owned-files.json"}
+    listed = set(files) | {"manifest.json", "owned-files.json"}
     for path in target.rglob("*"):
         if path.is_file() and "__pycache__" not in path.parts and path.relative_to(target).as_posix() not in listed:
             problems.append(f"unexpected engine file: {path.relative_to(target).as_posix()}")
@@ -192,60 +227,113 @@ def cmd_verify(root: Path, _args: argparse.Namespace) -> int:
     return EXIT_FAIL if problems else EXIT_OK
 
 
-def cmd_upgrade(root: Path, _args: argparse.Namespace) -> int:
+def version_tuple(text: str) -> tuple[int, ...]:
+    return tuple(int(x) for x in text.split("."))
+
+
+def cmd_upgrade(root: Path, args: argparse.Namespace) -> int:
     if not (root / PROJECT_FILE).exists():
         raise CgspecError("CGSpec is not installed here; run 'install.py install'")
-    plugin_root()
     project = read_json(root / PROJECT_FILE)
+    old = project.get("cgspec_version", "0.0.0")
+    if version_tuple(version()) < version_tuple(old) and not args.force:
+        raise CgspecError(f"refusing downgrade {old} -> {version()} (use --force if you mean it)")
+    owned = read_json(root / OWNED) if (root / OWNED).is_file() else new_owned()
+    files, dirs = template_files(project["profile"], project["topology"])
+    for rel in dirs:
+        if not safe_target(root, rel).exists():
+            (root / rel).mkdir(parents=True)
+            owned["dirs"].append(rel)
+    for rel, src in files.items():
+        if not safe_target(root, rel).exists():  # add what a newer template introduced; never overwrite
+            place_file(root, rel, src, owned)
     copy_engine(root)
-    owned_path = root / OWNED
-    if owned_path.exists():
-        owned = read_json(owned_path)
-        owned["cgspec_version"] = version()
-        write_json(owned_path, owned)
-    old = project.get("cgspec_version")
+    update_gitignore(root, owned)
+    owned["cgspec_version"] = version()
+    write_json(root / OWNED, owned)
     project["cgspec_version"] = version()  # the version marker is updated last (spec 5)
     write_json(root / PROJECT_FILE, project)
     print(f"engine refreshed; CGSpec {old} -> {version()}")
     return EXIT_OK
 
 
-def cmd_uninstall(root: Path, _args: argparse.Namespace) -> int:
-    owned = read_json(root / OWNED)
-    kept = []
+def remove_created(root: Path, owned: dict, allowed: set[str]) -> list[str]:
+    report = []
     for rel, digest in owned.get("created", {}).items():
-        path = root / rel
-        if rel in owned.get("replaced", {}) or not path.exists():
+        if rel not in allowed:
+            report.append(f"ignored (not created by install): {rel}")
+            continue
+        if rel in owned.get("replaced", {}):
+            continue
+        try:
+            path = safe_target(root, rel)
+        except CgspecError as exc:
+            report.append(f"ignored ({exc})")
+            continue
+        if not path.is_file():
             continue
         if rel == PROJECT_FILE.as_posix() or sha256_file(path) == digest:
             path.unlink()
         else:
-            kept.append(rel)
-    for rel, archive in owned.get("replaced", {}).items():
-        shutil.copy2(root / archive, root / rel)
+            report.append(f"kept (changed since install): {rel}")
+    return report
+
+
+def restore_replaced(root: Path, owned: dict) -> tuple[list[str], bool]:
+    report, archive_needed = [], False
+    for rel, archive_rel in owned.get("replaced", {}).items():
+        if rel not in REPLACEABLE:
+            report.append(f"ignored (not replaceable): {rel}")
+            continue
+        current, archive = safe_target(root, rel), safe_target(root, archive_rel)
+        if current.is_file() and sha256_file(current) != owned["created"].get(rel):
+            report.append(f"kept (changed since install): {rel}; original stays in {archive_rel}")
+            archive_needed = True
+        elif not archive.is_file():
+            report.append(f"archive missing for {rel}; left the current file in place")
+        else:
+            shutil.copy2(archive, current)
+    return report, archive_needed
+
+
+def cmd_uninstall(root: Path, _args: argparse.Namespace) -> int:
+    owned = read_json(root / OWNED)
+    project = read_json(root / PROJECT_FILE) if (root / PROJECT_FILE).is_file() else {}
+    files, dirs = template_files(project.get("profile", "web-workspace"), project.get("topology", "single"))
+    allowed = set(files) | {PROJECT_FILE.as_posix(), ".gitignore"}
+    report = remove_created(root, owned, allowed)
+    restored, archive_needed = restore_replaced(root, owned)
+    report += restored
     gitignore = root / ".gitignore"
-    if gitignore.exists() and owned.get("gitignore_added"):
+    if gitignore.is_file() and not gitignore.is_symlink() and owned.get("gitignore_added"):
         remaining = [l for l in gitignore.read_text(encoding="utf-8").splitlines() if l not in owned["gitignore_added"]]
         if remaining:
             gitignore.write_text("\n".join(remaining) + "\n", encoding="utf-8")
         else:
             gitignore.unlink()
     shutil.rmtree(root / ENGINE_DIR, ignore_errors=True)
-    if owned.get("replaced"):
+    if not archive_needed:
         shutil.rmtree(root / ARCHIVE, ignore_errors=True)
-    for rel in sorted(set(owned.get("dirs", [])) | {ARCHIVE.parent.as_posix()}, key=lambda d: d.count("/"), reverse=True):
+    remove_empty_dirs(root, set(dirs) & set(owned.get("dirs", [])) | {ENGINE_DIR.as_posix(), ARCHIVE.as_posix(), ARCHIVE.parent.as_posix()})
+    for line in report:
+        print(line)
+    kept = sum(1 for line in report if line.startswith("kept"))
+    print(f"uninstalled CGSpec; kept {kept} changed files")
+    return EXIT_OK
+
+
+def remove_empty_dirs(root: Path, rels: set[str]) -> None:
+    for rel in sorted(rels, key=lambda d: d.count("/"), reverse=True):
         path = root / rel
-        for keep in list(path.rglob(".gitkeep")) if path.is_dir() else []:
-            if not any(p for p in keep.parent.iterdir() if p.name != ".gitkeep"):
-                keep.unlink()
+        if not path.is_dir() or path.is_symlink():
+            continue
+        keep = path / ".gitkeep"
+        if keep.is_file() and [p.name for p in path.iterdir()] == [".gitkeep"]:
+            keep.unlink()
         try:
             path.rmdir()
         except OSError:
             pass
-    for rel in kept:
-        print(f"kept (changed since install): {rel}")
-    print(f"uninstalled CGSpec; kept {len(kept)} changed files")
-    return EXIT_OK
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -255,6 +343,8 @@ def build_parser() -> argparse.ArgumentParser:
     for name in ("install", "upgrade", "verify", "uninstall"):
         p = sub.add_parser(name)
         p.add_argument("--root", required=True)
+        if name == "upgrade":
+            p.add_argument("--force", action="store_true", help="allow a downgrade")
         if name == "install":
             p.add_argument("--profile", required=True,
                            choices=["website", "web-workspace", "mobile", "cli", "headless", "small"])

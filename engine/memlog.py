@@ -30,7 +30,6 @@ FULL_HEADER = re.compile(
     r"^ (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) \| tags: ([^|]+)\| owner: ([^|]+)\| perms: (\S.*)$"
 )
 VALID_ID = re.compile(r"^(?:[a-z0-9-]+:)?M-(?:\d{8}-[0-9a-f]{4}|\d{3,})$")
-STALE_LOCK_SECONDS = 120
 
 
 @dataclass
@@ -59,35 +58,42 @@ def parse(text: str) -> list[Entry]:
 
 
 class Lock:
-    """Exclusive lock file next to the ledger; stale locks (crashed writers) are taken over."""
+    """OS-level exclusive lock on a side file; released automatically if the writer dies."""
 
     def __init__(self, path: Path, timeout: float) -> None:
-        self.path, self.timeout = path, timeout
+        self.path, self.timeout, self.handle = path, timeout, None
+
+    def _try(self) -> bool:
+        if os.name == "nt":
+            import msvcrt
+            try:
+                msvcrt.locking(self.handle.fileno(), msvcrt.LK_NBLCK, 1)
+                return True
+            except OSError:
+                return False
+        import fcntl
+        try:
+            fcntl.flock(self.handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return True
+        except OSError:
+            return False
 
     def __enter__(self) -> "Lock":
+        self.handle = open(self.path, "a+")
         deadline = time.monotonic() + self.timeout
-        while True:
-            try:
-                fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
-                os.write(fd, str(os.getpid()).encode())
-                os.close(fd)
-                return self
-            except FileExistsError:
-                try:
-                    if time.time() - self.path.stat().st_mtime > STALE_LOCK_SECONDS:
-                        self.path.unlink()
-                        continue
-                except FileNotFoundError:
-                    continue
-                if time.monotonic() >= deadline:
-                    raise TimeoutError(f"ledger is locked by another writer ({self.path})")
-                time.sleep(0.05)
+        while not self._try():
+            if time.monotonic() >= deadline:
+                self.handle.close()
+                raise TimeoutError(f"ledger is locked by another writer ({self.path})")
+            time.sleep(0.05)
+        return self
 
     def __exit__(self, *exc) -> None:
-        try:
-            self.path.unlink()
-        except FileNotFoundError:
-            pass
+        self.handle.close()  # closing releases the lock; the side file stays, harmlessly
+
+
+FORGED_LINE = re.compile(r"^\s*(###\s*\[|[-*]\s*\*\*)")
+PREFIX = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 
 def clean_field(name: str, value: str) -> str:
@@ -98,13 +104,33 @@ def clean_field(name: str, value: str) -> str:
     return value.strip()
 
 
+def clean_details(value: str | None) -> str | None:
+    """Multi-line details are allowed but indented, and may not imitate headers or fields."""
+    if not value:
+        return None
+    lines = value.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    for line in lines[1:]:
+        if FORGED_LINE.match(line):
+            raise CgspecError("--details may not contain lines that look like ledger headers or fields")
+    if FORGED_LINE.match(lines[0]):
+        raise CgspecError("--details may not start like a ledger header or field")
+    return "\n  ".join(line.rstrip() for line in lines)
+
+
 def cmd_add(root: Path, args: argparse.Namespace) -> int:
     tags = clean_field("tags", args.tags)
     owner = clean_field("owner", args.owner)
     perms = clean_field("perms", args.perms)
     summary = clean_field("summary", args.summary)
-    details = args.details.replace("\r", "") if args.details else None
+    details = clean_details(args.details)
     links = clean_field("links", args.links) if args.links else None
+    if args.repo_prefix and not PREFIX.match(args.repo_prefix):
+        raise CgspecError("--repo-prefix must match ^[a-z0-9][a-z0-9-]*$")
+    approval = clean_field("approval-ref", args.approval_ref) if args.approval_ref else None
+    if args.status == "Approved" and not approval:
+        # Spec 8: approvals come only from the user's message or commit trailer; the hook that
+        # records them passes the reference, and CI verifies it exists.
+        raise CgspecError("status Approved needs --approval-ref (inbox entry or commit with your trailer)")
 
     log = root / MEMLOG_FILE
     log.parent.mkdir(parents=True, exist_ok=True)
@@ -122,6 +148,8 @@ def cmd_add(root: Path, args: argparse.Namespace) -> int:
             lines.append(f"- **Details:** {details}")
         if args.status:
             lines.append(f"- **Status:** {args.status}")
+        if approval:
+            lines.append(f"- **Approval:** {approval}")
         if links:
             lines.append(f"- **Links:** {links}")
         block = "\n".join(lines) + "\n"
@@ -197,6 +225,7 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("--owner", default=os.environ.get("CGSPEC_OWNER", "@agent"))
     add.add_argument("--perms", default="public")
     add.add_argument("--repo-prefix", default=os.environ.get("CGSPEC_REPO_PREFIX", ""))
+    add.add_argument("--approval-ref", help="required with --status Approved")
     add.add_argument("--lock-timeout", type=float, default=10.0)
 
     sub.add_parser("check")
@@ -217,7 +246,7 @@ def main(argv: list[str] | None = None) -> int:
     except CgspecError as exc:
         print(f"memlog: {exc}", file=sys.stderr)
         return EXIT_FAIL
-    except TimeoutError as exc:
+    except (TimeoutError, PermissionError) as exc:
         print(f"memlog: {exc}", file=sys.stderr)
         return EXIT_INTERNAL
 
