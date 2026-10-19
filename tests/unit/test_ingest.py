@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stdout, redirect_stderr
+from unittest.mock import patch
 
 SCRIPT = Path(__file__).resolve().parents[2] / 'engine/ingest.py'
 spec = importlib.util.spec_from_file_location('inventory_ingest', SCRIPT)
@@ -154,6 +155,35 @@ CREATE TABLE real (id int);
         code, _, _ = self.run_cli(self.repo, '--output', config)
         self.assertEqual(code, 2)
         self.assertEqual(config.read_text(), '{"secret": "keep"}\n')
+
+    def test_output_created_during_scan_is_never_replaced(self):
+        (self.repo / 'app.py').write_text('x = 1\n')
+        output = self.base / 'inventory.json'
+        actual_snapshot = ingest.snapshot
+
+        def intervening_snapshot(*args):
+            output.write_text('{"secret": "later"}\n')
+            return actual_snapshot(*args)
+
+        with patch.object(ingest, 'snapshot', side_effect=intervening_snapshot):
+            code, _, _ = self.run_cli(self.repo, '--output', output)
+        self.assertEqual(code, 2)
+        self.assertEqual(output.read_text(), '{"secret": "later"}\n')
+
+    def test_existing_manifest_changed_during_scan_is_preserved(self):
+        (self.repo / 'app.py').write_text('x = 1\n')
+        output = self.base / 'inventory.json'
+        output.write_text('{"schema_version":"2.0","approval":"unreviewed"}\n')
+        actual_snapshot = ingest.snapshot
+
+        def intervening_snapshot(*args):
+            output.write_text('{"schema_version":"2.0","approval":"unreviewed","new":true}\n')
+            return actual_snapshot(*args)
+
+        with patch.object(ingest, 'snapshot', side_effect=intervening_snapshot):
+            code, _, _ = self.run_cli(self.repo, '--output', output)
+        self.assertEqual(code, 2)
+        self.assertIn('"new":true', output.read_text())
 
     def test_infrastructure_files_are_explicit_unsupported_coverage(self):
         (self.repo / 'app.py').write_text('x = 1\n')

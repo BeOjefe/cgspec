@@ -10,17 +10,17 @@ Python AST and limited SQL DDL yield candidates; other files are unsupported.
 import argparse
 import ast
 import hashlib
-import json
 import os
 from pathlib import Path
 import re
 import stat
 import subprocess
 import sys
-import tempfile
 from datetime import datetime, timezone
 
-MAX_FILE_BYTES = 1024 * 1024
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _lib.ingest_io import MAX_FILE_BYTES, read_regular_json, write_manifest
+
 IGNORE_DIRS = {'.git', '.hg', '.svn', 'node_modules', 'vendor', '.venv', 'venv',
                '__pycache__', 'target', 'dist', 'build', '.next', '.turbo',
                '.gemini', '.cgspec', '_cgspec', 'docs', 'templates', 'archive',
@@ -282,47 +282,13 @@ def snapshot(root, scan, schema=None, output=None):
     return result
 
 
-def write_manifest(manifest, output=None):
-    text = json.dumps(manifest, indent=2, ensure_ascii=False) + '\n'
-    if output is None:
-        sys.stdout.write(text)
-        return
-    # Parent must exist: output is explicit, but never create a target tree.
-    temp = None
-    try:
-        with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=output.parent,
-                                         prefix='.cgspec-ingest-', delete=False) as handle:
-            temp = Path(handle.name)
-            handle.write(text)
-            handle.flush()
-            os.fsync(handle.fileno())
-        if output.is_symlink() or (output.exists() and not output.is_file()):
-            raise ValueError('output changed to a non-regular file during inventory')
-        os.replace(temp, output)
-    finally:
-        if temp and temp.exists():
-            temp.unlink()
-
-
-def read_regular_json(path, label):
-    flags = os.O_RDONLY | os.O_NONBLOCK | getattr(os, 'O_NOFOLLOW', 0)
-    fd = os.open(path, flags)
-    with os.fdopen(fd, 'rb') as handle:
-        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
-            raise ValueError(f'{label} must be a regular file')
-        raw = handle.read(MAX_FILE_BYTES + 1)
-    if len(raw) > MAX_FILE_BYTES:
-        raise ValueError(f'{label} exceeds 1 MiB limit')
-    return json.loads(raw.decode('utf-8'))
-
-
 def registry_snapshot(args, output, manifest):
     if args.target_path or args.subsystem or args.live_schema:
         raise ValueError('registry cannot combine with target/subsystem/live-schema')
     registry = Path(args.registry).resolve(strict=True)
     if output == registry:
         raise ValueError('output cannot overwrite registry')
-    entries = read_regular_json(registry, 'registry')
+    entries, _ = read_regular_json(registry, 'registry')
     if isinstance(entries, dict):
         entries = entries.get('repositories')
     if not isinstance(entries, list) or not entries:
@@ -359,6 +325,7 @@ def main(argv=None):
     parser.add_argument('--output', help='Explicit JSON output; parent must already exist')
     args = parser.parse_args(argv)
     try:
+        expected_output = None
         output = Path(args.output).absolute() if args.output else None
         if output and (output.is_symlink() or not output.parent.is_dir() or
                        (output.exists() and not output.is_file())):
@@ -368,7 +335,7 @@ def main(argv=None):
             if is_inventory_source(output):
                 raise ValueError('output must not replace a recognized source or infrastructure file')
             if output.exists():
-                previous = read_regular_json(output, 'output')
+                previous, expected_output = read_regular_json(output, 'output')
                 if (not isinstance(previous, dict) or previous.get('schema_version') != '2.0' or
                         previous.get('approval') != 'unreviewed'):
                     raise ValueError('existing output is not a CGSpec v2 inventory manifest')
@@ -386,7 +353,7 @@ def main(argv=None):
         print(f'Invalid inventory input: {exc}', file=sys.stderr)
         return 2
     try:
-        write_manifest(manifest, output)
+        write_manifest(manifest, output, expected_output)
     except ValueError as exc:
         print(f'Invalid inventory output: {exc}', file=sys.stderr)
         return 2
