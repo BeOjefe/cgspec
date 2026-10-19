@@ -251,13 +251,13 @@ For a reference that has no package (a closed product's look), the design system
 
 **How adherence is enforced** (all registered checks, section 8):
 
-1. **Use, don't re-implement.** Components come only from the design system's package. A lint rule built from its component list refuses raw elements it already covers (a hand-made `<button>` when it ships `Button`) and imports from other UI libraries. A custom component must be built from the system's primitives and approved in a slice.
-2. **Tokens only.** The official lint plugin when one exists; otherwise a Stylelint rule generated from the token file rejects any raw color, size, spacing, radius, shadow or duration, and any Tailwind arbitrary value.
-3. **Correct usage.** Strict type checking against the package types; the design system's MCP server or `llms.txt` is queried during the build; mechanical Do/Don't rules from its guidelines become lint rules, and the rest go into the reviewer's frozen criteria.
-4. **Rendered conformance.** In the browser, a script reads the computed style of every element on every state and fails if a color, font size, spacing, radius or motion value is not a token value. Each used component is screenshot-compared with the design system's own render of the same component and props.
+1. **Use, don't re-implement.** In the product UI scope, use package components where they cover the needed behavior. A lint rule flags hand-made substitutes and unrelated UI-library imports; native semantic elements and custom components have documented, reviewed exceptions. A custom component uses the system's primitives where they fit and is scoped in a slice.
+2. **Tokens for design choices.** Use the official lint plugin when one exists; otherwise generate checks from the token file for authored colors, typography, spacing, radii, shadows and motion values. Layout mechanics such as percentages, `auto`, grid fractions, and content-driven dimensions are not token violations. Record justified exceptions rather than forcing a token that breaks the layout.
+3. **Correct usage.** Strict type checking validates package props. Query the design system's machine-readable guidance when available; turn only genuinely mechanical Do/Don't rules into lint rules, and put contextual guidance into frozen reviewer criteria.
+4. **Rendered conformance.** In a browser, check selected design properties on representative components and states against token-derived values, with explicit tolerances for font rendering and CSS resolution. Dynamic geometry, browser defaults, inheritance and user accessibility overrides are not required to equal a raw token. Compare screenshots with official component renders only when the same version, props, state, viewport, fonts and browser environment can be reproduced; otherwise record visual review evidence and its limit.
 5. **Version pin.** The design system version is pinned; upgrading it is a T2 change that re-runs every baseline.
 
-A screen cannot lock at layers 5–7 with a conformance error. The report shows a per-screen conformance count, so drift is visible instead of discovered later.
+A screen cannot lock at layers 5–7 with a measured conformance error. Missing package, browser or reference-render evidence makes that part of conformance PARTIAL; it cannot be reported as a pass. The report shows per-screen measured failures and untested coverage so drift is visible instead of discovered later.
 
 ## 7. Verification
 
