@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib.common import (  # noqa: E402
     ENGINE_DIR, EXIT_FAIL, EXIT_OK, PROJECT_FILE, CgspecError, read_json, sha256_file, utc_now, write_json,
 )
-from _lib.adapters import unwire, wire  # noqa: E402
+from _lib.adapters import refresh as refresh_adapters, unwire, wire  # noqa: E402
 from _lib.document_dates import stamp_new  # noqa: E402
 from _lib.layout import GUI_PROFILES  # noqa: E402
 
@@ -242,8 +242,6 @@ def cmd_verify(root: Path, _args: argparse.Namespace) -> int:
 
 def version_tuple(text: str) -> tuple[int, ...]:
     return tuple(int(x) for x in text.split("."))
-
-
 def cmd_upgrade(root: Path, args: argparse.Namespace) -> int:
     if args.from_v1:
         from _lib.upgrade_v1 import run as upgrade_v1
@@ -268,6 +266,8 @@ def cmd_upgrade(root: Path, args: argparse.Namespace) -> int:
         if not safe_target(root, rel).exists():  # add what a newer template introduced; never overwrite
             place_file(root, rel, src, owned)
     copy_engine(root)
+    for note in refresh_adapters(root, owned):
+        print(note)
     update_gitignore(root, owned)
     owned["cgspec_version"] = version()
     write_json(root / OWNED, owned)

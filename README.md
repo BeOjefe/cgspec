@@ -21,6 +21,10 @@ python3 engine/install.py verify --root /tmp/cgspec-example
 
 `install.py upgrade --from-v1 --root <project>` produces a staged report for earlier v0.1 layouts before publication. The `--from-v1` flag retains its spelling for compatibility. It stops with a partial result where legacy material, links or decisions need review. Do not use `--apply` on a live project until the report, rollback and project ownership are settled.
 
+For an installed v0.2 project, run `python3 <current-plugin>/engine/install.py upgrade --root <project>` after obtaining the newer plugin copy. This refreshes the vendored engine, Claude and Antigravity hooks, and Antigravity's workspace skills. Replaced skill copies are archived under `docs/_cgspec/_archive/agent-skills/`. Run `verify` and `doctor.py` afterward. Changes to protected GitHub CI wiring still need owner review before the new release can judge protected branches.
+
+Keep the host plugin and the project copy in step: update or replace this plugin directory first, then run the project `upgrade` command above. Claude Code marketplace installs use `claude plugin update cgspec@<marketplace>`; Antigravity can install the directory with `agy plugin install <plugin-directory>` (its CLI currently has no `update` command, so re-import/reinstall must be checked on the installed host). Codex can register this repository with `codex plugin marketplace add <plugin-directory>` and install `cgspec@cgspec-local`; for this local source, update the directory and restart the host. For a Git marketplace, `codex plugin marketplace upgrade <marketplace>` refreshes its snapshot. The root `plugin.json` and `.agents/plugins/marketplace.json` package the same ten skills for Codex and Antigravity. A host plugin update alone does not refresh a project's vendored engine or workspace hooks.
+
 For this plugin repository:
 
 ```bash

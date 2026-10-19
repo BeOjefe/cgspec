@@ -91,6 +91,47 @@ class WiringTests(unittest.TestCase):
         self.assertIn("CONTRACT.md", (self.root / ".cursor/rules/cgspec.mdc").read_text())
         self.assertEqual(run_script("doctor.py", "--root", str(self.root)).returncode, 0)
 
+    def test_antigravity_hook_resolves_engine_from_agents_working_directory(self):
+        self.assertEqual(self.do_install().returncode, 0)
+        data = json.loads((self.root / ".agents/hooks.json").read_text())
+        command = data["cgspec"]["PreToolUse"][0]["hooks"][0]["command"]
+        payload = ag_payload(self.root, "replace_file_content",
+                             TargetFile=str(self.root / "docs/spines/01-INTENT.md"),
+                             ReplacementContent="text")
+        result = subprocess.run(command, shell=True, cwd=self.root / ".agents", input=json.dumps(payload),
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("can't open file", result.stderr)
+
+    def test_antigravity_hook_resolves_engine_before_git_init(self):
+        with TempDir() as root:
+            result = run_script("install.py", "install", "--root", str(root), "--profile", "web-workspace",
+                                "--topology", "single", "--tools", "antigravity")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            data = json.loads((root / ".agents/hooks.json").read_text())
+            command = data["cgspec"]["PreToolUse"][0]["hooks"][0]["command"]
+            payload = ag_payload(root, "replace_file_content", TargetFile=str(root / "docs/spines/01-INTENT.md"),
+                                 ReplacementContent="text")
+            called = subprocess.run(command, shell=True, cwd=root / ".agents", input=json.dumps(payload),
+                                    capture_output=True, text=True)
+            self.assertEqual(called.returncode, 0, called.stderr)
+
+    def test_upgrade_refreshes_claude_hook_without_removing_user_hook(self):
+        self.assertEqual(self.do_install().returncode, 0)
+        path = self.root / ".claude/settings.json"
+        data = json.loads(path.read_text())
+        data["hooks"]["PreToolUse"].append({"matcher": "Read", "hooks": [
+            {"type": "command", "command": "echo my-hook"}]})
+        data["hooks"]["Stop"][0]["hooks"][0]["command"] = "python3 stale/cgspec_hook.py stop --tool claude"
+        path.write_text(json.dumps(data))
+        result = run_script("install.py", "upgrade", "--root", str(self.root))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        after = json.loads(path.read_text())
+        self.assertIn("echo my-hook", json.dumps(after))
+        self.assertIn('"$CLAUDE_PROJECT_DIR"/docs/_cgspec/01-engine/cgspec_hook.py stop',
+                      after["hooks"]["Stop"][0]["hooks"][0]["command"])
+        self.assertNotIn("stale/cgspec_hook.py", json.dumps(after))
+
     def test_existing_settings_are_merged_and_restored(self):
         (self.root / ".claude").mkdir()
         mine = {"model": "opus", "hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "my-check"}]}]}}

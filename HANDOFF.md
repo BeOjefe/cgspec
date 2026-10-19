@@ -1,6 +1,6 @@
 # Historical handoff: CGSpec v0.2 rebuild
 
-**Current continuation:** read [`../cgspec-audit-2026-10-18/23-V0.2-AGY-CONTINUATION-2026-10-19.md`](../cgspec-audit-2026-10-18/23-V0.2-AGY-CONTINUATION-2026-10-19.md) first, then [`docs/METHOD-v0.2.md`](docs/METHOD-v0.2.md). The details below are the older handoff as it stood before subsequent implementation and review; its test counts, branch and release status are historical.
+**Current continuation:** read [`../cgspec-audit-2026-10-18/25-ANTIGRAVITY-HOOK-AND-UPDATE-2026-10-19.md`](../cgspec-audit-2026-10-18/25-ANTIGRAVITY-HOOK-AND-UPDATE-2026-10-19.md), then [`../cgspec-audit-2026-10-18/23-V0.2-AGY-CONTINUATION-2026-10-19.md`](../cgspec-audit-2026-10-18/23-V0.2-AGY-CONTINUATION-2026-10-19.md) and [`docs/METHOD-v0.2.md`](docs/METHOD-v0.2.md). The details below are the older handoff as it stood before subsequent implementation and review; its test counts, branch and release status are historical.
 
 Date: 2026-10-19. Previous owner: Claude (claude.ai session). Read this first, then
 `docs/METHOD-v0.2.md` (the spec, source of truth) and `engine/FORMATS.md` (file formats and hook contract).
