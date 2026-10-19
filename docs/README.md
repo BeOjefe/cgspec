@@ -1,23 +1,5 @@
-# Project Documentation Hub (`docs/`)
+# CGSpec documentation
 
-Welcome to the documentation hub of this project, structured under the **Reformed CGSpec v0.2 Specification-Driven SDLC Methodology** (Model 1: Structured Spines with First-Class Visible Records).
+Start with the [v2 candidate index](00-INDEX.md) and the [method specification](METHOD-v2.md). The implementation status is in the [repository README](../README.md).
 
----
-
-## 1. Quick Navigation
-
-The single entry point and master compass for this project is:
-👉 **[`00-INDEX.md`](./00-INDEX.md)** — Master Compass, Active Milestones & Document Status Matrix.
-
----
-
-## 2. Directory Layout & Organization
-
-Documentation is organized into dedicated, visible, first-class domains:
-
-- **[`docs/spines/`](./spines/README.md):** The 5 living core specification spines (`01-INTENT.md` through `05-DELIVERY.md`).
-- **[`docs/adr/`](./adr/README.md):** Permanent Architecture Decision Records (`ADR-001.md` .. `ADR-NNN.md`).
-- **[`docs/slices/`](./slices/README.md):** Bounded vertical slice delivery contracts (`SLICE-001.md` .. `SLICE-NNN.md`).
-- **[`docs/prototypes/`](./prototypes/README.md):** Zero-build interactive HTML wireframes and prototypes.
-- **[`docs/_memlog.md`](./_memlog.md):** Append-only chronological audit ledger of milestones and architectural locks (`[M-001]` .. `[M-NNN]`).
-- **[`docs/_cgspec/`](./_cgspec/README.md):** The internal engine room containing verification scripts (`01-script/`), research spikes (`02-research/`), multi-agent debate deliberations (`03-council/`), and stashed files (`_archive/`).
+The [spines](spines/README.md), [ADRs](adr/README.md), [research](_cgspec/02-research/README.md), [council records](_cgspec/03-council/README.md), and [ledger](_memlog.md) inherited from v1 remain as historical evidence. Their status labels and old absolute links do not establish v2 approval or working tooling.
