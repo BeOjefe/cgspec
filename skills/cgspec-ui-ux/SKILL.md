@@ -11,7 +11,7 @@ Read the [agent contract](../../engine/CONTRACT.md) and [method section 6](../..
 
 | Layer | Do | Load |
 | --- | --- | --- |
-| 0 References | Find up to six contrasting **real** references (live sites or apps, with links and screenshots in `docs/prototypes/_vision/`). Do not invent them or describe them from memory; if you cannot browse, say so and ask for examples. The user reacts in their own words. Measure the ones they like. | [reference-extraction](references/reference-extraction.md); [RES-001](../../docs/_cgspec/02-research/RES-001-ui-design-systems-and-surface-profiles-benchmark.md), [RES-004](../../docs/_cgspec/02-research/RES-004-vibecoded-design-tells-and-high-craft-ergonomics.md) |
+| 0 References | Find up to six contrasting **real** references, with links and screenshots in `docs/prototypes/_vision/`; measure those the user likes. Search with available web tools and project links. If access fails, record the gap, invite optional links, and continue independent grey work without inventing references or locking reference-derived choices. | [reference-extraction](references/reference-extraction.md); [RES-001](../../docs/_cgspec/02-research/RES-001-ui-design-systems-and-surface-profiles-benchmark.md), [RES-004](../../docs/_cgspec/02-research/RES-004-vibecoded-design-tells-and-high-craft-ergonomics.md) |
 | 0-1 Register (5a) | Write the one-paragraph register (density, type, stance, mood, accent, signature element, avoid, deliberate choices), show it, lock it with the user's approval. | [register](references/register.md) |
 | 1 Tasks | Actors and tasks in the spine, each with frequency and device. | — |
 | 2 Screens and flows | One row per screen with its main need (the focal point). | [craft](references/craft.md) section 1 |
