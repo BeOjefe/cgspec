@@ -111,7 +111,7 @@ class StaticAuditTests(Base):
         for code in ("E-DUP-ID", "E-IMG-ALT", "E-NO-NAME", "E-EMOJI"):
             self.assertIn(code, out)
 
-    def test_generic_look_tells_warn_and_can_be_allowed(self):
+    def test_generic_look_tells_warn_and_css_comment_cannot_allow(self):
         css = ("<style>h1{background:linear-gradient(#7c3aed,#a855f7);-webkit-background-clip:text;"
                "background-clip:text;color:transparent}.c{box-shadow:0 0 30px #a855f7}</style>")
         self.page('<h1>Hi</h1>', head='<meta name="viewport" content="width=device-width">' + css)
@@ -120,7 +120,7 @@ class StaticAuditTests(Base):
         for code in ("W-LOOK-PURPLE", "W-LOOK-GRADIENT-TEXT", "W-LOOK-GLOW"):
             self.assertIn(code, result.stdout)
         self.page('<h1>Hi</h1>', head=css.replace("<style>", "<style>/* cgspec-allow: purple */"))
-        self.assertNotIn("W-LOOK-PURPLE", self.audit("invoice").stdout)
+        self.assertIn("W-LOOK-PURPLE", self.audit("invoice").stdout)
 
     def test_missing_local_file_fails(self):
         (self.screen / "logo.png").unlink()
@@ -133,7 +133,10 @@ class StaticAuditTests(Base):
         self.page('<p class="a">Hi</p>', head='<meta name="viewport" content="width=device-width">' + css)
         self.assertIn("W-LOOK-PURPLE", self.audit("invoice").stdout)
         spine = self.root / "docs/spines/03-EXPERIENCE.md"
-        spine.write_text(spine.read_text() + "\n## Register\n\n- Deliberate choices: purple accent, existing brand since 2024\n")
+        spine.write_text(spine.read_text().replace(
+            "## Register\n", "## Register\nStatus: Locked\n"
+            "- Deliberate choices: purple\n"
+            "- Deliberate reason purple: existing brand since 2024\n", 1))
         self.assertNotIn("W-LOOK-PURPLE", self.audit("invoice").stdout)
 
     def test_unknown_target_errors(self):

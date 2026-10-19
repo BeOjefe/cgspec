@@ -20,14 +20,15 @@ Status: Proposed | Locked (approval A-...)
 - Accent: <one hue and its single job>
 - Signature element: <the one recognisable detail and where it appears>
 - Avoid: <two or three things this product must not look like>
-- Deliberate choices: <each choice a generic-look warning flags, with the reason; for example "purple accent: existing brand colour since 2024">
+- Deliberate choices: <comma-separated exact warning IDs: purple, cream-serif, gradient-text, glow, hero-cards; or none>
+- Deliberate reason <ID>: <why the user chose this, one line for each listed ID>
 ```
 
 ## Rules
 
 - Each field must trace to a reference the user reacted to, or to a stated user need. "Looks modern" is not a reason.
 - One accent, one signature element. If you want two, you have not chosen yet.
-- A deliberate choice listed here turns the matching `visual_audit.py` look warning into an accepted note; nothing else silences it. Do not use `cgspec-allow` comments for choices the user has not seen.
+- An exact warning ID listed here with its reason turns the matching `visual_audit.py` look warning into an accepted note only after this register is locked. CSS comments cannot silence a warning.
 - The register is a starting point, not paint: the bans in RES-004 are defaults to challenge with a reason, not laws. Avoiding every cliché at once produces a new cliché.
 
 ## Example (maintenance work orders for building managers)

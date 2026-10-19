@@ -9,8 +9,7 @@ overflow on mobile, text contrast (WCAG AA) and visible keyboard focus as errors
 font sizes outside the token scale, spacing off the base grid and too many accent hues as warnings;
 desktop/mobile screenshots in .cgspec-scratch/visual/ for the critique rubric.
 Exit 0 PASS, 1 FAIL, 2 PARTIAL (static checks passed, no browser for rendered checks), 3 internal.
-A tell the register lists under "Deliberate choices" is accepted; a CSS comment such as
-/* cgspec-allow: purple */ also accepts it, but should only record a choice the user has seen.
+A tell is accepted only when the locked experience register lists its exact ID and reason.
 """
 
 from __future__ import annotations
@@ -130,7 +129,7 @@ def _hsl(match) -> tuple[float, float, float] | None:
 
 
 def tells(css: str, page: Page, accepted: set[str] | None = None) -> list[str]:
-    allowed = set(re.findall(r"cgspec-allow:\s*([a-z-]+)", css)) | (accepted or set())
+    allowed = accepted or set()
     found = []
     colors = [c for c in (_hsl(m) for m in COLOR.finditer(css)) if c]
     if "purple" not in allowed and any(255 <= h <= 295 and s >= 0.35 and 0.2 <= l <= 0.8 for h, s, l in colors):
@@ -237,15 +236,20 @@ def targets_of(root: Path, raw: list[str]) -> list[tuple[str, Path, list[str]]]:
 
 def audit(root: Path, raw: list[str], write: bool = True) -> tuple[int, list[str]]:
     try:
-        profile = json.loads((root / PROJECT_FILE).read_text(encoding="utf-8")).get("profile", "")
+        project = json.loads((root / PROJECT_FILE).read_text(encoding="utf-8"))
+        profile = project.get("profile", "")
     except (OSError, ValueError):
+        project = {}
         profile = ""
     if profile and profile not in GUI_PROFILES:
         return EXIT_OK, [f"NOT_APPLICABLE: profile {profile} has no user interface"]
     items = targets_of(root, raw)
     accepted = visual_quality.deliberate(root)
-    tokens = visual_quality.find_tokens(root)
+    tokens = visual_quality.find_tokens(root, project)
     results = {label: static_audit(path, profile, accepted) for label, path, _ in items}
+    if tokens.get("issue"):
+        for errors, warnings in results.values():
+            warnings.append(tokens["issue"])
     runs = [{"kind": "audit", "label": label, "url": path.resolve().as_uri()} for label, path, _ in items]
     shown = browser.run(root, runs, root / ".cgspec-scratch/visual")
     blocked = shown.get("blocked")
