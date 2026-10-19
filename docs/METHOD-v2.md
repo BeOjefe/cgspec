@@ -442,7 +442,7 @@ Checkpoint (`07-state/checkpoint.json`, committed): goal, stage per part, accept
 
 The agent always says which wake-up it set.
 
-**Memory and late changes.** Every message is triaged: current step (apply now), other screens or later UX (experience spine), backend or future scope (OOUX, architecture or inbox), research (`RES-NNN`); each lands with a ledger line. A late idea or change of mind goes through the change flow: capture → ask whether more is coming → impact script (follows the index links from nouns, screens, layers and baselines; plain code, no AI context) → impact map shown to you → approve → all records updated together → affected evidence marked stale and re-run. On big projects, one scout per repo reads only the affected files.
+**Memory and late changes.** Every message is triaged: current step (apply now), other screens or later UX (experience spine), backend or future scope (OOUX, architecture or inbox), research (`RES-NNN`); each lands with a ledger line. A late idea or change of mind goes through the change flow: capture → ask whether more is coming → impact script (`impact.py <paths|IDs> [--term noun] [--screen name]` follows links and record-ID mentions backwards from nouns, screens, layers and baselines, then lists records to update, code in affected slice scopes, evidence that goes stale and frozen baselines that need a new version; plain code, no AI context, read-only) → impact map shown to you → approve → all records updated together → affected evidence marked stale and re-run. On big projects, one scout per repo reads only the affected files.
 
 ## 10. Scale, migration and operations
 
