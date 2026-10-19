@@ -13,7 +13,9 @@ import tempfile
 from pathlib import Path
 
 from . import layout as L
+from . import upgrade_v1_txn as txn
 from .common import PROJECT_FILE, sha256_file, utc_now, write_json
+from .upgrade_v1_git import plan as git_plan
 
 JOURNAL = Path(".cgspec-upgrade-v1")
 ARCHIVE = Path("docs/_cgspec/_archive/upgrade-v1")
@@ -127,7 +129,7 @@ def _legacy_baseline(stage: Path, original: dict[str, bytes], report: dict) -> N
     report["legacy_files"] = len(entries)
 
 
-def _prepare(stage: Path, options: dict, report: dict) -> None:
+def _prepare(stage: Path, options: dict, report: dict, hooks: list[dict]) -> None:
     original = files(stage)
     scripts = stage / "docs/_cgspec/01-script"
     if scripts.exists():
@@ -153,11 +155,21 @@ def _prepare(stage: Path, options: dict, report: dict) -> None:
         old, template = stage / rel, plugin_root() / "templates/base" / rel
         if old.is_file() and old.read_bytes() != template.read_bytes():
             report["unresolved"].append(f"legacy agent instructions need semantic mapping: {rel}")
+    staged_tools = ",".join(t for t in options["tools"].split(",") if t and t != "git")
     args = argparse.Namespace(profile=options["profile"], topology=options["topology"],
-                              tools=options["tools"], repo_prefix=options["repo_prefix"],
+                              tools=staged_tools, repo_prefix=options["repo_prefix"],
                               plugin_source=options["plugin_source"])
     with contextlib.redirect_stdout(io.StringIO()):
         cmd_install(stage, args)
+    if "git" in options["tools"].split(","):
+        marker = stage / PROJECT_FILE
+        project = json.loads(marker.read_text())
+        project["tools"] = sorted(set(project["tools"]) | {"git"})
+        write_json(marker, project)
+        owned_path = stage / "docs/_cgspec/01-engine/owned-files.json"
+        owned = json.loads(owned_path.read_text())
+        owned.setdefault("adapters", {})["git_abs"] = [h["path"] for h in hooks if h["created"]]
+        write_json(owned_path, owned)
     _legacy_baseline(stage, original, report)
     doctor_fix(stage, options["profile"])
     capture = io.StringIO()
@@ -170,130 +182,51 @@ def _prepare(stage: Path, options: dict, report: dict) -> None:
                                  for f in check["findings"] if f["code"].startswith("E-")]
 
 
-def _inventory_diff(before: dict[str, bytes], after: dict[str, bytes]) -> list[dict]:
-    out = []
-    for rel in sorted(set(before) | set(after)):
-        if before.get(rel) != after.get(rel):
-            out.append({"path": rel, "before": digest(before.get(rel)), "after": digest(after.get(rel))})
-    out.sort(key=lambda item: item["path"] == PROJECT_FILE.as_posix())
-    return out
+def _inventory_diff(before: dict[str, bytes], after: dict[str, bytes], pre: dict | None = None,
+                    post: dict | None = None) -> list[dict]:
+    pre = pre or txn.metadata(Path.cwd(), before)
+    post = post or txn.metadata(Path.cwd(), after)
+    return txn.inventory_diff(before, after, pre, post)
 
 
-def _save_journal(root: Path, before: dict[str, bytes], diff: list[dict]) -> None:
-    folder = root / JOURNAL
-    folder.mkdir()
-    with tarfile.open(folder / "before.tar.gz", "w:gz") as tar:
-        for item in diff:
-            rel = item["path"]
-            if rel in before:
-                data = before[rel]
-                info = tarfile.TarInfo(rel)
-                info.size = len(data)
-                tar.addfile(info, io.BytesIO(data))
-    (folder / "plan.json").write_text(json.dumps({"schema": 1, "diff": diff}, indent=2) + "\n")
+def _save_journal(root: Path, before: dict[str, bytes], diff: list[dict], pre: dict, post: dict,
+                  hooks: list[dict]) -> None:
+    txn.save_journal(root, before, diff, pre, post, hooks)
 
 
 def _safe_restore(root: Path, folder: Path) -> list[str]:
-    from install import safe_target
-    plan = json.loads((folder / "plan.json").read_text())
-    diff = plan["diff"]
-    conflicts = []
-    for item in diff:
-        try:
-            path = safe_target(root, item["path"])
-        except Exception:
-            conflicts.append(item["path"])
-            continue
-        current = sha256_file(path) if path.is_file() else None
-        if path.is_symlink() or current not in (item["before"], item["after"]):
-            conflicts.append(item["path"])
-        pending = path.with_name(path.name + ".upgrade-new")
-        if pending.exists() and (not pending.is_file() or sha256_file(pending) != item["after"]):
-            conflicts.append(str(pending.relative_to(root)))
-    if conflicts:
-        return conflicts
-    with tarfile.open(folder / "before.tar.gz", "r:gz") as tar:
-        original = {m.name: tar.extractfile(m).read() for m in tar.getmembers() if m.isfile()}
-    for item in diff:
-        if item["before"] is not None and digest(original.get(item["path"])) != item["before"]:
-            conflicts.append(f"corrupt backup: {item['path']}")
-    if conflicts:
-        return conflicts
-    for item in diff:
-        path = root / item["path"]
-        path.with_name(path.name + ".upgrade-new").unlink(missing_ok=True)
-        if item["before"] is None:
-            path.unlink(missing_ok=True)
-        else:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = path.with_name(path.name + ".upgrade-restore")
-            tmp.write_bytes(original[item["path"]])
-            os.replace(tmp, path)
-    for parent in sorted({(root / i["path"]).parent for i in diff}, key=lambda p: len(p.parts), reverse=True):
-        while parent != root and parent.is_dir():
-            try:
-                parent.rmdir()
-            except OSError:
-                break
-            parent = parent.parent
-    return []
+    return txn.restore(root, folder)
 
 
-def _publish(root: Path, stage: Path, before: dict[str, bytes], after: dict[str, bytes], report: dict) -> None:
-    from install import safe_target
-    if files(root) != before:
-        raise ValueError("project changed during stage; rerun dry-run")
-    diff = _inventory_diff(before, after)
-    _save_journal(root, before, diff)
-    try:
-        for item in [i for i in diff if i["path"] != PROJECT_FILE.as_posix()]:
-            path = safe_target(root, item["path"])
-            if item["after"] is None:
-                path.unlink(missing_ok=True)
-            else:
-                path.parent.mkdir(parents=True, exist_ok=True)
-                temp = path.with_name(path.name + ".upgrade-new")
-                temp.write_bytes(after[item["path"]])
-                os.replace(temp, path)
-        for old in ("docs/adr", "docs/_cgspec/03-council", "docs/_cgspec/01-script"):
-            folder = safe_target(root, old)
-            for child in sorted(folder.rglob("*"), key=lambda p: len(p.parts), reverse=True) if folder.is_dir() else []:
-                if child.is_dir():
-                    child.rmdir()
-            if folder.is_dir():
-                folder.rmdir()
-        archive = root / ARCHIVE
-        archive.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(root / JOURNAL / "before.tar.gz", archive / "before.tar.gz")
-        shutil.copy2(root / JOURNAL / "plan.json", archive / "plan.json")
-        marker = root / PROJECT_FILE
-        marker.parent.mkdir(parents=True, exist_ok=True)
-        temp = marker.with_name(marker.name + ".upgrade-new")
-        temp.write_bytes(after[PROJECT_FILE.as_posix()])
-        os.replace(temp, marker)
-    except Exception:
-        report["recovery"] = f"run upgrade --from-v1 --rollback; journal at {JOURNAL}"
-        raise
-    shutil.rmtree(root / JOURNAL)
-    report["changed_files"] = len(diff)
+def _publish(root: Path, stage: Path, before: dict[str, bytes], after: dict[str, bytes], report: dict,
+             pre: dict | None = None, post: dict | None = None, hooks: list[dict] | None = None) -> None:
+    pre = pre or txn.metadata(root, before)
+    post = post or txn.metadata(stage, after)
+    txn.publish(root, before, after, pre, post, hooks or [], report, files, _save_journal)
 
 
 def _stage_and_run(root: Path, options: dict, apply: bool, report: dict) -> tuple[int, dict]:
     before = files(root)
+    hooks, issues = git_plan(root, options["tools"])
+    report["git_hooks"] = [h["path"] for h in hooks]
+    if issues:
+        report["unresolved"] += issues
+        return 2, report
     with tempfile.TemporaryDirectory(prefix="cgspec-v1-stage-") as temp:
         stage = Path(temp) / "project"
         shutil.copytree(root, stage, ignore=shutil.ignore_patterns(".git", *L.SKIP_WALK, JOURNAL.name))
         (stage / PROJECT_FILE).unlink(missing_ok=True)
-        _prepare(stage, options, report)
+        _prepare(stage, options, report, hooks)
         if report["unresolved"]:
             return 2, report
         after = files(stage)
+        pre, post = txn.metadata(root, before), txn.metadata(stage, after)
         report["archive"] = [(ARCHIVE / "before.tar.gz").as_posix()]
         report["archived_hashes"] = {rel: digest(before[rel]) for rel in report["path_map"] if rel in before}
         report["verdict"] = "READY"
-        report["changed_files"] = len(_inventory_diff(before, after))
+        report["changed_files"] = len(_inventory_diff(before, after, pre, post))
         if apply:
-            _publish(root, stage, before, after, report)
+            _publish(root, stage, before, after, report, pre, post, hooks)
             report["verdict"] = "PASS"
         return 0, report
 

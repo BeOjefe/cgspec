@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import unittest
 from unittest.mock import patch
 
-from tests.helpers import TempDir, doctor, install, run_script, snapshot_tree
+from tests.helpers import TempDir, doctor, git, install, run_script, snapshot_tree
 
 
 def old_project(root):
@@ -36,7 +37,7 @@ def old_project(root):
 def upgrade(root, *flags):
     result = run_script("install.py", "upgrade", "--root", str(root), "--from-v1",
                         "--profile", "web-workspace", "--topology", "single",
-                        "--tools", "git", *flags)
+                        "--tools", "", *flags)
     return result, json.loads(result.stdout)
 
 
@@ -122,7 +123,7 @@ class UpgradeV1Tests(unittest.TestCase):
         with TempDir() as root:
             old_project(root)
             before = snapshot_tree(root)
-            opts = {"profile": "web-workspace", "topology": "single", "tools": "git",
+            opts = {"profile": "web-workspace", "topology": "single", "tools": "",
                     "repo_prefix": "", "plugin_source": "https://github.com/mrojefe/cgspec.git"}
             replace = migration.os.replace
             calls = 0
@@ -224,6 +225,115 @@ class UpgradeV1Tests(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("AGENTS.md", str(report["unresolved"]))
             self.assertEqual(snapshot_tree(root), before)
+
+    def test_rollback_refuses_symlinked_restore_temp_without_touching_target(self):
+        with TempDir() as root:
+            old_project(root)
+            self.assertEqual(upgrade(root, "--apply")[0].returncode, 0)
+            target = root / "outside.txt"
+            target.write_text("do not touch\n")
+            temp = root / "docs/00-INDEX.md.upgrade-restore"
+            temp.symlink_to(target)
+            result, report = upgrade(root, "--rollback")
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("upgrade-restore", str(report["unresolved"]))
+            self.assertEqual(target.read_text(), "do not touch\n")
+            self.assertTrue(temp.is_symlink())
+
+    def test_concurrent_edit_after_journal_is_not_overwritten(self):
+        from engine._lib import upgrade_v1 as migration
+        with TempDir() as root:
+            old_project(root)
+            save = migration._save_journal
+
+            def edit_after_journal(*args):
+                save(*args)
+                path = root / "docs/00-INDEX.md"
+                path.write_text(path.read_text() + "\nconcurrent human edit\n")
+
+            opts = {"profile": "web-workspace", "topology": "single", "tools": "",
+                    "repo_prefix": "", "plugin_source": "https://github.com/mrojefe/cgspec.git"}
+            with patch.object(migration, "_save_journal", side_effect=edit_after_journal):
+                code, report = migration.run(root, opts, apply=True)
+            self.assertEqual(code, 2, report)
+            self.assertIn("concurrent human edit", (root / "docs/00-INDEX.md").read_text())
+            self.assertFalse((root / "docs/_cgspec/project.json").exists())
+
+    def test_git_requested_wires_live_hooks_or_reports_partial(self):
+        with TempDir() as root:
+            old_project(root)
+            before = snapshot_tree(root)
+            result, report = upgrade(root, "--tools", "git", "--apply")
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("git", str(report["unresolved"]).lower())
+            self.assertEqual(snapshot_tree(root), before)
+        with TempDir() as root:
+            old_project(root)
+            git(root, "init", "-q")
+            result, report = upgrade(root, "--tools", "git", "--apply")
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            for event in ("pre-commit", "commit-msg"):
+                path = root / ".git/hooks" / event
+                self.assertTrue(path.is_file(), event)
+                self.assertIn("cgspec_hook.py", path.read_text())
+            owned = json.loads((root / "docs/_cgspec/01-engine/owned-files.json").read_text())
+            self.assertEqual(len(owned["adapters"]["git_abs"]), 2)
+
+    def test_modes_and_empty_legacy_dirs_survive_upgrade_rollback(self):
+        with TempDir() as root:
+            old_project(root)
+            adr = root / "docs/adr/ADR-001-choice.md"
+            empty = root / "docs/_cgspec/01-script"
+            os.chmod(adr, 0o640)
+            os.chmod(empty, 0o750)
+            self.assertEqual(upgrade(root, "--apply")[0].returncode, 0)
+            self.assertEqual((root / "docs/adrs/ADR-001-choice.md").stat().st_mode & 0o777, 0o640)
+            result, report = upgrade(root, "--rollback")
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertEqual(adr.stat().st_mode & 0o777, 0o640)
+            self.assertTrue(empty.is_dir())
+            self.assertEqual(empty.stat().st_mode & 0o777, 0o750)
+
+    def test_created_git_hooks_are_removed_by_rollback(self):
+        with TempDir() as root:
+            old_project(root)
+            git(root, "init", "-q")
+            self.assertEqual(upgrade(root, "--tools", "git", "--apply")[0].returncode, 0)
+            result, report = upgrade(root, "--rollback")
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertFalse((root / ".git/hooks/pre-commit").exists())
+            self.assertFalse((root / ".git/hooks/commit-msg").exists())
+
+    def test_existing_unrelated_git_hook_blocks_adoption(self):
+        with TempDir() as root:
+            old_project(root)
+            git(root, "init", "-q")
+            path = root / ".git/hooks/pre-commit"
+            path.write_text("#!/bin/sh\nexit 0\n")
+            before = snapshot_tree(root)
+            result, report = upgrade(root, "--tools", "git", "--apply")
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("reviewed integration", str(report["unresolved"]))
+            self.assertEqual(snapshot_tree(root), before)
+
+    def test_edit_after_publication_blocks_version_marker(self):
+        from engine._lib import upgrade_v1 as migration, upgrade_v1_txn as transaction
+        with TempDir() as root:
+            old_project(root)
+            original = transaction.publish_hooks
+
+            def edit_after_files(project, hooks):
+                original(project, hooks)
+                path = root / "docs/00-INDEX.md"
+                path.write_text(path.read_text() + "\nnew human note\n")
+
+            with patch.object(transaction, "publish_hooks", side_effect=edit_after_files):
+                code, report = migration.run(root, {"profile": "web-workspace", "topology": "single",
+                                                     "tools": "", "repo_prefix": "",
+                                                     "plugin_source": "https://github.com/mrojefe/cgspec.git"}, apply=True)
+            self.assertEqual(code, 2, report)
+            self.assertFalse((root / "docs/_cgspec/project.json").exists())
+            self.assertIn("new human note", (root / "docs/00-INDEX.md").read_text())
 
 
 if __name__ == "__main__":
