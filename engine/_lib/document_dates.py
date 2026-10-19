@@ -66,36 +66,95 @@ def touch(text: str, now: str) -> str:
     return "".join(lines)
 
 
-def validate_change(old: str | None, new: str) -> list[str]:
-    """Check a new or changed document without trusting filesystem timestamps."""
-    try:
-        lines = _lines(new)
-    except ValueError as exc:
-        return [str(exc)]
+FUTURE_SLACK = timedelta(minutes=10)
+RECORD_KEY = re.compile(r"^((?:ADR|SLICE|RES|COUNCIL)-(?:\d{3}|draft))-")
+
+
+def _parse(text: str) -> tuple[list[str], re.Match | None]:
+    lines = text.splitlines(keepends=True)
     match = STAMP.fullmatch(lines[1].rstrip("\n")) if len(lines) > 1 else None
-    if not match:
-        return ["missing Created / Last edited line directly below the title"]
+    return lines, match
+
+
+def _body(lines: list[str]) -> str:
+    """Everything except the provenance line, to tell content edits from date-only edits."""
+    return lines[0] + "".join(lines[2:]) if len(lines) > 1 else "".join(lines)
+
+
+def created_of(text: str | None) -> str | None:
+    if not text:
+        return None
+    match = _parse(text)[1]
+    return match.group(1) if match else None
+
+
+def rename_key(path: str, text: str | None) -> str | None:
+    """How an added document is matched to a deleted one when git does not detect the rename."""
+    name = path.rsplit("/", 1)[-1]
+    found = RECORD_KEY.match(name)
+    if found:
+        return path.rsplit("/", 1)[0] + "/" + found.group(1)
+    first = (text or "").splitlines()[:1]
+    return ("title:" + first[0].strip()) if first and first[0].startswith("# ") else None
+
+
+def _check_times(created: str, edited: str, lines: list[str], now: datetime | None) -> list[str]:
     try:
-        created, edited = match.groups()
+        moments = [_time(edited)] + ([] if created == "unknown" else [_time(created)])
         if created != "unknown" and _time(created) > _time(edited):
             return ["Created is later than Last edited"]
-        _time(edited)
     except ValueError:
         return ["invalid date; use ISO-8601 UTC"]
     if created == "unknown" and len(lines) > 2 and lines[2].startswith("First seen in available Git history:"):
         seen = FIRST_SEEN.fullmatch(lines[2].rstrip("\n"))
-        if not seen:
-            return ["invalid first-seen date"]
         try:
-            _time(seen.group(1))
+            moments.append(_time(seen.group(1)) if seen else None)
         except ValueError:
             return ["invalid first-seen date"]
+        if not seen:
+            return ["invalid first-seen date"]
+    if now is not None and any(m > now + FUTURE_SLACK for m in moments):
+        return ["date is in the future; use the real current UTC time"]
+    return []
+
+
+def validate_change(old: str | None, new: str, now: datetime | None = None, floor: str | None = None,
+                    allow_unknown: bool = False, renamed_from_created: str | None = None) -> list[str]:
+    """Check a new or changed document without trusting filesystem timestamps.
+
+    now: the checker's wall clock (dates later than now + 10 min are refused).
+    floor: when CGSpec was installed; a new document cannot claim to be older.
+    allow_unknown: an install/upgrade change may write Created: unknown on new documents.
+    renamed_from_created: Created of the deleted document this one replaces (detected rename).
+    """
+    try:
+        lines = _lines(new)
+    except ValueError as exc:
+        return [str(exc)]
+    lines, match = _parse(new)
+    if not match:
+        return ["missing Created / Last edited line directly below the title"]
+    created, edited = match.groups()
+    problems = _check_times(created, edited, lines, now)
+    if problems:
+        return problems
     if old is None:
+        if renamed_from_created is not None:
+            return [] if created == renamed_from_created else ["Created changed; preserve it across edits and renames"]
+        if created == "unknown" and not allow_unknown:
+            return ["a new document cannot claim Created: unknown; use the current UTC time"]
+        if created != "unknown" and floor and _time(created) < _time(floor):
+            return ["Created is before CGSpec was installed in this project; a new document cannot be older"]
         return []
-    old_lines = old.splitlines(keepends=True)
-    previous = STAMP.fullmatch(old_lines[1].rstrip("\n")) if len(old_lines) > 1 else None
-    if previous and previous.group(1) != created:
+    old_lines, previous = _parse(old)
+    if previous is None:
+        if old != new and created != "unknown" and not allow_unknown:
+            return ["this document existed before dates were tracked; write Created: unknown, not an invented date"]
+        return []
+    if previous.group(1) != created:
         return ["Created changed; preserve it across edits and renames"]
-    if previous and _time(edited) <= _time(previous.group(2)) and old != new:
+    if _body(old_lines) == _body(lines) and old != new:
+        return ["Last edited changed without a content change; keep the previous dates"]
+    if old != new and _time(edited) <= _time(previous.group(2)):
         return ["Last edited was not advanced after this document changed"]
     return []

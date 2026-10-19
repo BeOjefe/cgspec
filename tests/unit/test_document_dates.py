@@ -38,8 +38,9 @@ class DocumentDateTests(unittest.TestCase):
             self.assertEqual(install(root).returncode, 0)
             index = root / "docs/00-INDEX.md"
             before = index.read_text()
+            from _lib.common import utc_now
             (root / "docs/adrs/ADR-001-choice.md").write_text(stamp_new(
-                "# Choice\n\n- **Status:** Draft\n", "2026-10-19T10:00:00Z"))
+                "# Choice\n\n- **Status:** Draft\n", utc_now()))
             self.assertEqual(doctor(root, "--fix").returncode, 0)
             after = index.read_text()
             old = STAMP.fullmatch(before.splitlines()[1])
@@ -57,7 +58,8 @@ class DocumentDateTests(unittest.TestCase):
             git(root, "add", "docs/adrs/ADR-001-choice.md")
             self.assertTrue(any("Last edited" in reason for reason in evaluate(root, View.staged(root))))
             from _lib.document_dates import stamp_new
-            record.write_text(stamp_new(record.read_text(), "2026-10-19T10:00:00Z"))
+            from _lib.common import utc_now
+            record.write_text(stamp_new(record.read_text(), utc_now()))
             git(root, "add", "docs/adrs/ADR-001-choice.md")
             self.assertFalse(any("Last edited" in reason for reason in evaluate(root, View.staged(root))))
             git(root, "commit", "-q", "-m", "add decision")

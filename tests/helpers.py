@@ -107,11 +107,12 @@ def make_slice(root: Path, status: str = "Approved", scope: str = "src/login/**"
     lines = [f"# SLICE-{number}: Login", "", f"- **Status:** {status}", f"- **Scope:** {scope}"]
     if approval:
         lines.append(f"- **Approval:** {approval}")
-    path.write_text(stamp_new("\n".join(lines) + "\n", "2026-10-18T00:00:00Z"))
+    from _lib.common import utc_now
+    path.write_text(stamp_new("\n".join(lines) + "\n", utc_now()))
     idx = root / "docs/00-INDEX.md"
     entry = f"- [SLICE-{number}](slices/{path.name})"
     if index and entry not in idx.read_text():
-        idx.write_text(touch(idx.read_text() + "\n" + entry + "\n", "2026-10-18T00:00:00Z"))
+        idx.write_text(touch(idx.read_text() + "\n" + entry + "\n", utc_now()))
     return path
 
 

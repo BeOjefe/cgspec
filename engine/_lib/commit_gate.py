@@ -77,6 +77,33 @@ def _test_pairs(view: View, code_changes, tier: dict | None, classes: dict, proj
     return reasons
 
 
+def _document_dates(view: View, changes) -> list[str]:
+    """Spec 2: visible Created / Last edited dates, checked against the checker's own clock."""
+    from datetime import datetime, timezone
+    from .document_dates import created_of, rename_key
+    now = datetime.now(timezone.utc)
+    floor = trust.load(view.read_new(trust.ENGINE + "owned-files.json")).get("installed_at")
+    install = trust.is_install_commit(view)
+    text = lambda raw: raw.decode("utf-8", "replace") if raw is not None else None
+    deleted = {}
+    for change in changes:
+        if change.status == "D" and managed_doc(change.path):
+            old = text(view.read_old(change.path))
+            if rename_key(change.path, old):
+                deleted[rename_key(change.path, old)] = created_of(old)
+    reasons = []
+    for change in changes:
+        if change.status == "D" or not managed_doc(change.path):
+            continue
+        new, old = text(view.read_new(change.path)), text(view.read_old(change.old_path or change.path))
+        if new is None:
+            continue
+        renamed = deleted.get(rename_key(change.path, new)) if old is None else None
+        reasons += [f"{change.path}: {issue}" for issue in validate_change(
+            old, new, now=now, floor=floor, allow_unknown=install, renamed_from_created=renamed)]
+    return reasons
+
+
 def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bool = False) -> list[str]:
     changes = view.changes()
     project = trust.load(view.read_new(PROJECT_FILE.as_posix()))
@@ -95,14 +122,8 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
                     and not trust.engine_file(c.path) and not c.path.startswith(trust.ENGINE)]
     reasons += _tier_rules(view, code_changes, tier)
     reasons += _test_pairs(view, code_changes, tier, classes, project)
+    reasons += _document_dates(view, changes)
     for change in changes:
-        if change.status != "D" and managed_doc(change.path):
-            new = view.read_new(change.path)
-            old = view.read_old(change.old_path or change.path)
-            if new is not None:
-                reasons += [f"{change.path}: {issue}" for issue in validate_change(
-                    old.decode("utf-8", "replace") if old is not None else None,
-                    new.decode("utf-8", "replace"))]
         if change.path.startswith(trust.ENGINE):
             continue  # engine files are checked against the release or manifest above
         if change.status in "AC" and _is_script_name(change.path, None):

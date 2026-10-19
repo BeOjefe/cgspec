@@ -149,7 +149,8 @@ def document_dates(root: Path) -> Iterator[Finding]:
             continue
         content = read_text(path, root, sink)
         if content is not None:
-            for issue in validate_change(None, content):
+            from datetime import datetime, timezone
+            for issue in validate_change(None, content, now=datetime.now(timezone.utc), allow_unknown=True):
                 code = "W-DOC-DATES" if issue.startswith("missing Created") else "E-DOC-DATES"
                 yield Finding(code, rel, issue)
     yield from sink
