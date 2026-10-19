@@ -5,7 +5,7 @@ description: Turn a new product idea or feature request into researched intent, 
 
 # Forge product intent
 
-Read the [agent contract](../../engine/CONTRACT.md) and relevant existing spines. Determine the goal type: money, learning, personal, or client. For a money goal, research who pays, competing options, price, demand evidence and risks in `docs/_cgspec/02-research/RES-NNN-<slug>.md`, with source links and dated facts. State uncertainty; do not invent market validation.
+Read only what the current step needs, once per session: the [agent contract](../../engine/CONTRACT.md) and relevant existing spines. Determine the goal type: money, learning, personal, or client. For a money goal, research who pays, competing options, price, demand evidence and risks in `docs/_cgspec/02-research/RES-NNN-<slug>.md`, with source links and dated facts. State uncertainty; do not invent market validation.
 
 Write `docs/spines/01-INTENT.md` with the goal, actors, real tasks, anti-goals, v0.1 boundary and parked ideas. Write `02-OOUX.md` with nouns, attributes, relations, hierarchy, permissions and important states. Trace each actor task to its nouns; check that none are orphaned. In a larger project, update only the relevant spine parts and links rather than rewriting all of them.
 

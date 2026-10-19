@@ -5,7 +5,7 @@ description: Take over an existing project or upgrade an older CGSpec layout, in
 
 # Adopt an existing project
 
-Read the [agent contract](../../engine/CONTRACT.md), [method section 5](../../docs/METHOD-v0.2.md), and the current project/version marker. Inspect reachable repos, git roots and history, docs, tests, deployments, configs and active work read-only. Ask only for gaps that materially change the map: missing repos or access, current docs, renames/incidents, incomplete history, infrastructure ownership, and the desired first outcome. Mark each statement observed, inferred or unknown. Where agents are available, give a read-only scout one bounded repo or area; no invented access.
+Read only what the current step needs, once per session: the [agent contract](../../engine/CONTRACT.md), [method section 5](../../docs/METHOD-v0.2.md) (that section only), and the current project/version marker. Inspect reachable repos, git roots and history, docs, tests, deployments, configs and active work read-only. Ask only for gaps that materially change the map: missing repos or access, current docs, renames/incidents, incomplete history, infrastructure ownership, and the desired first outcome. Mark each statement observed, inferred or unknown. Where agents are available, give a read-only scout one bounded repo or area; no invented access.
 
 Build a project map and a takeover map from every legacy document/rule to a canonical v0.2 home. Show contradictions and unresolved access explicitly. Import existing decisions as `Imported` with source, never `Approved`. Preserve the real stage of each part. Record legacy files in `SLICE-000-baseline` and `docs/_cgspec/07-state/legacy-baseline.json`; new changes need a new scoped slice.
 

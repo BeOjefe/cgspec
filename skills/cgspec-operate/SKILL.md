@@ -5,7 +5,7 @@ description: Run release, observation, incident response, drift repair, runbooks
 
 # Operate the project
 
-Read the [agent contract](../../engine/CONTRACT.md), `docs/spines/05-DELIVERY.md`, active slices and [method section 10](../../docs/METHOD-v0.2.md). For a release, verify the CI governance check and profile checks at the exact revision, write release notes and rollback or forward-fix route, then seek the user's release approval before production. A preview is evidence only for its environment. Confirm smoke tests and observation with actual results.
+Read only what the current step needs, once per session: the [agent contract](../../engine/CONTRACT.md), `docs/spines/05-DELIVERY.md`, active slices and [method section 10](../../docs/METHOD-v0.2.md) (that section only). For a release, verify the CI governance check and profile checks at the exact revision, write release notes and rollback or forward-fix route, then seek the user's release approval before production. A preview is evidence only for its environment. Confirm smoke tests and observation with actual results.
 
 For an incident, establish impact and current state first, contain within authorized access, keep a timestamped evidence trail, then record the incident as a project constraint and follow-up slice. For drift, compare deployed behavior, code and docs; show disagreements and their sources before deciding which truth to change. Keep deploy, restore and known-failure runbooks in the delivery spine or its folder.
 

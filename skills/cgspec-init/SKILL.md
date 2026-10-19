@@ -5,7 +5,7 @@ description: Install, verify, update, or uninstall the CGSpec v0.2 package and t
 
 # Initialize CGSpec
 
-Read the [agent contract](../../engine/CONTRACT.md) and the installed `docs/_cgspec/project.json` if present. This skill manages the package; project discovery and content migration belong to `cgspec-adopt`.
+Read only what the current step needs, once per session: the [agent contract](../../engine/CONTRACT.md) and the installed `docs/_cgspec/project.json` if present. This skill manages the package; project discovery and content migration belong to `cgspec-adopt`.
 
 For a new project, identify its profile (`website`, `web-workspace`, `mobile`, `cli`, `headless`, `small`), topology (`single`, `monorepo`, `large-monorepo`, `polyrepo-governance`, `polyrepo-member`), and tools actually present. Use the plugin copy of `engine/install.py` and its `--help` to confirm syntax. The current install command is `python3 engine/install.py install --root <path> --profile <profile> --topology <topology> [--tools <comma-separated-tools>]`. Install only into the authorized repository. The installer owns generated files and has an uninstall manifest; inspect conflicts before acting on a nonempty tree.
 
