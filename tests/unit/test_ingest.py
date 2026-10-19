@@ -90,6 +90,13 @@ CREATE TABLE real (id int);
                 self.assertEqual(data['database_tables'], [])
                 self.assertEqual(data['source_counts']['unsupported'], 1)
 
+    def test_backslash_escaped_sql_literal_does_not_invent_table(self):
+        (self.repo / 'schema.sql').write_text(r"SELECT E'\' CREATE TABLE ghost(id int); \'';" + '\n')
+        code, data, _ = self.run_cli(self.repo)
+        self.assertEqual(code, 2)
+        self.assertEqual(data['database_tables'], [])
+        self.assertEqual(data['source_counts']['unsupported'], 1)
+
     def test_git_inventory_does_not_execute_fsmonitor(self):
         subprocess.run(['git', 'init', '-q', str(self.repo)], check=True)
         (self.repo / 'app.py').write_text('x = 1')
@@ -129,6 +136,24 @@ CREATE TABLE real (id int);
         code, _, _ = self.run_cli(self.repo, '--output', pipe)
         self.assertEqual(code, 2)
         self.assertTrue(pipe.is_fifo())
+
+    def test_output_cannot_replace_recognized_infrastructure_source(self):
+        (self.repo / 'app.py').write_text('x = 1\n')
+        for name in ('Dockerfile', 'main.tf', 'package.json'):
+            with self.subTest(name=name):
+                source = self.repo / name
+                source.write_text('original\n')
+                code, _, _ = self.run_cli(self.repo, '--output', source)
+                self.assertEqual(code, 2)
+                self.assertEqual(source.read_text(), 'original\n')
+
+    def test_output_cannot_replace_unrelated_json_config(self):
+        (self.repo / 'app.py').write_text('x = 1\n')
+        config = self.repo / 'settings.json'
+        config.write_text('{"secret": "keep"}\n')
+        code, _, _ = self.run_cli(self.repo, '--output', config)
+        self.assertEqual(code, 2)
+        self.assertEqual(config.read_text(), '{"secret": "keep"}\n')
 
     def test_infrastructure_files_are_explicit_unsupported_coverage(self):
         (self.repo / 'app.py').write_text('x = 1\n')

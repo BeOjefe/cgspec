@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """Evidence-first, partial source inventory; never an approved baseline.
 
-Default: JSON to stdout, no writes. --output atomically replaces an explicitly
-chosen manifest. --registry accepts a JSON array (or {"repositories": [...]}) of
-{id, path}; relative repo paths resolve beside the registry. Missing satellites
-are reported unavailable, never created. Exit 0: selected parsers ran without
-known omissions; 2: partial/unavailable coverage or invalid input; 1: output I/O
-failure. Even exit 0 is NOT complete architecture or behavioral discovery.
-Python uses AST for selected syntactic candidates. SQL uses a limited DDL
-heuristic. Other languages are explicitly unsupported, not silently parsed.
+Default: JSON to stdout, no writes. --output creates a manifest or replaces a
+prior CGSpec v2 inventory. --registry accepts {id, path} entries; missing repos
+are unavailable, never created. Exit 0: selected parsers had no known omissions;
+2: partial/invalid input; 1: output I/O failure. Exit 0 is not full discovery.
+Python AST and limited SQL DDL yield candidates; other files are unsupported.
 """
 import argparse
 import ast
@@ -34,6 +31,12 @@ SOURCE_SUFFIXES = {'.py', '.sql', '.js', '.ts', '.jsx', '.tsx', '.go', '.rs',
 INFRA_SUFFIXES = {'.tf', '.tfvars', '.yaml', '.yml'}
 INFRA_NAMES = {'Dockerfile', 'Containerfile', 'package.json', 'pyproject.toml'}
 METHODS = {'get', 'post', 'put', 'delete', 'patch', 'head', 'options', 'route'}
+
+
+def is_inventory_source(path):
+    name = path.name
+    return (path.suffix.lower() in SOURCE_SUFFIXES | INFRA_SUFFIXES or
+            name in INFRA_NAMES or name.startswith(('Dockerfile.', 'Containerfile.')))
 
 
 def validate_paths(target, subsystem=None, live_schema=None):
@@ -148,6 +151,8 @@ def sql_comment_issue(content):
         if line:
             line = char != '\n'
         elif quote:
+            if char == '\\':
+                return 'Backslash-escaped SQL quotes require a dialect parser'
             if char == quote:
                 if content[i + 1:i + 2] == quote:
                     i += 1
@@ -205,8 +210,7 @@ def collect_candidates(root, scan, result):
         dirs[:] = sorted(d for d in dirs if d not in IGNORE_DIRS and not Path(base, d).is_symlink())
         for name in sorted(files):
             path = Path(base, name)
-            if (path.suffix.lower() in SOURCE_SUFFIXES | INFRA_SUFFIXES or
-                    name in INFRA_NAMES or name.startswith(('Dockerfile.', 'Containerfile.'))):
+            if is_inventory_source(path):
                 candidates.add(path)
     return candidates
 
@@ -300,15 +304,15 @@ def write_manifest(manifest, output=None):
             temp.unlink()
 
 
-def read_registry(path):
+def read_regular_json(path, label):
     flags = os.O_RDONLY | os.O_NONBLOCK | getattr(os, 'O_NOFOLLOW', 0)
     fd = os.open(path, flags)
     with os.fdopen(fd, 'rb') as handle:
         if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
-            raise ValueError('registry must be a regular file')
+            raise ValueError(f'{label} must be a regular file')
         raw = handle.read(MAX_FILE_BYTES + 1)
     if len(raw) > MAX_FILE_BYTES:
-        raise ValueError('registry exceeds 1 MiB limit')
+        raise ValueError(f'{label} exceeds 1 MiB limit')
     return json.loads(raw.decode('utf-8'))
 
 
@@ -318,7 +322,7 @@ def registry_snapshot(args, output, manifest):
     registry = Path(args.registry).resolve(strict=True)
     if output == registry:
         raise ValueError('output cannot overwrite registry')
-    entries = read_registry(registry)
+    entries = read_regular_json(registry, 'registry')
     if isinstance(entries, dict):
         entries = entries.get('repositories')
     if not isinstance(entries, list) or not entries:
@@ -361,13 +365,20 @@ def main(argv=None):
             raise ValueError('output must be a regular file path with an existing parent, not a symlink')
         if output:
             output = output.resolve()
+            if is_inventory_source(output):
+                raise ValueError('output must not replace a recognized source or infrastructure file')
+            if output.exists():
+                previous = read_regular_json(output, 'output')
+                if (not isinstance(previous, dict) or previous.get('schema_version') != '2.0' or
+                        previous.get('approval') != 'unreviewed'):
+                    raise ValueError('existing output is not a CGSpec v2 inventory manifest')
         manifest = {'schema_version': '2.0', 'observed_at': datetime.now(timezone.utc).isoformat(),
                     'approval': 'unreviewed', 'coverage': 'partial'}
         if args.registry:
             partial = registry_snapshot(args, output, manifest)
         else:
             root, scan, schema = validate_paths(args.target_path or '.', args.subsystem, args.live_schema)
-            if output and (output == schema or output.suffix.lower() in SOURCE_SUFFIXES):
+            if output and output == schema:
                 raise ValueError('output must not overwrite source or live schema')
             manifest.update(snapshot(root, scan, schema, output))
             partial = manifest['has_known_omissions']
