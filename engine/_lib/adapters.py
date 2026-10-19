@@ -234,6 +234,11 @@ def wire(root: Path, tools: list[str], owned: dict) -> list[str]:
     if "antigravity" in tools:
         record["antigravity"] = {"path": ".agents/hooks.json", "created": _merge_json(root / ".agents/hooks.json", _antigravity)}
         notes.append("wired .agents/hooks.json (Antigravity sends no user message to hooks: inbox capture unavailable there)")
+        from .agent_skills import install as install_skills
+        skills = install_skills(root, Path(__file__).resolve().parents[2])
+        if skills:
+            record["antigravity"]["skills"] = skills
+            notes.append(f"copied {sum(1 for f in skills if f.endswith('SKILL.md'))} CGSpec skills into .agents/skills/")
     if "git" in tools:
         notes += _wire_git(root, record)
     if "ci" in tools:
@@ -285,6 +290,8 @@ def unwire(root: Path, owned: dict) -> None:
                 write_json(path, data)
             else:
                 path.unlink()
+        from .agent_skills import uninstall as uninstall_skills
+        uninstall_skills(root, record["antigravity"].get("skills", []))
     paths = [root / r for r in record.get("git", []) + [record[k] for k in ("ci", "ci_select", "cursor") if k in record]]
     for path in paths + [Path(p) for p in record.get("git_abs", [])]:
         if path.is_file() and not path.is_symlink() and (MARK in path.read_text(errors="replace") or "CGSpec" in path.read_text(errors="replace")):

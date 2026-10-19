@@ -338,6 +338,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--files", help="T0: comma-separated existing files")
     parser.add_argument("--slice", help="T1+: SLICE-NNN")
     parser.add_argument("--base", help="ci: base commit of the range to check")
+    parser.add_argument("--next", help="checkpoint: the next action")
+    parser.add_argument("--in-flight", dest="in_flight", help="checkpoint: work started and not finished")
+    parser.add_argument("--done", action="store_true", help="checkpoint: in-flight work is finished")
+    parser.add_argument("--blocked", help="checkpoint: why the in-flight work cannot finish (recorded as open issue)")
+    parser.add_argument("--goal", help="checkpoint: the current goal")
     parser.add_argument("--file", help="check register: proposed script under .cgspec-scratch/checks/")
     parser.add_argument("--applies-to", dest="applies_to", help="check register: comma-separated globs")
     parser.add_argument("--description", help="check register: what the check verifies")
@@ -362,6 +367,11 @@ def main(argv: list[str] | None = None) -> int:
             return post_tool(root, args.tool, sys.stdin.read())
         if args.event == "doc":
             return cmd_doc(root, args)
+        if args.event == "checkpoint":
+            from _lib.checkpoint_cmd import update
+            cp = update(root, args)
+            print(f"checkpoint updated: next: {cp['next_action'] or '(none)'}; in flight: {cp['in_flight'] or 'nothing'}")
+            return EXIT_OK
         if args.event == "check":
             from _lib.checks import cli
             return cli(root, args)

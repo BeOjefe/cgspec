@@ -5,10 +5,26 @@ description: Design or revise a product experience from real references through 
 
 # Design the experience
 
-Read the [agent contract](../../engine/CONTRACT.md) and [method section 6](../../docs/METHOD-v2.md). Start from the user's goal and current locked layers in `docs/spines/03-EXPERIENCE.md`. The AI finds up to six contrasting real references, with links, screenshots and captions in `docs/prototypes/_vision/`; the user reacts in their own words or marks images. Name effects and motion the user points to. If reference access is unavailable, state the gap and proceed with evidence already present. Do not ask the user to research or write the brief.
+Read the [agent contract](../../engine/CONTRACT.md) and [method section 6](../../docs/METHOD-v2.md). Start from the user's goal and the locked layers in `docs/spines/03-EXPERIENCE.md`. Advance only the layer affected; layers 0-4 are disposable grey work, 5b-7 are the real frontend. A tweak inside locked zones and tokens is applied directly; a changed flow, zone, token or register reopens only the dependent layers, and you run `impact.py` and show the map first.
 
-Advance only the layer affected: 0 references and shared words; 1 actor tasks; 2 screens and flows; 3 grey shell and wireframes with zone IDs; 4 clickable grey behavior, states and test IDs; 5 one real token sheet; 6 real frontend screens with mocked typed data; 7 motion in that frontend. Layers 0–4 are disposable. Lock layer 4 before building 5–7; approved journeys carry into the real app. A small tweak inside locked zones and tokens is applied directly. A changed flow, zone or token reopens only dependent layers and baselines; show impact before consequential redesign.
+## What to do at each layer, and what to load
 
-An existing design system is an option only when its installable typed components, machine-readable tokens and permissive license are verified. Explain how its exact version and checks will be used. If none qualifies, derive project tokens from references with provenance. Avoid imposing a universal visual style or treating generic-look warnings as user taste decisions.
+| Layer | Do | Load |
+| --- | --- | --- |
+| 0 References | Find up to six contrasting **real** references (live sites or apps, with links and screenshots in `docs/prototypes/_vision/`). Do not invent them or describe them from memory; if you cannot browse, say so and ask for examples. The user reacts in their own words. Measure the ones they like. | [reference-extraction](references/reference-extraction.md); [RES-001](../../docs/_cgspec/02-research/RES-001-ui-design-systems-and-surface-profiles-benchmark.md), [RES-004](../../docs/_cgspec/02-research/RES-004-vibecoded-design-tells-and-high-craft-ergonomics.md) |
+| 0-1 Register (5a) | Write the one-paragraph register (density, type, stance, mood, accent, signature element, avoid, deliberate choices), show it, lock it with the user's approval. | [register](references/register.md) |
+| 1 Tasks | Actors and tasks in the spine, each with frequency and device. | — |
+| 2 Screens and flows | One row per screen with its main need (the focal point). | [craft](references/craft.md) section 1 |
+| 3 Wireframes | Grey shell, zone IDs, real-looking data in realistic amounts, density from the register. | [craft](references/craft.md) sections 1-5, 8 |
+| 4 Behavior | Clickable grey prototype, all states, `data-testid` on every control; journeys in `docs/prototypes/<screen>/journeys/`; run `visual_audit.py` and `journey.py`. Cut a snapshot with `bundle_prototype.py` when the user locks the layer. | [behavior coverage](references/behavior-coverage.md), [RES-002](../../docs/_cgspec/02-research/RES-002-anti-slop-constrained-ui-and-deterministic-gates.md) |
+| 5b Token sheet | Derive every token from the register and measured references; each value says where it comes from. | [tokens template](references/tokens.dtcg.json), [reference-extraction](references/reference-extraction.md), [craft](references/craft.md) sections 3-7 |
+| 6 High fidelity | Real frontend, one key screen first, components from recipes; review screenshots against the rubric with a different reviewer before rolling out and before locking. | [craft](references/craft.md), [components](references/components.md), [critique rubric](references/critique-rubric.md) |
+| 7 Motion | Behaviors from layer 4 animated with motion tokens only. | — |
 
-For layer 4 journeys and later verification, load the [behavior coverage reference](references/behavior-coverage.md). For each screen, test the actual behavior in a browser when available, including responsive states and keyboard/accessibility paths; inspect screenshots separately. For native mobile, distinguish browser simulation, simulator and device evidence. Use `visual_audit.py`, `journey.py` and the bundler only if those tools exist in the installed engine. Missing browser or unbuilt tools mean PARTIAL or BLOCKED for that check, never PASS. Record revision and evidence before locking or presenting completion.
+## Rules
+
+- The AI leads: bring references and options; do not ask the user to research or write the brief.
+- An existing design system is an option only when its installable typed components, machine-readable tokens and permissive license are verified (section 6b). Otherwise derive project tokens with provenance.
+- Generic-look warnings are defaults to challenge, not taste decisions. A flagged choice the user wants is recorded under "Deliberate choices" in the register; never silence a warning the user has not seen.
+- Evidence is distinct by kind: a screenshot is not interaction; browser simulation is not a device. Missing browser or tools mean PARTIAL or BLOCKED, never PASS. Record revision and evidence before locking or presenting completion.
+- Never claim a screen is finished without the screenshots and the rubric result; show the screenshots to the user.

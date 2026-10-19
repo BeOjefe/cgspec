@@ -6,6 +6,7 @@ import json
 import re
 from pathlib import Path
 
+from .checkpoint_cmd import CMD
 from .common import MEMLOG_FILE, STATE_DIR, read_json, utc_now, write_json
 
 RETRIES = STATE_DIR / "stop-retries.json"
@@ -56,15 +57,17 @@ def pack(root: Path, doctor_summary: str) -> str:
 def stop_problems(root: Path, doctor_errors: int) -> list[str]:
     problems = []
     if doctor_errors:
-        problems.append(f"doctor reports {doctor_errors} errors; fix them or record a BLOCKED result")
+        problems.append(f"doctor reports {doctor_errors} errors; see them with python3 docs/_cgspec/01-engine/doctor.py, "
+                        "fix them, or record why you cannot with: " + CMD + " --blocked '<why>'")
     cp = _load(root, STATE_DIR / "checkpoint.json")
     if cp.get("in_flight"):
-        problems.append(f"work still in flight: {cp['in_flight']}; finish it or clear in_flight in the checkpoint")
+        problems.append(f"work still in flight: {cp['in_flight']}; finish it and run {CMD} --done, "
+                        f"or run {CMD} --blocked '<why>'")
     path = root / MEMLOG_FILE
     if path.is_file():
         times = LEDGER_TIME.findall(path.read_text(encoding="utf-8", errors="replace"))
         if times and cp.get("updated", "") < max(times):
-            problems.append("checkpoint is older than the latest ledger entry; update 07-state/checkpoint.json")
+            problems.append(f"checkpoint is older than the latest ledger entry; run {CMD} --next '<what comes next>'")
     return problems
 
 

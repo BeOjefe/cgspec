@@ -110,8 +110,22 @@ def write_targets(command: str, cwd: str = ".") -> tuple[list[str], list[str], l
     return targets, deletes, inline, broad
 
 
+HARMLESS_REDIRECT = re.compile(r"\d*>&\d+|&>\s*/dev/null|\d*>>?\s*/dev/null")
+ENGINE_RUN = re.compile(r"^\s*(?:\S*/)?python3?(?:\.\d+)?(?:\s+-[IBEsu]+)*\s+(?:\./)?(?:\S*/)?docs/_cgspec/01-engine/"
+                        r"[A-Za-z_]+\.py(?:\s|$)")
+
+
+def _without_engine_runs(command: str) -> str:
+    """Drop segments that only run one of the engine's own scripts: they are the legitimate writers and check
+    their own inputs. Writes elsewhere in the command are still seen by write_targets()."""
+    parts = re.split(r"(;|&&|\|\||\||\n)", command)
+    return "".join("" if ENGINE_RUN.match(part) and ".." not in part and not re.search(r"(?<!\d)>(?!&)", HARMLESS_REDIRECT.sub("", part))
+                   else part for part in parts)
+
+
 def mentions(command: str, candidates: list[str]) -> list[str]:
     """Protected paths a command names (full path or file name) when it runs a wrapper and looks like a write."""
+    command = _without_engine_runs(HARMLESS_REDIRECT.sub(" ", command))
     if not WRAPPERS.search(command) or not WRITE_HINTS.search(command):
         return []
     found = []

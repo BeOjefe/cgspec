@@ -72,7 +72,7 @@ Low: `find -iname '*.JSON' -delete` slips past the tool hook (best effort; commi
 ## Next steps (spec section 14 plan)
 
 1. Independent re-review of 9e6be76..e13a009; fix findings.
-2. Not built yet: `post-tool` hook (mark evidence stale), `bundle_prototype.py`, `visual_audit.py`, `journey.py`, `impact.py`, `ingest.py` (v2 versions), check-registration command, `install.py upgrade --from-v1` (needed for CortexGate, old layout `docs/_cgspec/01-script/`).
+2. Built since this note was written: `post-tool` hook, `bundle_prototype.py`, `visual_audit.py`, `journey.py`, `impact.py`, check registration (`cgspec_hook.py check`), `cgspec_hook.py checkpoint`. See `cgspec-audit-2026-10-18/19-*.md` for the current state.
 3. Publish: tag the plugin repo (`mrojefe/cgspec`) `v2.0.0`; CI in projects downloads that release.
 4. Step 3: the 9 skills (`skills/<name>/SKILL.md`) and the short contract; roles in `agents/`. Remove the old v1 `skills/`, `agents/`, `cgspec_template/` once replaced.
 5. Step 4: rehearse install/upgrade on a COPY of CortexGate. Step 5: upgrade real CortexGate. Step 6: fresh CortexGate session. Step 7: periodic check-ins. Step 8: pilot vs one careful agent.

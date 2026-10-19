@@ -128,6 +128,14 @@ class StaticAuditTests(Base):
         self.assertEqual(result.returncode, 1)
         self.assertIn("E-MISSING-FILE", result.stdout)
 
+    def test_register_deliberate_choice_accepts_tell(self):
+        css = "<style>.a{color:#7c3aed}</style>"
+        self.page('<p class="a">Hi</p>', head='<meta name="viewport" content="width=device-width">' + css)
+        self.assertIn("W-LOOK-PURPLE", self.audit("invoice").stdout)
+        spine = self.root / "docs/spines/03-EXPERIENCE.md"
+        spine.write_text(spine.read_text() + "\n## Register\n\n- Deliberate choices: purple accent, existing brand since 2024\n")
+        self.assertNotIn("W-LOOK-PURPLE", self.audit("invoice").stdout)
+
     def test_unknown_target_errors(self):
         self.assertEqual(self.audit("nope").returncode, 1)
 
@@ -175,6 +183,22 @@ class BrowserTests(Base):
     def test_page_error_fails_journey(self):
         (self.screen / "index.html").write_text(CLEAN.replace("<script>", "<script>undefinedFn();"))
         self.assertEqual(self.journey("invoice").returncode, 1)
+
+    def test_low_contrast_and_missing_focus_fail(self):
+        (self.screen / "index.html").write_text(CLEAN.replace(
+            "color:#222}", "color:#222} p{color:#bbb} button:focus,input:focus{outline:none}"))
+        result = self.audit("invoice")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("E-CONTRAST", result.stdout)
+        self.assertIn("E-FOCUS", result.stdout)
+
+    def test_sizes_outside_token_scale_warn(self):
+        (self.root / "src").mkdir(exist_ok=True)
+        (self.root / "src/tokens.json").write_text(json.dumps(
+            {"font": {"size": {"base": {"$type": "dimension", "$value": "14px"}}},
+             "space": {"unit": {"$type": "dimension", "$value": "4px"}}}))
+        out = self.audit("invoice").stdout
+        self.assertIn("W-TYPE-SCALE", out)
 
     def test_audit_passes_and_catches_mobile_overflow(self):
         result = self.audit("invoice")

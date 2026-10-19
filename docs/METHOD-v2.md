@@ -203,9 +203,11 @@ Upgrade mode (older CGSpec version): a path map from old to new locations, a lin
 flowchart LR
   L0[0 References + shared words] --> L1[1 Task map]
   L1 --> L2[2 Screen map + flows]
+  L0 -.-> R[5a Register, locked early]
+  R -.-> L3
   L2 --> L3[3 Wireframe]
   L3 --> L4[4 Behavior]
-  L4 --> L5[5 Visual language]
+  L4 --> L5[5b Token sheet]
   L5 --> L6[6 High fidelity]
   L6 --> L7[7 Motion]
 ```
@@ -213,12 +215,13 @@ flowchart LR
 | Layer | You see | Not in it yet | Lock scope |
 | --- | --- | --- | --- |
 | 0 References + words | AI-found references (up to 6, deliberately contrasting) as links + screenshots, each captioned; your words, images, videos; shared glossary; 0–3 existing design systems that passed the enforceability check (6b) | Any design of ours | Global |
+| 5a Register | One paragraph locked right after you react to references: density, type feel, light/dark stance, mood, one accent and its job, the signature element, what to avoid, and deliberate choices a generic-look warning would flag | Token values, screens | Global, locked at layer 0–1 because layout and look depend on each other |
 | 1 Task map | What each actor does, v0.1 only | Visuals | Global |
 | 2 Screen map + flows | Every screen, its purpose, how you move between them | Layout | Global |
 | 3 Wireframe | Grey boxes with real labels: shared shell first (header, side bars), then each screen; named zone IDs | Color, fonts, icons, animation | Shell global, then per screen |
 | 4 Behavior | Clickable grey prototype: navigation, every state, actions; test IDs on every interactive element; motion described in words + a reference clip | Final look | Per screen |
-| 5 Visual language | One token sheet (DTCG format): type, color, spacing, radius, icons, motion durations and easings; project "avoid list" of generic defaults | Screens | Global, opens after layer 4 is locked for all v0.1 screens |
-| 6 High fidelity | Real frontend screens (chosen stack, mocked data) matching the locked wireframes, tokens applied | Layout changes | Per screen |
+| 5b Token sheet | One token sheet (DTCG format) derived from the register and measured references, every value with its source: type scale, surfaces, color roles, spacing unit, radius, icons, motion durations and easings | Screens | Global, opens after layer 4 is locked for all v0.1 screens |
+| 6 High fidelity | Real frontend screens (chosen stack, mocked data) matching the locked wireframes, tokens applied; locked only after a different reviewer scores the screenshots against the critique rubric (no score below 3, mean at least 3.5) | Layout changes | Per screen |
 | 7 Motion | Layer 4 behaviors animated with motion tokens, in the real frontend | New behaviors | Per screen |
 
 Rules:
