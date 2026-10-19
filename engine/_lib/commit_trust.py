@@ -210,7 +210,8 @@ def install_exempt(view: View) -> set[str]:
         return set()
     owned = load(view.read_new(ENGINE + "owned-files.json"))
     paths = set(owned.get("created", {})) | set(owned.get("replaced", {}))
-    return {p for p in paths if p.startswith("docs/")} | ADAPTER_PATHS
+    skills = set(((owned.get("adapters") or {}).get("antigravity") or {}).get("skills", []))
+    return {p for p in paths if p.startswith("docs/")} | ADAPTER_PATHS | skills
 
 
 def approval_ids(view: View) -> set[str]:

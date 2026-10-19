@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -77,6 +78,9 @@ def shell_reasons(ctx: Context, command: str, cwd: str | None) -> list[str]:
     targets, deletes, inline, broad = write_targets(command, cwd or str(ctx.root))
     guarded = protected_list(ctx)
     reasons = []
+    if re.search(r"\binstall\.py\b[^;&|]*\b(uninstall|upgrade|install)\b", command):
+        reasons.append("installing, upgrading or uninstalling CGSpec is done by the user, not the agent; "
+                       "tell the user the exact install.py command to run")
     for raw in targets:
         rel = ctx.relative(raw)
         if rel is not None and rel != ".":

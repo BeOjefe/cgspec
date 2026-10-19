@@ -32,3 +32,34 @@ class EngineCommandTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GuardTests(unittest.TestCase):
+    """Lab finding: asked to 'remove the hooks', an agent emptied .claude/settings.json and deleted the git hooks."""
+
+    def setUp(self):
+        from tests.helpers import TempDir, git, install
+        self._tmp = TempDir()
+        self.root = self._tmp.__enter__()
+        git(self.root, "init", "-q")
+        install(self.root)
+
+    def tearDown(self):
+        self._tmp.__exit__(None, None, None)
+
+    def pre_tool(self, tool, **tool_input):
+        from tests.helpers import hook
+        return hook(self.root, "pre-tool", {"tool_name": tool, "tool_input": tool_input, "cwd": str(self.root)},
+                    "--tool", "claude")
+
+    def test_agent_cannot_disable_its_guards(self):
+        for cmd in ("printf '{}' > .claude/settings.json", "rm .git/hooks/pre-commit",
+                    "python3 docs/_cgspec/01-engine/install.py uninstall --root .",
+                    "python3 ~/cgspec/engine/install.py upgrade --root ."):
+            self.assertEqual(self.pre_tool("Bash", command=cmd).returncode, 2, cmd)
+        self.assertEqual(self.pre_tool("Write", file_path=str(self.root / ".claude/settings.json"),
+                                       content="{}").returncode, 2)
+
+    def test_reading_guards_and_verifying_install_still_allowed(self):
+        for cmd in ("cat .claude/settings.json", "ls .git/hooks", "python3 docs/_cgspec/01-engine/install.py verify"):
+            self.assertEqual(self.pre_tool("Bash", command=cmd).returncode, 0, cmd)

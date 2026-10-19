@@ -28,6 +28,8 @@ ALWAYS_PROTECTED = [
     "docs/_cgspec/04-checks/manifest.json",
     MEMLOG_FILE.as_posix(),
 ]
+GUARD_FILES = [".claude/settings.json", ".agents/hooks.json"]  # lab finding: an agent disabled its own hooks
+GUARD_DIRS = [".git/hooks/", ".agents/skills/"]
 NO_TIER_NEEDED = ("docs/", ".cgspec-scratch/")
 
 
@@ -60,6 +62,9 @@ class Context:
             return "the vendored engine changes only through install.py upgrade"
         if rel in ALWAYS_PROTECTED:
             return "this state file is written only by the engine"
+        if rel in GUARD_FILES or any(rel.startswith(d) or rel + "/" == d for d in GUARD_DIRS):
+            return ("CGSpec's hooks and skills are installed here; an agent never changes its own guards or method. "
+                    "The user changes them with install.py upgrade or uninstall")
         if rel in self.frozen:
             return "this file is frozen (07-state/frozen.json); cut a new version instead"
         if rel in self.checks:
@@ -100,7 +105,7 @@ def git_tracked(root: Path, rel: str) -> bool:
 
 
 def protected_list(ctx: "Context") -> list[str]:
-    return sorted(ctx.frozen | ctx.checks | set(ALWAYS_PROTECTED)) + [ENGINE_DIR.as_posix() + "/"]
+    return sorted(ctx.frozen | ctx.checks | set(ALWAYS_PROTECTED) | set(GUARD_FILES)) + [ENGINE_DIR.as_posix() + "/"] + GUARD_DIRS
 
 
 def _is_script_name(rel: str, content: str | None) -> bool:
