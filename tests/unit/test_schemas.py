@@ -13,7 +13,7 @@ NOW = "2026-10-18T21:40:00Z"
 
 VALID = {
     "project": {
-        "schema": 1, "cgspec_version": "2.0.0", "profile": "web-workspace", "topology": "single",
+        "schema": 1, "cgspec_version": "0.2.0", "profile": "web-workspace", "topology": "single",
         "path_classes": {"schema": ["db/**"], "api": ["src/api/**"], "auth": ["src/auth/**"],
                          "deps": ["package.json"], "code": ["src/**"], "tests": ["tests/**"], "docs": ["docs/**"]},
         "tools": ["claude", "git", "ci"],

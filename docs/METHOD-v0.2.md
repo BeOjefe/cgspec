@@ -1,6 +1,6 @@
-# CGSpec Method v2 — Specification
+# CGSpec Method v0.2 — Specification
 
-Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v1 — Architecture". Source for the rebuild in `cgspec-next`.
+Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Source for the rebuild in `cgspec-next`.
 
 **CGSpec is one package installed into a project: the AI carries the method, you set goals and judge results, and every rule that can be checked by a machine is enforced by one, not left to the AI's goodwill.** It works for a one-page site up to many independent repos, and for new or half-finished projects. Each rule below is stated once; other sections link to it.
 
@@ -23,7 +23,7 @@ flowchart LR
 | 3 Build | A failing test before code, every test kind the profile supports, small single-purpose files, no duplicated logic (DRY). |
 | 4 Any size | Same method from one page to many repos; each repo stays independent. CortexGate is an optional extra, never required. |
 
-What changed from v1: every round-1 and round-2 review finding is resolved in the section it concerns (not in a side table); the review setup follows the evidence (scripts + one reviewer from a different model, big teams only for big steps); enforcement holds even against shell commands; packaging, paths and every cap now have exact values.
+What changed from v0.1: every round-1 and round-2 review finding is resolved in the section it concerns (not in a side table); the review setup follows the evidence (scripts + one reviewer from a different model, big teams only for big steps); enforcement holds even against shell commands; packaging, paths and every cap now have exact values.
 
 ## 1. Collaboration contract
 
@@ -395,7 +395,7 @@ flowchart TB
 
 **First-install trust bootstrap.** Before a repository has a trusted CGSpec selector on its default branch, governance CI deliberately fails closed. Publish and inspect the pinned CGSpec release first. Put the installer output, `plugin_source`, initial `approver_keys` (if wanted), workflow and selection script into one proposed installation change. The repository owner reviews that exact change under a protected branch rule requiring owner review; the first merge cannot claim a passing CGSpec governance check because no prior trusted selector exists. After that reviewed baseline is on the default branch, enable the CGSpec governance check as a required status, then verify it on a subsequent harmless PR before treating the protection as active. Do not add the first approver key later through an ordinary PR: the engine cannot verify GitHub review as an authorization source yet, so it fails closed. A trusted key can rotate keys by signing with the previously trusted key. If owner review or the published release cannot be established, mark bootstrap BLOCKED rather than using the proposed change's engine as its own judge.
 
-What remains possible, and how to close it: the candidate now requires an exact, named approval phrase, reads signer keys from the trusted base, and fails closed when the CI selector cannot establish its trusted source. Those fixes passed bounded adversarial review; they do not certify the whole system. An agent with your shell could still write a fake approval together with a fake inbox line in one change. The first installation also has no earlier selector to judge it and therefore requires the owner-reviewed bootstrap above. The merge protection guarantee holds only when GitHub branch protection requires the CGSpec check and your review for changes to `.github/`, `docs/_cgspec/` and `docs/slices/`, and the agent lacks your GitHub admin credentials. A hardware signing key that requires your touch can strengthen approval evidence. Install prints the GitHub steps. The `v2.0.0` release and a live protected-branch rehearsal are still pending, so this section describes the intended guarantee, not a deployed one.
+What remains possible, and how to close it: the candidate now requires an exact, named approval phrase, reads signer keys from the trusted base, and fails closed when the CI selector cannot establish its trusted source. Those fixes passed bounded adversarial review; they do not certify the whole system. An agent with your shell could still write a fake approval together with a fake inbox line in one change. The first installation also has no earlier selector to judge it and therefore requires the owner-reviewed bootstrap above. The merge protection guarantee holds only when GitHub branch protection requires the CGSpec check and your review for changes to `.github/`, `docs/_cgspec/` and `docs/slices/`, and the agent lacks your GitHub admin credentials. A hardware signing key that requires your touch can strengthen approval evidence. Install prints the GitHub steps. The `v0.2.0` release and a live protected-branch rehearsal are still pending, so this section describes the intended guarantee, not a deployed one.
 
 **Session lifecycle hooks:**
 

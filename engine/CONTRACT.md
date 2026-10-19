@@ -14,4 +14,4 @@ The user sets goals, constraints and taste. You carry the method, research optio
 8. Work in bounded batches. Use available quota telemetry; never guess it. At the user's 15% threshold, finish an atomic unit, checkpoint and pause. On interruption, record revisions, completed evidence, open issues, owners and the next action. Do not invent a timer or imply one is running.
 9. Before ending, run the relevant checks and doctor, update the checkpoint and ledger as appropriate, and give a concise outcome with links. Include significant choices made for the user, their reasons and reversibility; say “None” when there were none. Unresolved defects remain visible.
 
-The detailed method is in the plugin's `docs/METHOD-v2.md`. The installed engine scripts and `docs/_cgspec/project.json` define the available commands and version. Load only the relevant skill for the current task.
+The detailed method is in the plugin's `docs/METHOD-v0.2.md`. The installed engine scripts and `docs/_cgspec/project.json` define the available commands and version. Load only the relevant skill for the current task.

@@ -2,14 +2,14 @@
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
-numbers refer to `docs/METHOD-v2.md`.
+numbers refer to `docs/METHOD-v0.2.md`.
 
 All state files carry `"schema": 1`. A future breaking change bumps it and ships a migration
 in `install.py upgrade`.
 
 ## Files
 
-Human-readable CGSpec Markdown documents (except the append-only inbox and ledger, engine files, and archived originals) show `Created: ... · Last edited: ...` immediately below the title. New template documents get both dates at install. The v1 upgrader uses `Created: unknown` when source creation cannot be proven. The commit gate rejects missing or unchanged edit dates on changed documents, future dates, new documents dated before install or marked unknown outside install/upgrade, date-only edits, invented creation dates on pre-existing documents, and changed creation across renames; doctor warns about untouched legacy documents missing the line. Date metadata does not count as substantive spine content.
+Human-readable CGSpec Markdown documents (except the append-only inbox and ledger, engine files, and archived originals) show `Created: ... · Last edited: ...` immediately below the title. New template documents get both dates at install. The v0.1 upgrader uses `Created: unknown` when source creation cannot be proven. The commit gate rejects missing or unchanged edit dates on changed documents, future dates, new documents dated before install or marked unknown outside install/upgrade, date-only edits, invented creation dates on pre-existing documents, and changed creation across renames; doctor warns about untouched legacy documents missing the line. Date metadata does not count as substantive spine content.
 
 | File (in a project) | Schema | Written by | Notes |
 | --- | --- | --- | --- |

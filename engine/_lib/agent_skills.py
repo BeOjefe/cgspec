@@ -44,7 +44,7 @@ def install(root: Path, plugin: Path, rel_base: str = ".agents/skills") -> list[
     dest_base = root / rel_base
     written = []
     sources = [(p, dest_base / p.relative_to(skills)) for p in skills.rglob("*") if p.is_file()]
-    sources += [(docs / "METHOD-v2.md", dest_base / DOCS / "METHOD-v2.md")] if (docs / "METHOD-v2.md").is_file() else []
+    sources += [(docs / "METHOD-v0.2.md", dest_base / DOCS / "METHOD-v0.2.md")] if (docs / "METHOD-v0.2.md").is_file() else []
     research = docs / "_cgspec/02-research"
     sources += [(p, dest_base / DOCS / p.relative_to(docs)) for p in research.glob("*.md")] if research.is_dir() else []
     for src, dest in sources:

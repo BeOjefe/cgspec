@@ -39,7 +39,7 @@ class CiSelectTests(unittest.TestCase):
         self.tmp = self._tmp.__enter__()
         self.root = self.tmp / "project"
         self.root.mkdir()
-        self.source = make_release_source(self.tmp, ["2.0.0", "2.1.0"])
+        self.source = make_release_source(self.tmp, ["0.2.0", "0.3.0"])
         git(self.root, "init", "-q", "-b", "main")
         from tests.helpers import run_script
         run_script("install.py", "install", "--root", str(self.root), "--profile", "headless", "--topology", "single",
@@ -67,17 +67,17 @@ class CiSelectTests(unittest.TestCase):
         git(self.root, "commit", "-q", "--no-verify", "-m", "project change")
         env = select(self.root, self.base, self.tmp)
         self.assertEqual(env["CGSPEC_BASE"], self.base)
-        self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), "2.0.0")
+        self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), "0.2.0")
 
     def test_downgrade_in_head_is_ignored(self):
-        self.edit("docs/_cgspec/01-engine/VERSION", lambda p: p.write_text("1.0.0\n"))
+        self.edit("docs/_cgspec/01-engine/VERSION", lambda p: p.write_text("0.1.0\n"))
         env = select(self.root, self.base, self.tmp)
-        self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), "2.0.0")
+        self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), "0.2.0")
 
     def test_upgrade_in_head_uses_the_newer_release(self):
-        self.edit("docs/_cgspec/01-engine/VERSION", lambda p: p.write_text("2.1.0\n"))
+        self.edit("docs/_cgspec/01-engine/VERSION", lambda p: p.write_text("0.3.0\n"))
         env = select(self.root, self.base, self.tmp)
-        self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), "2.1.0")
+        self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), "0.3.0")
 
     def test_redirected_plugin_source_in_head_is_ignored(self):
         def redirect(p):
@@ -124,7 +124,7 @@ class SelectorFallbackTests(unittest.TestCase):
         return "\n".join(block)
 
     def installed_checkout(self, tmp: Path) -> Path:
-        source = make_release_source(tmp, ["2.0.0"])
+        source = make_release_source(tmp, ["0.2.0"])
         origin = tmp / "origin"
         origin.mkdir()
         git(origin, "init", "-q", "-b", "main")
@@ -186,10 +186,10 @@ class SelectorFallbackTests(unittest.TestCase):
 
     def test_preinstall_event_base_uses_default_branch_source(self):
         with TempDir() as tmp:
-            trusted = make_release_source(tmp, ["2.0.0"])
+            trusted = make_release_source(tmp, ["0.2.0"])
             evil_parent = tmp / "evil"
             evil_parent.mkdir()
-            evil = make_release_source(evil_parent, ["2.0.0"])
+            evil = make_release_source(evil_parent, ["0.2.0"])
             origin = tmp / "origin"
             origin.mkdir()
             git(origin, "init", "-q", "-b", "main")
@@ -219,7 +219,7 @@ class SelectorFallbackTests(unittest.TestCase):
 
     def test_new_branch_push_uses_the_default_branch_selector(self):
         with TempDir() as tmp:
-            source = make_release_source(tmp, ["2.0.0"])
+            source = make_release_source(tmp, ["0.2.0"])
             origin = tmp / "origin"
             origin.mkdir()
             git(origin, "init", "-q", "-b", "main")

@@ -17,7 +17,7 @@ class AgentSkillsTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             skill = root / ".agents/skills/cgspec-ui-ux/SKILL.md"
             self.assertTrue(skill.is_file())
-            self.assertTrue((root / ".agents/skills/_cgspec-docs/METHOD-v2.md").is_file())
+            self.assertTrue((root / ".agents/skills/_cgspec-docs/METHOD-v0.2.md").is_file())
             for md in (root / ".agents/skills").rglob("*.md"):
                 for ref in re.findall(r"\]\(([^)\s#]+)", md.read_text()):
                     if not re.match(r"^[a-z]+:", ref):

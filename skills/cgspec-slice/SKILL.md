@@ -5,7 +5,7 @@ description: Plan, build, test, and review a bounded feature or fix within an ap
 
 # Deliver a bounded change
 
-Read the [agent contract](../../engine/CONTRACT.md), active project state, affected spines and [method sections 3 and 7b](../../docs/METHOD-v2.md). Size the change before editing. Use `python3 docs/_cgspec/01-engine/cgspec_hook.py tier set --root <path> --tier <T0|T1|T2|T3> --reason <reason> --files <comma-separated-existing-files>` for T0, or `--slice <SLICE-NNN>` for T1+. Confirm exact syntax with `--help`. A true T0 stays within three existing files and forty changed lines, with no restricted change; otherwise escalate.
+Read the [agent contract](../../engine/CONTRACT.md), active project state, affected spines and [method sections 3 and 7b](../../docs/METHOD-v0.2.md). Size the change before editing. Use `python3 docs/_cgspec/01-engine/cgspec_hook.py tier set --root <path> --tier <T0|T1|T2|T3> --reason <reason> --files <comma-separated-existing-files>` for T0, or `--slice <SLICE-NNN>` for T1+. Confirm exact syntax with `--help`. A true T0 stays within three existing files and forty changed lines, with no restricted change; otherwise escalate.
 
 For T1+, create or update `docs/slices/SLICE-NNN-<slug>.md` with file scope, interfaces, acceptance criteria and named checks. Criteria and test files are written and frozen before code by someone other than the builder; an author cannot approve or weaken its own tests. Capture a failing test at a real revision before implementation, then the passing test pair in `docs/_cgspec/06-evidence/`. Small projects and headless projects use their profile's actual checks; do not invent UI work.
 

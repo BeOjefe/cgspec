@@ -67,7 +67,7 @@ class UpgradeV1Tests(unittest.TestCase):
             self.assertFalse((root / "docs/_cgspec/01-script").exists())
             self.assertEqual(doctor(root).returncode, 0, doctor(root).stdout)
             self.assertIn("adrs/ADR-001-choice.md", (root / "docs/00-INDEX.md").read_text())
-            self.assertEqual(json.loads((root / "docs/_cgspec/project.json").read_text())["cgspec_version"], "2.0.0")
+            self.assertEqual(json.loads((root / "docs/_cgspec/project.json").read_text())["cgspec_version"], "0.2.0")
             imported = (root / "docs/adrs/ADR-001-choice.md").read_text()
             self.assertIn("Created: unknown · Last edited:", imported)
             self.assertEqual((imported.splitlines(keepends=True)[0] +
@@ -127,7 +127,7 @@ class UpgradeV1Tests(unittest.TestCase):
             old_project(root)
             before = snapshot_tree(root)
             opts = {"profile": "web-workspace", "topology": "single", "tools": "",
-                    "repo_prefix": "", "plugin_source": "https://github.com/mrojefe/cgspec.git"}
+                    "repo_prefix": "", "plugin_source": "https://github.com/BeOjefe/cgspec.git"}
             replace = migration.os.replace
             calls = 0
 
@@ -255,7 +255,7 @@ class UpgradeV1Tests(unittest.TestCase):
                 path.write_text(path.read_text() + "\nconcurrent human edit\n")
 
             opts = {"profile": "web-workspace", "topology": "single", "tools": "",
-                    "repo_prefix": "", "plugin_source": "https://github.com/mrojefe/cgspec.git"}
+                    "repo_prefix": "", "plugin_source": "https://github.com/BeOjefe/cgspec.git"}
             with patch.object(migration, "_save_journal", side_effect=edit_after_journal):
                 code, report = migration.run(root, opts, apply=True)
             self.assertEqual(code, 2, report)
@@ -333,7 +333,7 @@ class UpgradeV1Tests(unittest.TestCase):
             with patch.object(transaction, "publish_hooks", side_effect=edit_after_files):
                 code, report = migration.run(root, {"profile": "web-workspace", "topology": "single",
                                                      "tools": "", "repo_prefix": "",
-                                                     "plugin_source": "https://github.com/mrojefe/cgspec.git"}, apply=True)
+                                                     "plugin_source": "https://github.com/BeOjefe/cgspec.git"}, apply=True)
             self.assertEqual(code, 2, report)
             self.assertFalse((root / "docs/_cgspec/project.json").exists())
             self.assertIn("new human note", (root / "docs/00-INDEX.md").read_text())
@@ -352,7 +352,7 @@ class UpgradeV1Tests(unittest.TestCase):
                 return result
 
             opts = {"profile": "web-workspace", "topology": "single", "tools": "",
-                    "repo_prefix": "", "plugin_source": "https://github.com/mrojefe/cgspec.git"}
+                    "repo_prefix": "", "plugin_source": "https://github.com/BeOjefe/cgspec.git"}
             with patch.object(transaction, "_backup_content", side_effect=edit_while_reading):
                 code, report = migration.run(root, opts, apply=False, rollback=True)
             self.assertEqual(code, 2, report)
@@ -374,7 +374,7 @@ class UpgradeV1Tests(unittest.TestCase):
                 return result
 
             opts = {"profile": "web-workspace", "topology": "single", "tools": "",
-                    "repo_prefix": "", "plugin_source": "https://github.com/mrojefe/cgspec.git"}
+                    "repo_prefix": "", "plugin_source": "https://github.com/BeOjefe/cgspec.git"}
             with patch.object(migration, "_prepare", side_effect=chmod_while_staging):
                 code, report = migration.run(root, opts, apply=True)
             self.assertEqual(code, 2, report)

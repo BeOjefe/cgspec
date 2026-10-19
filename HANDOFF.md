@@ -1,16 +1,16 @@
-# Handoff: CGSpec v2 rebuild (for Codex or any next agent)
+# Historical handoff: CGSpec v0.2 rebuild
 
-**2026-10-19 current continuation:** this original Claude handoff is historical. Read [`../cgspec-audit-2026-10-18/18-CGSPEC-CLAUDE-HANDOFF-2026-10-19.md`](../cgspec-audit-2026-10-18/18-CGSPEC-CLAUDE-HANDOFF-2026-10-19.md) first for the current candidate HEAD, 315-test result, visible document dates, CortexGate dry-run gaps, and remaining work. Then read `docs/METHOD-v2.md` and `engine/FORMATS.md`.
+**Current continuation:** read [`../cgspec-audit-2026-10-18/23-V0.2-AGY-CONTINUATION-2026-10-19.md`](../cgspec-audit-2026-10-18/23-V0.2-AGY-CONTINUATION-2026-10-19.md) first, then [`docs/METHOD-v0.2.md`](docs/METHOD-v0.2.md). The details below are the older handoff as it stood before subsequent implementation and review; its test counts, branch and release status are historical.
 
 Date: 2026-10-19. Previous owner: Claude (claude.ai session). Read this first, then
-`docs/METHOD-v2.md` (the spec, source of truth) and `engine/FORMATS.md` (file formats and hook contract).
+`docs/METHOD-v0.2.md` (the spec, source of truth) and `engine/FORMATS.md` (file formats and hook contract).
 
 ## Where things are
 
 | What | Where |
 | --- | --- |
-| Spec (canonical, live doc) | Claude Doc "CGSpec Method v2 - Specification" (rev 48); repo copy `docs/METHOD-v2.md` is identical (sha256 9d2e5a96...) |
-| Code | this repo `~/Documents/Project/cgspec-next`, branch `method-v2` (branched from `method-v1` = live cgspec 716306b) |
+| Spec (historical at rev 48) | Claude Doc then matched the repo copy; later branch edits and the v0.2 rename make the old digest obsolete. The current repo spec is `docs/METHOD-v0.2.md`. |
+| Code | This historical handoff began on `method-v2`; current work is on `claude/design-craft` (see current continuation above). |
 | Audit dossier, history, reviews | `~/Documents/Project/cgspec-audit-2026-10-18/` (09-RESUME-STATE.md is the running log; 10-13 are re-audit, reviews, research) |
 | Live repos | `~/Documents/Project/cgspec` and `~/Documents/Project/cortexgate`: NOT touched. Do not edit them until step 5 of the plan. |
 
@@ -73,7 +73,7 @@ Low: `find -iname '*.JSON' -delete` slips past the tool hook (best effort; commi
 
 1. Independent re-review of 9e6be76..e13a009; fix findings.
 2. Built since this note was written: `post-tool` hook, `bundle_prototype.py`, `visual_audit.py`, `journey.py`, `impact.py`, check registration (`cgspec_hook.py check`), `cgspec_hook.py checkpoint`. See `cgspec-audit-2026-10-18/19-*.md` for the current state.
-3. Publish: tag the plugin repo (`mrojefe/cgspec`) `v2.0.0`; CI in projects downloads that release.
+3. Publish: the intended plugin remote is `BeOjefe/cgspec`; release tagging and live CI rehearsal remain pending.
 4. Step 3: the 9 skills (`skills/<name>/SKILL.md`) and the short contract; roles in `agents/`. Remove the old v1 `skills/`, `agents/`, `cgspec_template/` once replaced.
 5. Step 4: rehearse install/upgrade on a COPY of CortexGate. Step 5: upgrade real CortexGate. Step 6: fresh CortexGate session. Step 7: periodic check-ins. Step 8: pilot vs one careful agent.
 
@@ -82,4 +82,4 @@ Low: `find -iname '*.JSON' -delete` slips past the tool hook (best effort; commi
 - Tests first for every change; for key rules, revert the fix once and confirm a test fails.
 - Commit identity: reuse the repo's last author (`git -c user.name=... -c user.email=...`); never change git config.
 - Keep files <= 400 lines, functions <= 60 (enforced by `tests/unit/test_code_rules.py`).
-- Update `docs/METHOD-v2.md` and the live doc together when behavior changes; log progress in `cgspec-audit-2026-10-18/09-RESUME-STATE.md`.
+- Update `docs/METHOD-v0.2.md` and the live doc together when behavior changes; log progress in `cgspec-audit-2026-10-18/09-RESUME-STATE.md`.
