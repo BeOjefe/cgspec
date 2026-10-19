@@ -72,8 +72,14 @@ def approval_target(text: str) -> str | None:
     return None
 
 
-def record(root: Path, prompt: str) -> tuple[str, str | None]:
-    """Append the scrubbed prompt to the inbox; return (inbox id, approval id or None)."""
+def record(root: Path, prompt: str, session_id: str | None = None) -> tuple[str, str | None]:
+    """Append the scrubbed prompt to the inbox; return (inbox id, approval id or None).
+
+    A repo can have several agent sessions open on it at once (parallel Claude Code
+    sessions, or another tool entirely); every one of them shares this one file. The
+    short session tag is just so a reader can tell entries apart by session, never a
+    scoping or filtering mechanism - the inbox itself stays one shared, repo-wide file.
+    """
     clean = scrub(prompt)
     whole_line = " / ".join(part.strip() for part in clean.splitlines() if part.strip())
     one_line = whole_line[:MAX_INBOX_CHARS]
@@ -81,8 +87,9 @@ def record(root: Path, prompt: str) -> tuple[str, str | None]:
     path = root / INBOX
     existing = path.read_text(encoding="utf-8") if path.is_file() else "# Inbox\n"
     sep = "" if existing.endswith("\n") else "\n"
+    tag = f" [sess {session_id[-8:]}]" if session_id else ""
     with path.open("a", encoding="utf-8") as handle:
-        handle.write(f"{sep}- {inbox_id} {utc_now()}: {one_line}\n")
+        handle.write(f"{sep}- {inbox_id} {utc_now()}{tag}: {one_line}\n")
     approval_id = None
     if (is_approval(prompt) and len(prompt) <= MAX_APPROVAL_CHARS and
             len(whole_line) <= MAX_APPROVAL_CHARS and len(clean.strip().splitlines()) == 1):
