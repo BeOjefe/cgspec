@@ -144,7 +144,7 @@ def _command(event: str, tool: str) -> str:
     elif tool == "antigravity":
         # Antigravity starts hooks in .agents/ on some hosts, not the repo root.
         # A Git root handles nested working directories; the fallback covers installs before git init.
-        base = '"$(git rev-parse --show-toplevel 2>/dev/null || { [ -f docs/' + HOOK + ' ] && pwd || (cd .. && pwd); })"/'
+        base = '"$(git rev-parse --show-toplevel 2>/dev/null || { [ -f ' + HOOK + ' ] && pwd || (cd .. && pwd); })"/'
     else:
         base = ""
     return f"python3 {base}{HOOK} {event} --tool {tool}"
