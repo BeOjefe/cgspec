@@ -151,16 +151,18 @@ def block(tool: str, message: str) -> int:
     return EXIT_BLOCK
 
 
-def staged_doctor(root: Path, doctor) -> list:
-    """Run the doctor on exactly what is staged, not on the working tree."""
+def staged_doctor(root: Path, doctor, staged: list[str] | None = None) -> tuple[list, list[str]]:
+    """Run the doctor and the registered checks on exactly what is staged, not on the working tree."""
     import shutil
     import subprocess
     import tempfile
+    from _lib import checks
     tmp = Path(tempfile.mkdtemp(prefix="cgspec-index-"))
     try:
         subprocess.run(["git", "checkout-index", "-a", "-f", f"--prefix={tmp}/"], cwd=root, check=True,
                        capture_output=True)
-        return doctor.run_checks(tmp)
+        failures, _ = checks.run(tmp, staged or [], write_evidence=False)
+        return doctor.run_checks(tmp), failures
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -169,9 +171,12 @@ def pre_commit(root: Path) -> int:
     from _lib.commit_gate import evaluate
     from _lib.gitview import View
     import doctor
-    reasons = evaluate(root, View.staged(root))
-    findings = [f for f in staged_doctor(root, doctor) if f.is_error]
-    reasons += [f"doctor {f.code} {f.path}: {f.message}" for f in findings]
+    view = View.staged(root)
+    reasons = evaluate(root, view)
+    staged = [c.path for c in view.changes() if c.status != "D"]
+    findings, check_failures = staged_doctor(root, doctor, staged)
+    reasons += [f"doctor {f.code} {f.path}: {f.message}" for f in findings if f.is_error]
+    reasons += [f"check {failure}" for failure in check_failures]
     if reasons:
         print("CGSpec commit check failed:\n- " + "\n- ".join(reasons))
         return EXIT_FAIL
@@ -333,6 +338,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--files", help="T0: comma-separated existing files")
     parser.add_argument("--slice", help="T1+: SLICE-NNN")
     parser.add_argument("--base", help="ci: base commit of the range to check")
+    parser.add_argument("--file", help="check register: proposed script under .cgspec-scratch/checks/")
+    parser.add_argument("--applies-to", dest="applies_to", help="check register: comma-separated globs")
+    parser.add_argument("--description", help="check register: what the check verifies")
+    parser.add_argument("--approval", help="check register: approval id from your message, or 'trailer'")
+    parser.add_argument("--command", help="check register: JSON list with {path} and {files}")
     parser.add_argument("--no-rerun", action="store_true", help="ci: skip re-running failing-test records")
     parser.add_argument("--release-dir", help="ci: checkout of the CGSpec plugin release to verify engine changes")
     return parser
@@ -352,6 +362,9 @@ def main(argv: list[str] | None = None) -> int:
             return post_tool(root, args.tool, sys.stdin.read())
         if args.event == "doc":
             return cmd_doc(root, args)
+        if args.event == "check":
+            from _lib.checks import cli
+            return cli(root, args)
         if args.event == "ci":
             return ci(root, args.base, not args.no_rerun, args)
         if args.event in ("user-message", "session-start", "session-check", "pre-compact", "stop", "commit-msg"):

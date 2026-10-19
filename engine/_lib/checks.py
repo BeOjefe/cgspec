@@ -1,0 +1,120 @@
+"""Registered project checks (spec 8): a proposed script becomes a gate only after the user's
+approval, with its hash recorded; it then runs at commit and in CI on the files it applies to."""
+
+from __future__ import annotations
+
+import json
+import shutil
+import subprocess
+from pathlib import Path
+
+from .common import CHECKS_DIR, EVIDENCE_DIR, CgspecError, sha256_file, utc_now, write_json
+from .globs import match_any
+
+MANIFEST = CHECKS_DIR / "manifest.json"
+PROPOSALS = ".cgspec-scratch/checks/"
+RUNNERS = {".py": ["python3"], ".sh": ["sh"], ".js": ["node"], ".mjs": ["node"]}
+TIMEOUT = 300
+
+
+def _manifest(root: Path) -> dict:
+    try:
+        data = json.loads((root / MANIFEST).read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {"schema": 1, "checks": []}
+    except (OSError, ValueError):
+        return {"schema": 1, "checks": []}
+
+
+def register(root: Path, file: str, applies_to: list[str], description: str, approval: str,
+             command: list[str] | None = None) -> dict:
+    from .inbox import approval_exists
+    source = (root / file)
+    if not file.startswith(PROPOSALS) or ".." in Path(file).parts or not source.is_file() or source.is_symlink():
+        raise CgspecError(f"a check is proposed as a regular file under {PROPOSALS} first")
+    if approval != "trailer" and not approval_exists(root, approval):
+        raise CgspecError(f"approval {approval} is not in 07-state/approvals.json (only your own message creates one)")
+    if not applies_to or not description.strip():
+        raise CgspecError("say which files the check applies to (--applies-to) and what it checks (--description)")
+    data = _manifest(root)
+    dest = root / CHECKS_DIR / source.name
+    if dest.exists():
+        raise CgspecError(f"{dest.relative_to(root).as_posix()} already exists; registered checks never change")
+    runner = command or RUNNERS.get(source.suffix.lower(), []) + ["{path}", "{files}"]
+    if not command and source.suffix.lower() not in RUNNERS:
+        raise CgspecError("unknown script type; pass --command as JSON, e.g. '[\"bash\", \"{path}\", \"{files}\"]'")
+    shutil.copyfile(source, dest)
+    numbers = [int(c["id"][4:]) for c in data.get("checks", []) if str(c.get("id", "")).startswith("CHK-")]
+    entry = {"id": f"CHK-{max(numbers, default=0) + 1:03d}", "path": dest.relative_to(root).as_posix(),
+             "sha256": sha256_file(dest), "command": runner, "applies_to": applies_to,
+             "description": description.strip(),
+             "approval": {"source": "commit-trailer" if approval == "trailer" else "message-hook", "ref": approval,
+                          "at": utc_now()},
+             "added": utc_now()}
+    data.setdefault("checks", []).append(entry)
+    write_json(root / MANIFEST, data)
+    return entry
+
+
+def _revision(root: Path) -> str:
+    out = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=root, capture_output=True, text=True)
+    return out.stdout.strip() if out.returncode == 0 else "working-tree"
+
+
+def _command(entry: dict, root: Path, files: list[str]) -> list[str]:
+    out = []
+    for part in entry.get("command", []):
+        if part == "{files}":
+            out += files
+        else:
+            out.append(str(root / entry["path"]) if part == "{path}" else part)
+    return out
+
+
+def run(root: Path, files: list[str], run_all: bool = False, write_evidence: bool = True) -> tuple[list[str], list[str]]:
+    """(failures, notes). A check whose file no longer matches its approved hash fails without running."""
+    failures, notes = [], []
+    for entry in _manifest(root).get("checks", []):
+        cid, path = entry.get("id"), root / str(entry.get("path", ""))
+        matched = [f for f in files if match_any(f, entry.get("applies_to", []))]
+        if not matched and not run_all:
+            continue
+        if not path.is_file() or sha256_file(path) != entry.get("sha256"):
+            failures.append(f"{cid}: {entry.get('path')} changed since approval; it was not run")
+            continue
+        try:
+            result = subprocess.run(_command(entry, root, matched), cwd=root, capture_output=True, text=True,
+                                    timeout=TIMEOUT)
+            verdict, output = ("PASS" if result.returncode == 0 else "FAIL"), (result.stdout + result.stderr)[-2000:]
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            verdict, output = "FAIL", f"could not run: {exc}"
+        notes.append(f"{cid} {verdict}: {entry.get('description', '')}")
+        if verdict == "FAIL":
+            failures.append(f"{cid} failed ({entry.get('description', '')}):\n{output.strip()}")
+        if write_evidence:
+            write_json(root / EVIDENCE_DIR / "checks" / f"{cid}.json", {
+                "schema": 1, "check": cid, "revision": _revision(root), "verdict": verdict, "state": "Fresh",
+                "covers": entry.get("applies_to", []), "details": output.strip()[:2000],
+                "ran_at": utc_now(), "ran_by": "cgspec_hook check run"})
+    if not notes and not failures:
+        notes.append("no registered check applies to these files")
+    return failures, notes
+
+
+def cli(root: Path, args) -> int:
+    """`cgspec_hook.py check register|run`. Exit 0 ok, 1 a check failed."""
+    action = (args.rest[:1] or [""])[0]
+    if action == "register":
+        if not (args.file and args.applies_to and args.approval):
+            raise CgspecError("usage: check register --file .cgspec-scratch/checks/x.py --applies-to 'src/**' "
+                              "--description '...' --approval A-...")
+        command = json.loads(args.command) if args.command else None
+        entry = register(root, args.file, [g.strip() for g in args.applies_to.split(",") if g.strip()],
+                         args.description or "", args.approval, command)
+        print(f"registered {entry['id']} at {entry['path']}")
+        return 0
+    if action == "run":
+        files = [f.strip() for f in (args.files or "").split(",") if f.strip()]
+        failures, notes = run(root, files, run_all=not files)
+        print("\n".join(notes + failures))
+        return 1 if failures else 0
+    raise CgspecError("usage: cgspec_hook.py check register|run ...")

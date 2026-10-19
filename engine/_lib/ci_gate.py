@@ -102,6 +102,12 @@ def run(root: Path, base: str | None, rerun_tests: bool = True,
         subject = git(root, "log", "-1", "--format=%h %s", commit).stdout.strip()
         reasons = evaluate(root, View.commit(root, commit), release_dir, strict=True)
         problems += [f"commit {subject}: {reason}" for reason in reasons]
+    from . import checks
+    changed = [line for line in git(root, "diff", "--name-only", "--diff-filter=d", f"{base}..HEAD").stdout.splitlines()
+               if line]
+    failures, check_notes = checks.run(root, changed, write_evidence=False)
+    problems += [f"check {failure}" for failure in failures]
+    notes += [note for note in check_notes if not note.startswith("no registered")]
     if rerun_tests:
         for record in new_test_records(root, base):
             problem = prove_failed(root, record)
