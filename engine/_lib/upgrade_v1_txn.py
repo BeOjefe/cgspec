@@ -122,6 +122,9 @@ def _restore_files(root: Path, diff: list[dict], original: dict[str, bytes]) -> 
     from install import safe_target
     for item in diff:
         path = safe_target(root, item["path"])
+        allowed = {(item["before"], item["before_mode"]), (item["after"], item["after_mode"])}
+        if _file_state(path) not in allowed:
+            raise ValueError(f"changed during rollback: {item['path']}")
         safe_target(root, item["path"] + ".upgrade-new").unlink(missing_ok=True)
         if item["before"] is None:
             path.unlink(missing_ok=True)
@@ -159,6 +162,10 @@ def restore(root: Path, folder: Path) -> list[str]:
     if issues:
         return issues
     original, issues = _backup_content(folder, diff)
+    if issues:
+        return issues
+    issues = _check_restore_files(root, diff) + _check_restore_dirs(root, plan)
+    issues += check_rollback(root, plan.get("hooks", []))
     if issues:
         return issues
     _restore_files(root, diff, original)

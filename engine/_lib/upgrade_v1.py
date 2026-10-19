@@ -207,6 +207,10 @@ def _publish(root: Path, stage: Path, before: dict[str, bytes], after: dict[str,
 
 def _stage_and_run(root: Path, options: dict, apply: bool, report: dict) -> tuple[int, dict]:
     before = files(root)
+    pre = txn.metadata(root, before)
+    if files(root) != before or txn.metadata(root, before) != pre:
+        report["unresolved"].append("project changed while initial inventory was read")
+        return 2, report
     hooks, issues = git_plan(root, options["tools"])
     report["git_hooks"] = [h["path"] for h in hooks]
     if issues:
@@ -220,7 +224,7 @@ def _stage_and_run(root: Path, options: dict, apply: bool, report: dict) -> tupl
         if report["unresolved"]:
             return 2, report
         after = files(stage)
-        pre, post = txn.metadata(root, before), txn.metadata(stage, after)
+        post = txn.metadata(stage, after)
         report["archive"] = [(ARCHIVE / "before.tar.gz").as_posix()]
         report["archived_hashes"] = {rel: digest(before[rel]) for rel in report["path_map"] if rel in before}
         report["verdict"] = "READY"
@@ -258,7 +262,7 @@ def run(root: Path, options: dict, apply: bool, rollback: bool = False) -> tuple
         try:
             conflicts = _safe_restore(root, source)
         except (OSError, ValueError, KeyError, tarfile.TarError) as exc:
-            report["unresolved"].append(f"rollback backup cannot be read: {exc}")
+            report["unresolved"].append(f"rollback stopped; recovery data retained: {exc}")
             return 2, report
         if conflicts:
             report["unresolved"] += [f"changed since upgrade: {p}" for p in conflicts]
@@ -300,6 +304,7 @@ def run(root: Path, options: dict, apply: bool, rollback: bool = False) -> tuple
     try:
         return _stage_and_run(root, options, apply, report)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
+        report["verdict"] = "PARTIAL"
         report["unresolved"].append(f"upgrade could not be verified: {exc}")
         return 2, report
 

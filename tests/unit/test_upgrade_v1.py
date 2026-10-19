@@ -335,6 +335,51 @@ class UpgradeV1Tests(unittest.TestCase):
             self.assertFalse((root / "docs/_cgspec/project.json").exists())
             self.assertIn("new human note", (root / "docs/00-INDEX.md").read_text())
 
+    def test_rollback_edit_during_backup_read_is_preserved(self):
+        from engine._lib import upgrade_v1 as migration, upgrade_v1_txn as transaction
+        with TempDir() as root:
+            old_project(root)
+            self.assertEqual(upgrade(root, "--apply")[0].returncode, 0)
+            index = root / "docs/00-INDEX.md"
+            read_backup = transaction._backup_content
+
+            def edit_while_reading(*args):
+                result = read_backup(*args)
+                index.write_text(index.read_text() + "\nHUMAN CHANGE DURING ROLLBACK\n")
+                return result
+
+            opts = {"profile": "web-workspace", "topology": "single", "tools": "",
+                    "repo_prefix": "", "plugin_source": "https://github.com/mrojefe/cgspec.git"}
+            with patch.object(transaction, "_backup_content", side_effect=edit_while_reading):
+                code, report = migration.run(root, opts, apply=False, rollback=True)
+            self.assertEqual(code, 2, report)
+            self.assertEqual(report["verdict"], "PARTIAL")
+            self.assertIn("HUMAN CHANGE DURING ROLLBACK", index.read_text())
+            self.assertTrue((root / "docs/_cgspec/project.json").exists())
+
+    def test_chmod_during_staging_blocks_publish_with_partial_verdict(self):
+        from engine._lib import upgrade_v1 as migration
+        with TempDir() as root:
+            old_project(root)
+            target = root / "docs/00-INDEX.md"
+            os.chmod(target, 0o644)
+            prepare = migration._prepare
+
+            def chmod_while_staging(*args):
+                result = prepare(*args)
+                os.chmod(target, 0o600)
+                return result
+
+            opts = {"profile": "web-workspace", "topology": "single", "tools": "",
+                    "repo_prefix": "", "plugin_source": "https://github.com/mrojefe/cgspec.git"}
+            with patch.object(migration, "_prepare", side_effect=chmod_while_staging):
+                code, report = migration.run(root, opts, apply=True)
+            self.assertEqual(code, 2, report)
+            self.assertEqual(report["verdict"], "PARTIAL")
+            self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+            self.assertFalse((root / "docs/_cgspec/project.json").exists())
+            self.assertFalse((root / ".cgspec-upgrade-v1").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
