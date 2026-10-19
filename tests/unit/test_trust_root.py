@@ -65,8 +65,11 @@ class TrustRootTests(unittest.TestCase):
         self.assertCiFails("differs from plugin release", "--release-dir", str(REPO))
 
     def test_untouched_engine_passes_against_the_release(self):
-        (self.root / "docs/spines/01-INTENT.md").write_text(
-            "# Intent\n\nInvestors in Casablanca need fast, plain explanations of BRVM and BVC market moves.\n")
+        from _lib.document_dates import touch
+        spine = self.root / "docs/spines/01-INTENT.md"
+        spine.write_text(touch(spine.read_text() +
+            "\nInvestors in Casablanca need fast, plain explanations of BRVM and BVC market moves.\n",
+            "2026-10-19T00:00:00Z"))
         commit(self.root, "intent")
         result = ci(self.root, self.base, "--release-dir", str(REPO))
         self.assertEqual(result.returncode, 0, result.stdout)

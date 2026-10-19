@@ -122,11 +122,28 @@ def _legacy_baseline(stage: Path, original: dict[str, bytes], report: dict) -> N
         entries[rel] = {"sha256": digest(data), "lines": data.count(b"\n") + int(bool(data) and not data.endswith(b"\n"))}
     write_json(state, {"schema": 1, "created": utc_now(), "files": entries})
     slice_path.parent.mkdir(parents=True, exist_ok=True)
-    slice_path.write_text("# SLICE-000: Legacy baseline\n\n- **Status:** Draft\n\n"
-                          f"{len(entries)} pre-existing files are listed with hashes in "
-                          "[legacy-baseline.json](../_cgspec/07-state/legacy-baseline.json). "
-                          "This snapshot grants no approval to edit them; use a new approved slice.\n")
+    from .document_dates import stamp_new
+    slice_path.write_text(stamp_new("# SLICE-000: Legacy baseline\n\n- **Status:** Draft\n\n"
+                                    f"{len(entries)} pre-existing files are listed with hashes in "
+                                    "[legacy-baseline.json](../_cgspec/07-state/legacy-baseline.json). "
+                                    "This snapshot grants no approval to edit them; use a new approved slice.\n", utc_now()))
     report["legacy_files"] = len(entries)
+
+
+def _stamp_documents(stage: Path, report: dict) -> None:
+    from .document_dates import managed_doc, stamp_import, STAMP
+    for path in sorted((stage / "docs").rglob("*.md")):
+        rel = path.relative_to(stage).as_posix()
+        if not managed_doc(rel) or path.is_symlink():
+            continue
+        content = path.read_text(encoding="utf-8")
+        if len(content.splitlines()) > 1 and STAMP.fullmatch(content.splitlines()[1]):
+            continue
+        try:
+            path.write_text(stamp_import(content, utc_now()), encoding="utf-8")
+            report["rewritten"].append(rel)
+        except ValueError:
+            report["unresolved"].append(f"document dates need manual mapping: {rel}")
 
 
 def _prepare(stage: Path, options: dict, report: dict, hooks: list[dict]) -> None:
@@ -172,6 +189,7 @@ def _prepare(stage: Path, options: dict, report: dict, hooks: list[dict]) -> Non
         write_json(owned_path, owned)
     _legacy_baseline(stage, original, report)
     doctor_fix(stage, options["profile"])
+    _stamp_documents(stage, report)
     capture = io.StringIO()
     with contextlib.redirect_stdout(capture):
         status = doctor_main(["--root", str(stage), "--json"])

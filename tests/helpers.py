@@ -101,16 +101,17 @@ def approve(root: Path, text: str = "approved, go ahead") -> str:
 
 def make_slice(root: Path, status: str = "Approved", scope: str = "src/login/**", approval: str | None = None,
                number: str = "001", index: bool = True) -> Path:
+    from _lib.document_dates import stamp_new, touch
     approval = approval if approval is not None else approve(root, f"approve SLICE-{number}")
     path = root / f"docs/slices/SLICE-{number}-login.md"
     lines = [f"# SLICE-{number}: Login", "", f"- **Status:** {status}", f"- **Scope:** {scope}"]
     if approval:
         lines.append(f"- **Approval:** {approval}")
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text(stamp_new("\n".join(lines) + "\n", "2026-10-18T00:00:00Z"))
     idx = root / "docs/00-INDEX.md"
     entry = f"- [SLICE-{number}](slices/{path.name})"
     if index and entry not in idx.read_text():
-        idx.write_text(idx.read_text() + "\n" + entry + "\n")
+        idx.write_text(touch(idx.read_text() + "\n" + entry + "\n", "2026-10-18T00:00:00Z"))
     return path
 
 

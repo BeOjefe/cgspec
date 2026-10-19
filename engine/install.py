@@ -25,6 +25,7 @@ from _lib.common import (  # noqa: E402
     ENGINE_DIR, EXIT_FAIL, EXIT_OK, PROJECT_FILE, CgspecError, read_json, sha256_file, utc_now, write_json,
 )
 from _lib.adapters import unwire, wire  # noqa: E402
+from _lib.document_dates import stamp_new  # noqa: E402
 from _lib.layout import GUI_PROFILES  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -134,7 +135,10 @@ def place_file(root: Path, rel: str, src: Path, owned: dict) -> None:
         shutil.copy2(dst, archive)
         owned["replaced"][rel] = (ARCHIVE / rel).as_posix()
     dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(src, dst)
+    if rel.startswith("docs/") and rel.endswith(".md") and rel not in {"docs/00-INBOX.md", "docs/_memlog.md"}:
+        dst.write_text(stamp_new(src.read_text(encoding="utf-8"), utc_now()), encoding="utf-8")
+    else:
+        shutil.copyfile(src, dst)
     owned["created"][rel] = sha256_file(dst)
 
 

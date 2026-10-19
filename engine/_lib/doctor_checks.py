@@ -17,6 +17,7 @@ from .mdlinks import link_targets
 from .findings import Finding, rel as _rel
 from .doctor_layout import layout  # noqa: F401  (re-exported for doctor.py)
 from .schema import validate_named
+from .document_dates import STAMP, FIRST_SEEN, managed_doc, validate_change
 
 STATUS = re.compile(r"^\s*[-*]?\s*\*{0,2}Status:?\*{0,2}:?\s*(.+?)\s*$", re.M | re.I)
 URL_SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*:", re.I)
@@ -106,7 +107,8 @@ def _real_content(text: str, spine: str) -> bool:
     words = 0
     for line in text.splitlines():
         stripped = line.strip()
-        if (not stripped or stripped.startswith("#") or L.EMPTY_MARKER in stripped or stripped == template
+        if (not stripped or stripped.startswith("#") or STAMP.fullmatch(stripped) or FIRST_SEEN.fullmatch(stripped)
+                or L.EMPTY_MARKER in stripped or stripped == template
                 or re.match(L.PLACEHOLDER_LINE, stripped, re.I)):
             continue
         words += len(re.findall(r"[^\W_]{2,}", stripped))
@@ -137,6 +139,20 @@ def _markdown_files(root: Path) -> list[Path]:
         engine = root / ENGINE_DIR
         files += [p for p in docs.rglob("*.md") if engine not in p.parents]
     return [p for p in files if p.is_file() and not p.is_symlink()]
+
+
+def document_dates(root: Path) -> Iterator[Finding]:
+    sink: list[Finding] = []
+    for path in _markdown_files(root):
+        rel = _rel(path, root)
+        if not managed_doc(rel):
+            continue
+        content = read_text(path, root, sink)
+        if content is not None:
+            for issue in validate_change(None, content):
+                code = "W-DOC-DATES" if issue.startswith("missing Created") else "E-DOC-DATES"
+                yield Finding(code, rel, issue)
+    yield from sink
 
 
 def links(root: Path) -> Iterator[Finding]:

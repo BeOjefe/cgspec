@@ -61,7 +61,11 @@ class PreCommitTests(unittest.TestCase):
         git(self.root, "add", "-A")
 
     def test_docs_only_commit_needs_no_tier(self):
-        self.stage("docs/spines/01-INTENT.md", "# Intent\n\nSome words about why this exists for the people using it every day.\n")
+        from _lib.document_dates import touch
+        original = (self.root / "docs/spines/01-INTENT.md").read_text()
+        self.stage("docs/spines/01-INTENT.md", touch(original +
+                   "\nSome words about why this exists for the people using it every day.\n",
+                   "2026-10-19T00:00:00Z"))
         self.assertAllowed()
 
     def test_code_without_tier_is_blocked(self):

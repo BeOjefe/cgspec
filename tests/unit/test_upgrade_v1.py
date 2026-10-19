@@ -68,7 +68,10 @@ class UpgradeV1Tests(unittest.TestCase):
             self.assertEqual(doctor(root).returncode, 0, doctor(root).stdout)
             self.assertIn("adrs/ADR-001-choice.md", (root / "docs/00-INDEX.md").read_text())
             self.assertEqual(json.loads((root / "docs/_cgspec/project.json").read_text())["cgspec_version"], "2.0.0")
-            self.assertEqual((root / "docs/adrs/ADR-001-choice.md").read_bytes(), original)
+            imported = (root / "docs/adrs/ADR-001-choice.md").read_text()
+            self.assertIn("Created: unknown · Last edited:", imported)
+            self.assertEqual((imported.splitlines(keepends=True)[0] +
+                              "".join(imported.splitlines(keepends=True)[2:])).encode(), original)
             second, again = upgrade(root, "--apply")
             self.assertEqual(second.returncode, 0)
             self.assertEqual(again["verdict"], "ALREADY_CURRENT")

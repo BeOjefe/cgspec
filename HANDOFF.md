@@ -1,6 +1,6 @@
 # Handoff: CGSpec v2 rebuild (for Codex or any next agent)
 
-**2026-10-19 Codex continuation:** this Claude handoff is historical. Read the latest section of [`../cgspec-audit-2026-10-18/08-WORKING-CHECKPOINT.md`](../cgspec-audit-2026-10-18/08-WORKING-CHECKPOINT.md) first. The current candidate HEAD, completed fixes, tests, CortexGate dry-run gaps, quota signal and unscheduled wake request are recorded there.
+**2026-10-19 current continuation:** this original Claude handoff is historical. Read [`../cgspec-audit-2026-10-18/18-CGSPEC-CLAUDE-HANDOFF-2026-10-19.md`](../cgspec-audit-2026-10-18/18-CGSPEC-CLAUDE-HANDOFF-2026-10-19.md) first for the current candidate HEAD, 315-test result, visible document dates, CortexGate dry-run gaps, and remaining work. Then read `docs/METHOD-v2.md` and `engine/FORMATS.md`.
 
 Date: 2026-10-19. Previous owner: Claude (claude.ai session). Read this first, then
 `docs/METHOD-v2.md` (the spec, source of truth) and `engine/FORMATS.md` (file formats and hook contract).

@@ -19,6 +19,7 @@ sys.dont_write_bytecode = True  # never leave caches in the vendored engine
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import doctor_checks as C  # noqa: E402
 from _lib import layout as L  # noqa: E402
+from _lib.document_dates import STAMP, touch  # noqa: E402
 from _lib.common import (  # noqa: E402
     EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, PROJECT_FILE, STATE_DIR, CgspecError, atomic_write_text, resolve_root,
 )
@@ -59,6 +60,7 @@ def run_checks(root: Path) -> list[C.Finding]:
         ("symlinks", lambda: C.symlinks(root)),
         ("state", lambda: C.state_files(root)),
         ("spines", lambda: C.spines(root, load_stages(root))),
+        ("document_dates", lambda: C.document_dates(root)),
         ("links", lambda: C.links(root)),
         ("records", lambda: C.records(root)),
         ("index", lambda: C.index(root)),
@@ -108,6 +110,9 @@ def fix(root: Path, profile: str) -> list[str]:
         else:
             new = text.rstrip("\n") + "\n\n" + render_index(root) + "\n"
         if new != text:
+            if len(new.splitlines()) > 1 and STAMP.fullmatch(new.splitlines()[1]):
+                from _lib.common import utc_now
+                new = touch(new, utc_now())
             atomic_write_text(index, new)
             done.append("regenerated index section in docs/00-INDEX.md")
     frozen = root / STATE_DIR / "frozen.json"

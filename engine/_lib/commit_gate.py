@@ -9,6 +9,7 @@ from .common import ENGINE_DIR, PROJECT_FILE, STATE_DIR
 from . import commit_trust as trust
 from .gates import EMOJI, Context, _is_script_name, _script_allowed
 from .gitview import View
+from .document_dates import managed_doc, validate_change
 from .globs import match_any
 
 NO_TIER = ("docs/", ".cgspec-scratch/")
@@ -95,6 +96,13 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     reasons += _tier_rules(view, code_changes, tier)
     reasons += _test_pairs(view, code_changes, tier, classes, project)
     for change in changes:
+        if change.status != "D" and managed_doc(change.path):
+            new = view.read_new(change.path)
+            old = view.read_old(change.old_path or change.path)
+            if new is not None:
+                reasons += [f"{change.path}: {issue}" for issue in validate_change(
+                    old.decode("utf-8", "replace") if old is not None else None,
+                    new.decode("utf-8", "replace"))]
         if change.path.startswith(trust.ENGINE):
             continue  # engine files are checked against the release or manifest above
         if change.status in "AC" and _is_script_name(change.path, None):
