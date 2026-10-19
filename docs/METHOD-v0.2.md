@@ -226,7 +226,7 @@ flowchart LR
 
 Rules:
 
-- **The AI leads.** It brings references first because it can search far more than you; you react ("this is mine", "not this", "mix 2 and 4"). Feedback by sketching on a screenshot is preferred over ranking options. With no idea at all, up to 6 quick contrasting sketches are shown side by side and then thrown away (sketch agents count toward the tier cap; beyond it they run one after another).
+- **The AI leads.** It brings references first because it can search far more than you; you react ("this is mine", "not this", "mix 2 and 4"). Feedback by sketching on a screenshot is preferred over ranking options. The AI casts a wide net by default, not only when you have no idea: 3-5 quick, deliberately different variations of the key screen are shown side by side, you react, the AI iterates on the winner and throws the rest away (sketch agents count toward the tier cap; beyond it they run one after another). Images and video come from the host's own generation when it has one; paid services are suggested with their cost and used only with your explicit yes.
 - **Naming what you feel.** If you like an animation or effect without knowing its name, the AI names it, or asks for a screen recording; if the model cannot watch video, it sends you to a tool that can (for example Gemini) and records the answer.
 - **Tweaks vs changes.** A tweak inside approved tokens and zones is applied directly (T0). Changing a zone, a flow or a token reopens that layer; a token change reopens layers 6 and 7 on every screen.
 - **Constrained UI.** Prototypes assemble registered components with typed props instead of inventing layouts each time (RES-002), which keeps results stable and repeatable.

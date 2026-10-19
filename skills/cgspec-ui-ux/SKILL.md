@@ -12,6 +12,7 @@ Read the [agent contract](../../engine/CONTRACT.md) and [method section 6](../..
 | Layer | Do | Load |
 | --- | --- | --- |
 | 0 References | Find up to six contrasting **real** references, with links and screenshots in `docs/prototypes/_vision/`; measure those the user likes. Search with available web tools and project links. If access fails, record the gap, invite optional links, and continue independent grey work without inventing references or locking reference-derived choices. | [reference-extraction](references/reference-extraction.md); [RES-001](../../docs/_cgspec/02-research/RES-001-ui-design-systems-and-surface-profiles-benchmark.md), [RES-004](../../docs/_cgspec/02-research/RES-004-vibecoded-design-tells-and-high-craft-ergonomics.md) |
+| 0-3 Cast a wide net | Before narrowing, build 3-5 quick, deliberately different variations of the key screen (different density, type, layout and mood), side by side in `docs/prototypes/_vision/variations/`, each one line on what it bets on. The user reacts ("this one", "mix 2 and 4"); iterate on the winner and delete the rest. Repeat with fewer, closer variations when a direction is unclear. Do this even when the user is vague; it replaces guessing. | [craft](references/craft.md) |
 | 0-1 Register (5a) | Write the one-paragraph register (density, type, stance, mood, accent, signature element, avoid, deliberate choices), show it, lock it with the user's approval. | [register](references/register.md) |
 | 1 Tasks | Actors and tasks in the spine, each with frequency and device. | — |
 | 2 Screens and flows | One row per screen with its main need (the focal point). | [craft](references/craft.md) section 1 |
@@ -24,6 +25,7 @@ Read the [agent contract](../../engine/CONTRACT.md) and [method section 6](../..
 ## Rules
 
 - The AI leads: bring references and options; do not ask the user to research or write the brief.
+- Images and video: when the host can generate them itself (for example Antigravity), use that for mood images, placeholders and illustrative assets, and say which were generated. Prefer free and built-in tools and permissively licensed assets. A paid service (for example Higgsfield) or a new design tool (for example Impeccable) is only mentioned as an option with its cost and license; never used without the user's explicit yes.
 - An existing design system is an option only when its installable typed components, machine-readable tokens and permissive license are verified (section 6b). Otherwise derive project tokens with provenance.
 - Generic-look warnings are defaults to challenge, not taste decisions. A flagged choice the user wants is recorded under "Deliberate choices" in the register; never silence a warning the user has not seen.
 - Evidence is distinct by kind: a screenshot is not interaction; browser simulation is not a device. Missing browser or tools mean PARTIAL or BLOCKED, never PASS. Record revision and evidence before locking or presenting completion.
