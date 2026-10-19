@@ -1,41 +1,12 @@
 ---
 name: cgspec-slice
-description: Atomic Vertical Slice Builder. Generates a bounded slice contract from locked spines (01..05), enforces Ports & Adapters modularity, and runs tests + browser verification.
+description: Plan, build, test, and review a bounded feature or fix within an approved slice and its declared file scope.
 ---
 
-# cgspec-slice
+# Deliver a bounded change
 
-## Execution Steps
+Read the [agent contract](../../engine/CONTRACT.md), active project state, affected spines and [method sections 3 and 7b](../../docs/METHOD-v2.md). Size the change before editing. Use `python3 docs/_cgspec/01-engine/cgspec_hook.py tier set --root <path> --tier <T0|T1|T2|T3> --reason <reason> --files <comma-separated-existing-files>` for T0, or `--slice <SLICE-NNN>` for T1+. Confirm exact syntax with `--help`. A true T0 stays within three existing files and forty changed lines, with no restricted change; otherwise escalate.
 
-1. **Pre-Flight Check & Compass:**
-   - **Doctor Hook:** Run `python3 scripts/doctor.py .` to verify that all core spines exist and ADRs are properly registered before code is scaffolded.
-   - **Strict Law 3 Gate:** Verify that Stage 1 (Intent & OOUX Nouns) and Stage 2 (UI/UX, Spatial Zoning, and Interactive Prototype) are locked and approved by the user. Vertical code slices are **strictly prohibited** until UI/UX has been approved.
-   - **Mandatory ADR Invariant Audit:** Read all `{project-root}/docs/adr/*.md` to ensure the slice architecture, database schema, and crypto contracts strictly comply with accepted ADRs.
-   - Show the 1-line plain-text compass (zero emojis):
-     `Where we are: Stage 1: Intent & Domain Nouns [Done] -> Stage 2: UI/UX & Interactive Prototype [Done] -> Stage 3: Architecture & Physical DDL [Done] -> [Stage 4: Build Slices]`
+For T1+, create or update `docs/slices/SLICE-NNN-<slug>.md` with file scope, interfaces, acceptance criteria and named checks. Criteria and test files are written and frozen before code by someone other than the builder; an author cannot approve or weaken its own tests. Capture a failing test at a real revision before implementation, then the passing test pair in `docs/_cgspec/06-evidence/`. Small projects and headless projects use their profile's actual checks; do not invent UI work.
 
-2. **Propose Concrete Next Actions (Never Vague Open-Ended Questions):**
-   - **Never** ask a vague *"How would you like to proceed?"*.
-   - Always present concrete, numbered options using `ask_question` (or clear numbered choices):
-     - `Option 1 (Recommended): Launch browser preview of prototype.html`
-     - `Option 2: Scaffold the next vertical slice (code & database)`
-     - `Option 3: Adjust or add another feature in requirements first`
-
-3. **Write Bounded Slice Spec (`{project-root}/docs/slices/SLICE-NNN-<slug>.md`):**
-   - Target nouns & permissions (`read|invoke|propose_edit|write|share|admin`).
-   - Exact files/modules in scope across mounted services.
-   - **Contract-First Interface Decoupling:** If Service A depends on Service B, define the shared schema/payload in `docs/slices/` first so dependent teams build against mock adapters without waiting for backend deployment.
-   - Test & 7-state UI verification criteria.
-
-4. **Implement & Verify:**
-   - Enforce Ports & Adapters isolation (`uv` for Python, `bun`/`pnpm` for TS).
-   - Run unit/integration tests + linter/typecheck.
-   - For UI work: open in a headless browser, inspect screenshots, verify zero console errors.
-   - Log completion:
-     ```bash
-     uv run {skill-dir}/scripts/memlog.py add {project-root}/docs/.memlog.md \
-       --tags "lock,slice" \
-       --summary "Completed SLICE-NNN"
-     ```
-   - Update `{project-root}/docs/00-INDEX.md`.
-
+Implement only within the slice scope and agreed ownership. Run the profile and tier checks from the method table, then doctor. At T1+ use one clean-context reviewer, different model when available, and label same-model review honestly. Findings block on correctness or stated requirements; taste suggestions stay optional. After two rounds on the same defect, change approach; at three rounds report BLOCKED with remaining defects. A PASS names the revision and checks run, and lists checks not run. Log the result and checkpoint.

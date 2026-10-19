@@ -1,0 +1,38 @@
+{
+  "title": "docs/_cgspec/07-state/checkpoint.json — enough to resume after any interruption",
+  "type": "object",
+  "required": ["schema", "updated", "goal", "stages", "next_action", "in_flight"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "updated": {"type": "string"},
+    "goal": {"type": "string"},
+    "stages": {
+      "type": "object",
+      "additionalProperties": {"enum": ["brainstorming", "design", "architecture", "milestones", "coding", "testing", "cicd", "follow-up"]}
+    },
+    "constraints": {"type": "array", "items": {"type": "string"}},
+    "revision": {"type": "string"},
+    "evidence_done": {"type": "array", "items": {"type": "string"}},
+    "pending": {"type": "array", "items": {"type": "string"}},
+    "open_issues": {"type": "array", "items": {"type": "string"}},
+    "owners": {"type": "object", "additionalProperties": {"type": "string"}},
+    "next_action": {"type": "string"},
+    "in_flight": {"anyOf": [{"type": "null"}, {"type": "string"}]},
+    "wakeup": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": {"enum": ["scheduler", "timer", "paste", "none"]},
+            "id": {"type": "string"},
+            "at": {"type": "string"},
+            "paste_line": {"type": "string"}
+          }
+        }
+      ]
+    }
+  }
+}

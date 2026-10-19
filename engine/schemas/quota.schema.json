@@ -1,0 +1,23 @@
+{
+  "title": "docs/_cgspec/07-state/quota.json — latest quota reading from the AI tool",
+  "type": "object",
+  "required": ["schema", "read_at", "source"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "read_at": {"type": "string"},
+    "source": {"enum": ["claude-statusline", "manual", "unavailable"]},
+    "five_hour": {"$ref": "#/definitions/window"},
+    "weekly": {"$ref": "#/definitions/window"}
+  },
+  "definitions": {
+    "window": {
+      "type": "object",
+      "required": ["used_pct"],
+      "properties": {
+        "used_pct": {"type": "number", "minimum": 0, "maximum": 100},
+        "resets_at": {"type": "string"}
+      }
+    }
+  }
+}

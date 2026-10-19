@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "updated": "1970-01-01T00:00:00Z",
+  "goal": "",
+  "stages": {},
+  "next_action": "Run the forge workflow: goal type, intent, actors.",
+  "in_flight": null,
+  "wakeup": null
+}

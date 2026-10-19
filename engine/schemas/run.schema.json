@@ -1,0 +1,161 @@
+{
+  "title": "docs/_cgspec/05-runs/<run-id>/run.json \u2014 one team task with frozen criteria",
+  "type": "object",
+  "required": [
+    "schema",
+    "run_id",
+    "tier",
+    "goal",
+    "criteria",
+    "tests",
+    "units",
+    "frozen_at",
+    "approval"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^R-\\d{8}-[0-9a-f]{4}$"
+    },
+    "tier": {
+      "enum": [
+        "T1",
+        "T2",
+        "T3"
+      ]
+    },
+    "slice": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 3
+    },
+    "criteria": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/hashed"
+      }
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/hashed"
+      }
+    },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "owner",
+          "allowed_paths",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "allowed_paths": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(?![/\\\\])(?![A-Za-z]:)(?!.*(^|[/\\\\])\\.\\.([/\\\\]|$)).+$"
+            }
+          },
+          "status": {
+            "enum": [
+              "todo",
+              "in-progress",
+              "PASS",
+              "FAIL",
+              "PARTIAL",
+              "BLOCKED",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "review_rounds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          }
+        }
+      }
+    },
+    "frozen_at": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "approval": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/definitions/approval"
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "hashed": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^(?![/\\\\])(?![A-Za-z]:)(?!.*(^|[/\\\\])\\.\\.([/\\\\]|$)).+$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "required": [
+        "source",
+        "ref",
+        "at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "enum": [
+            "message-hook",
+            "commit-trailer"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "at": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

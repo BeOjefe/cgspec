@@ -1,0 +1,149 @@
+{
+  "title": "docs/_cgspec/project.json \u2014 version marker",
+  "type": "object",
+  "required": [
+    "schema",
+    "cgspec_version",
+    "profile",
+    "topology",
+    "path_classes",
+    "tools"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "cgspec_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "profile": {
+      "enum": [
+        "website",
+        "web-workspace",
+        "mobile",
+        "cli",
+        "headless",
+        "small"
+      ]
+    },
+    "topology": {
+      "enum": [
+        "single",
+        "monorepo",
+        "large-monorepo",
+        "polyrepo-governance",
+        "polyrepo-member"
+      ]
+    },
+    "repo_prefix": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "governance_repo": {
+      "type": "string"
+    },
+    "path_classes": {
+      "type": "object",
+      "required": [
+        "schema",
+        "api",
+        "auth",
+        "deps",
+        "code",
+        "tests",
+        "docs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "$ref": "#/definitions/globs"
+        },
+        "api": {
+          "$ref": "#/definitions/globs"
+        },
+        "auth": {
+          "$ref": "#/definitions/globs"
+        },
+        "deps": {
+          "$ref": "#/definitions/globs"
+        },
+        "code": {
+          "$ref": "#/definitions/globs"
+        },
+        "tests": {
+          "$ref": "#/definitions/globs"
+        },
+        "docs": {
+          "$ref": "#/definitions/globs"
+        }
+      }
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "claude",
+          "antigravity",
+          "codex",
+          "cursor",
+          "git",
+          "ci"
+        ]
+      }
+    },
+    "design_system": {
+      "type": "object",
+      "required": [
+        "name",
+        "package",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "package": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "tokens": {
+          "type": "string"
+        }
+      }
+    },
+    "plugin_source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "test_command": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "test_command_approval": {
+      "type": "string"
+    },
+    "approver_keys": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 8
+      }
+    }
+  },
+  "definitions": {
+    "globs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}
