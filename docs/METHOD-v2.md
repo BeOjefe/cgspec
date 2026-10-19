@@ -433,7 +433,7 @@ Checkpoint (`07-state/checkpoint.json`, committed): goal, stage per part, accept
 | Tool can... | Wake-up |
 | --- | --- |
 | Schedule itself (Claude, Antigravity) | Its own scheduled task; ID recorded in the checkpoint |
-| Run from the command line (Codex `exec`, `exec resume`) | System timer that relaunches it with the checkpoint; pre-approved, you are told it was set; never above the weekly limit |
+| Run from the command line (Codex `exec`, `exec resume`) | A system timer may start a new CLI session with the checkpoint. `exec resume <id>` is allowed only after the existing writer for that exact session has closed; a live Codex chat holding the writer lock makes concurrent resume fail. Verify the timer, saved session ID, output destination, and lock state in a short test before claiming a wake-up. Do not infer that CLI output will appear in the open chat UI. Respect the weekly limit above. |
 | Neither | The checkpoint plus one line to paste and when to come back |
 
 The agent always says which wake-up it set.
