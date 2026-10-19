@@ -79,6 +79,17 @@ CREATE TABLE real (id int);
         self.assertNotIn('ghost', [t['table_name'] for t in data['database_tables']])
         self.assertTrue(data['has_known_omissions'])
 
+    def test_unclosed_sql_quotes_and_mysql_comments_are_not_candidates(self):
+        for content in ("SELECT 'unfinished\nCREATE TABLE ghost (id int);\n",
+                        'SELECT "unfinished\nCREATE TABLE ghost (id int);\n',
+                        '# CREATE TABLE ghost (id int);\n'):
+            with self.subTest(content=content):
+                (self.repo / 'schema.sql').write_text(content)
+                code, data, _ = self.run_cli(self.repo)
+                self.assertEqual(code, 2)
+                self.assertEqual(data['database_tables'], [])
+                self.assertEqual(data['source_counts']['unsupported'], 1)
+
     def test_git_inventory_does_not_execute_fsmonitor(self):
         subprocess.run(['git', 'init', '-q', str(self.repo)], check=True)
         (self.repo / 'app.py').write_text('x = 1')
@@ -99,6 +110,34 @@ CREATE TABLE real (id int);
         self.assertEqual(proc.returncode, 2)
         data = json.loads(proc.stdout)
         self.assertEqual(data['source_counts']['skipped'], 1)
+
+    def test_named_pipe_registry_is_rejected_without_blocking(self):
+        if not hasattr(os, 'mkfifo'):
+            self.skipTest('FIFO unavailable')
+        pipe = self.base / 'registry.json'
+        os.mkfifo(pipe)
+        proc = subprocess.run(['python3', str(SCRIPT), '--registry', str(pipe)],
+                              capture_output=True, text=True, timeout=2)
+        self.assertEqual(proc.returncode, 2)
+
+    def test_named_pipe_output_is_preserved(self):
+        if not hasattr(os, 'mkfifo'):
+            self.skipTest('FIFO unavailable')
+        (self.repo / 'app.py').write_text('x = 1\n')
+        pipe = self.base / 'output.json'
+        os.mkfifo(pipe)
+        code, _, _ = self.run_cli(self.repo, '--output', pipe)
+        self.assertEqual(code, 2)
+        self.assertTrue(pipe.is_fifo())
+
+    def test_infrastructure_files_are_explicit_unsupported_coverage(self):
+        (self.repo / 'app.py').write_text('x = 1\n')
+        (self.repo / 'Dockerfile').write_text('FROM scratch\n')
+        (self.repo / 'main.tf').write_text('resource "x" "y" {}\n')
+        code, data, _ = self.run_cli(self.repo)
+        self.assertEqual(code, 2)
+        self.assertEqual(data['source_counts']['unsupported'], 2)
+        self.assertTrue(data['has_known_omissions'])
 
     def test_invalid_target_preserves_stale_output(self):
         output = self.base / 'old.json'

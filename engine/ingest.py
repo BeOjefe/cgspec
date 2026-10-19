@@ -31,6 +31,8 @@ IGNORE_DIRS = {'.git', '.hg', '.svn', 'node_modules', 'vendor', '.venv', 'venv',
 SOURCE_SUFFIXES = {'.py', '.sql', '.js', '.ts', '.jsx', '.tsx', '.go', '.rs',
                    '.java', '.rb', '.php', '.cs', '.cpp', '.c', '.prisma', '.kt',
                    '.swift', '.sh', '.vue', '.svelte'}
+INFRA_SUFFIXES = {'.tf', '.tfvars', '.yaml', '.yml'}
+INFRA_NAMES = {'Dockerfile', 'Containerfile', 'package.json', 'pyproject.toml'}
 METHODS = {'get', 'post', 'put', 'delete', 'patch', 'head', 'options', 'route'}
 
 
@@ -163,10 +165,14 @@ def sql_comment_issue(content):
         elif pair == '/*':
             depth = 1
             i += 1
+        elif char == '#':
+            return 'Hash comments require a dialect parser'
         elif char in ("'", '"', '`'):
             quote = char
         i += 1
-    return 'Unclosed SQL block comment' if depth else None
+    if depth:
+        return 'Unclosed SQL block comment'
+    return 'Unclosed SQL quoted literal or identifier' if quote else None
 
 
 def git_evidence(root):
@@ -199,7 +205,8 @@ def collect_candidates(root, scan, result):
         dirs[:] = sorted(d for d in dirs if d not in IGNORE_DIRS and not Path(base, d).is_symlink())
         for name in sorted(files):
             path = Path(base, name)
-            if path.suffix.lower() in SOURCE_SUFFIXES:
+            if (path.suffix.lower() in SOURCE_SUFFIXES | INFRA_SUFFIXES or
+                    name in INFRA_NAMES or name.startswith(('Dockerfile.', 'Containerfile.'))):
                 candidates.add(path)
     return candidates
 
@@ -285,10 +292,24 @@ def write_manifest(manifest, output=None):
             handle.write(text)
             handle.flush()
             os.fsync(handle.fileno())
+        if output.is_symlink() or (output.exists() and not output.is_file()):
+            raise ValueError('output changed to a non-regular file during inventory')
         os.replace(temp, output)
     finally:
         if temp and temp.exists():
             temp.unlink()
+
+
+def read_registry(path):
+    flags = os.O_RDONLY | os.O_NONBLOCK | getattr(os, 'O_NOFOLLOW', 0)
+    fd = os.open(path, flags)
+    with os.fdopen(fd, 'rb') as handle:
+        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+            raise ValueError('registry must be a regular file')
+        raw = handle.read(MAX_FILE_BYTES + 1)
+    if len(raw) > MAX_FILE_BYTES:
+        raise ValueError('registry exceeds 1 MiB limit')
+    return json.loads(raw.decode('utf-8'))
 
 
 def registry_snapshot(args, output, manifest):
@@ -297,7 +318,7 @@ def registry_snapshot(args, output, manifest):
     registry = Path(args.registry).resolve(strict=True)
     if output == registry:
         raise ValueError('output cannot overwrite registry')
-    entries = json.loads(registry.read_text(encoding='utf-8'))
+    entries = read_registry(registry)
     if isinstance(entries, dict):
         entries = entries.get('repositories')
     if not isinstance(entries, list) or not entries:
@@ -335,7 +356,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         output = Path(args.output).absolute() if args.output else None
-        if output and (output.is_symlink() or not output.parent.is_dir() or output.is_dir()):
+        if output and (output.is_symlink() or not output.parent.is_dir() or
+                       (output.exists() and not output.is_file())):
             raise ValueError('output must be a regular file path with an existing parent, not a symlink')
         if output:
             output = output.resolve()
@@ -349,11 +371,14 @@ def main(argv=None):
                 raise ValueError('output must not overwrite source or live schema')
             manifest.update(snapshot(root, scan, schema, output))
             partial = manifest['has_known_omissions']
-    except (OSError, ValueError, TypeError) as exc:
+    except (OSError, ValueError, TypeError, UnicodeError) as exc:
         print(f'Invalid inventory input: {exc}', file=sys.stderr)
         return 2
     try:
         write_manifest(manifest, output)
+    except ValueError as exc:
+        print(f'Invalid inventory output: {exc}', file=sys.stderr)
+        return 2
     except OSError as exc:
         print(f'Cannot write inventory: {exc}', file=sys.stderr)
         return 1
