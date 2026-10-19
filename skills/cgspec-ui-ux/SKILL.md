@@ -7,6 +7,22 @@ description: Design or revise a product experience from real references through 
 
 Read only what the current step needs, once per session: the [agent contract](../../engine/CONTRACT.md) and [method section 6](../../docs/METHOD-v0.2.md) (that section only). Start from the user's goal and the locked layers in `docs/spines/03-EXPERIENCE.md`. Advance only the layer affected; layers 0-4 are disposable grey work, 5b-7 are the real frontend. A tweak inside locked zones and tokens is applied directly; a changed flow, zone, token or register reopens only the dependent layers, and you run `impact.py` and show the map first.
 
+## Guide the user through a visible path
+
+The layers below are for you. The user sees a simple path, in plain words:
+
+1. **Examples**: we look at real apps together and you say what you like.
+2. **Direction**: one short paragraph on the feel, plus a few quick versions of the main screen to choose from.
+3. **Screens**: the list of screens, each with its one job, and how you move between them.
+4. **Each screen**: we sketch the screens one at a time, in a clean neutral style, and you react to each.
+5. **Click-through**: the screens become clickable so you can try the real flow, with a panel to adjust fonts, colours and density yourself.
+6. **Final look**: the real app with the final look, checked on laptop and phone.
+
+- Explain this path once at the start, in at most five short lines. Do not explain it again.
+- Begin every design reply with one short progress line, for example "Step 3 of 6: the screens". Nothing else about the method.
+- Finish each step with the user's agreement before moving on; if they want to go back, go back without arguing.
+- In step 3 show the screen list first, then in step 4 go one screen at a time: show it, wait for the reaction, adjust, then the next screen.
+
 ## What to do at each layer, and what to load
 
 | Layer | Do | Load |
