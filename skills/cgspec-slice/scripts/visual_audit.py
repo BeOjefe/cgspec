@@ -1,1 +1,0 @@
-../../../.cgspec/scripts/visual_audit.py

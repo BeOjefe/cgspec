@@ -1,1 +1,0 @@
-../../../.cgspec/scripts/memlog.py

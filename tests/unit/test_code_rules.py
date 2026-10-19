@@ -52,3 +52,17 @@ class SourceHygieneTests(unittest.TestCase):
             if path.is_file() and "__pycache__" not in path.parts and path.suffix in (".py", ".md", ".json"):
                 with self.subTest(file=path.name):
                     self.assertIsNone(EMOJI.search(path.read_text(encoding="utf-8")))
+
+
+class PackageHygieneTests(unittest.TestCase):
+    def test_no_symlinks_are_tracked_in_the_plugin(self):
+        import subprocess
+        from tests.helpers import REPO
+        out = subprocess.run(["git", "ls-files", "-s"], cwd=REPO, capture_output=True, text=True).stdout
+        links = [line.split("\t", 1)[1] for line in out.splitlines() if line.startswith("120000")]
+        self.assertEqual(links, [], "spec 11 bans symlinks in the plugin")
+
+    def test_skills_carry_no_copies_of_engine_scripts(self):
+        from tests.helpers import REPO
+        copies = [p.relative_to(REPO).as_posix() for p in (REPO / "skills").rglob("*.py")]
+        self.assertEqual(copies, [], "skills call the engine; they never contain copies of it (spec 11)")

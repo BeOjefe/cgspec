@@ -1,1 +1,0 @@
-../../../.cgspec/scripts/doctor.py
