@@ -22,7 +22,7 @@ Tasks, screens, flows, design layer status per screen (or API/CLI behavior when 
 
 ## Zones
 
-<!-- Layer 3: zone IDs per screen (for example overview.header, overview.overdue-total) so feedback and changes can point at them. -->
+<!-- Layer 3: zone IDs per screen (for example overview.header, overview.summary) so feedback and changes can point at them. -->
 
 ## Components
 

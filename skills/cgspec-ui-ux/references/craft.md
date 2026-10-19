@@ -6,7 +6,7 @@ Load at layer 3 (wireframes), 5 (token sheet) and 6 (high fidelity). The bans in
 
 Before laying out a screen, write one sentence: "On this screen the user mainly needs to ___." The element that answers it gets the largest size or strongest contrast on the screen; nothing else competes at that level.
 
-- A dashboard is not "everything at once". Pick the one number or list the user acts on (for invoices: what is overdue and by how much).
+- A dashboard is not "everything at once". Pick the one number or list the user acts on (for a maintenance tool: which open work orders are urgent and how late they are).
 - Secondary actions sit visibly lower: smaller, quieter colour, or behind a menu.
 - Check: squint or blur the screenshot. The focal point is still the first thing you see.
 
@@ -81,7 +81,7 @@ Define two to four surface levels and use them consistently.
 
 - Set row height, control height and base unit from the register, not per screen.
 - Dense tool: 32–40px rows, 28–32px controls on desktop; touch targets still 44px on phone (rows can stay compact while their tap area grows).
-- Show real-looking data in realistic amounts (30 invoices, long client names, zero, negative, overdue by 400 days). A layout that only works with three tidy rows is not done.
+- Show real-looking data in realistic amounts (dozens of records, long names, zero, negative, very old dates). A layout that only works with three tidy rows is not done.
 - Check: rubric item 4; layouts survive long text and empty data.
 
 ## 9. The signature element

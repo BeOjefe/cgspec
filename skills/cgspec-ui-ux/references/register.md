@@ -30,15 +30,15 @@ Status: Proposed | Locked (approval A-...)
 - A deliberate choice listed here turns the matching `visual_audit.py` look warning into an accepted note; nothing else silences it. Do not use `cgspec-allow` comments for choices the user has not seen.
 - The register is a starting point, not paint: the bans in RES-004 are defaults to challenge with a reason, not laws. Avoiding every cliché at once produces a new cliché.
 
-## Example (invoice tracker for solo freelancers)
+## Example (maintenance work orders for building managers)
 
-> Calm and exact, like a good accountant's ledger rather than a startup dashboard. Users open it for a minute between client work to see what is owed and act on what is late, mostly on a laptop. It borrows the dense, quiet tables of the first reference and the confident single figure of the third. It must never feel like a marketing site or a toy.
+> Steady and legible, like a well-run control room rather than a consumer app. Building managers check it between site visits to see what is urgent and who is on it, on a laptop at the desk and a phone on site. It borrows the dense, sortable lists of the first reference and the strong single status band of the second. It must never feel playful or decorative.
 >
 > - Density: dense tool (14px body, 4px unit, 36px rows)
-> - Type: one neo-grotesque for everything, tabular figures for amounts
+> - Type: one humanist sans for text, tabular figures for times and counts
 > - Stance: light primary, dark later
-> - Mood: composed
-> - Accent: deep green, only for the primary action and paid status
-> - Signature element: the overdue total set large in the top-left of every screen, with days overdue as a thin bar under each row
-> - Avoid: gradient hero, card grid dashboard, playful illustrations
+> - Mood: steady
+> - Accent: a single deep blue, only for the primary action and the current selection
+> - Signature element: an urgency band down the left edge of each row whose length shows hours past the response target
+> - Avoid: card-grid dashboard, gradient headers, illustrations
 > - Deliberate choices: none
