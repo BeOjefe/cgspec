@@ -402,7 +402,7 @@ What remains possible, and how to close it: the candidate now requires an exact,
 | Your message | Scrub likely secrets, save to inbox |
 | Before compaction | Write the checkpoint |
 | Before a tool | Gates above |
-| After a tool | Update index, run related checks, mark affected evidence stale, count budget |
+| After a tool | Mark evidence whose covered files changed as stale, count helper agents against the budget (index and document dates are refreshed at the end of the turn) |
 | Stop | Refuse to end until doctor passes, ledger updated, checkpoint fresh, decisions list written; allowed to end with a recorded BLOCKED or PARTIAL; respects the tool's loop flag (`stop_hook_active`) and a retry counter on disk (max 2) |
 
 | AI tool | What it supports | Fallback |

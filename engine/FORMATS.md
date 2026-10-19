@@ -75,12 +75,14 @@ and `--tool` tells the hook how to read it. Events:
 | `session-check` | inside `session-start`, also runnable alone | no; reports, exit 1 if broken |
 | `user-message` | each user message | never; scrubs secrets, saves to inbox, records approvals |
 | `pre-tool` | before a write or shell tool | yes |
-| `post-tool` | after a tool | no |
+| `post-tool` | after a write, shell or helper-agent tool | no; marks evidence whose `covers` globs match a changed file `Stale`, counts helper agents in `budget.json` (exit 2 only to show a budget warning) |
 | `pre-compact` | before compaction | no; writes checkpoint |
 | `stop` | agent wants to end | yes, at most 2 times in a row (counter on disk) |
 | `pre-commit` | git pre-commit | yes |
 | `commit-msg` | git commit-msg | yes |
 | `ci` | CI governance stage | yes |
+
+Document dates: `cgspec_hook.py doc sync` dates new documents, advances `Last edited` on edited ones, reverts date-only edits and labels edited legacy documents `Created: unknown`; the `stop` hook runs it at the end of each turn.
 
 Tier declarations: `cgspec_hook.py tier set --tier T0 --reason "..." --files a,b` (T0) or
 `--slice SLICE-NNN` (T1+); `tier show`; `tier clear`. CI: `cgspec_hook.py ci --base <sha>`.

@@ -1,19 +1,67 @@
 {
-  "title": "docs/_cgspec/06-evidence/<scope>/<check-id>.json — one check or review result",
+  "title": "docs/_cgspec/06-evidence/<scope>/<check-id>.json \u2014 one check or review result",
   "type": "object",
-  "required": ["schema", "check", "revision", "verdict", "ran_at", "ran_by"],
+  "required": [
+    "schema",
+    "check",
+    "revision",
+    "verdict",
+    "ran_at",
+    "ran_by"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schema": {"const": 1},
-    "check": {"type": "string"},
-    "revision": {"type": "string"},
-    "verdict": {"enum": ["PASS", "FAIL", "PARTIAL", "BLOCKED", "NOT_APPLICABLE"]},
-    "state": {"enum": ["Fresh", "Stale"]},
-    "details": {"type": "string"},
-    "not_run": {"type": "array", "items": {"type": "string"}},
-    "reviewer_model": {"type": "string"},
-    "same_model_review": {"type": "boolean"},
-    "ran_at": {"type": "string"},
-    "ran_by": {"type": "string"}
+    "schema": {
+      "const": 1
+    },
+    "check": {
+      "type": "string"
+    },
+    "revision": {
+      "type": "string"
+    },
+    "verdict": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "PARTIAL",
+        "BLOCKED",
+        "NOT_APPLICABLE"
+      ]
+    },
+    "state": {
+      "enum": [
+        "Fresh",
+        "Stale"
+      ]
+    },
+    "details": {
+      "type": "string"
+    },
+    "not_run": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reviewer_model": {
+      "type": "string"
+    },
+    "same_model_review": {
+      "type": "boolean"
+    },
+    "ran_at": {
+      "type": "string"
+    },
+    "ran_by": {
+      "type": "string"
+    },
+    "covers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
   }
 }

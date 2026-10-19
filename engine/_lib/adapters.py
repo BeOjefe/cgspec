@@ -18,6 +18,7 @@ MARK = "cgspec_hook.py"
 
 CLAUDE_EVENTS = {
     "PreToolUse": ("Write|Edit|MultiEdit|NotebookEdit|Bash", "pre-tool"),
+    "PostToolUse": ("Write|Edit|MultiEdit|NotebookEdit|Bash|Task|Agent", "post-tool"),
     "UserPromptSubmit": (None, "user-message"),
     "SessionStart": (None, "session-start"),
     "PreCompact": (None, "pre-compact"),
@@ -25,6 +26,7 @@ CLAUDE_EVENTS = {
 }
 AG_EVENTS = {
     "PreToolUse": ("write_to_file|replace_file_content|multi_replace_file_content|run_command", "pre-tool"),
+    "PostToolUse": ("write_to_file|replace_file_content|multi_replace_file_content|run_command", "post-tool"),
     "SessionStart": (None, "session-start"),
     "Stop": (None, "stop"),
 }

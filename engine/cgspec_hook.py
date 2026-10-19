@@ -34,7 +34,7 @@ def _strings(value, skip=frozenset()) -> list[str]:
     if isinstance(value, list):
         return [s for v in value for s in _strings(v, skip)]
     return []
-LATER = {"post-tool"}
+LATER: set[str] = set()
 
 
 def normalize(payload: dict, tool: str) -> dict:
@@ -231,6 +231,12 @@ def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str) -> int
         print(f"doctor: {summary}" + (f"; engine: {len(problems)} problems" if problems else "; engine OK"))
         return EXIT_FAIL if errors or problems else EXIT_OK
     if event == "stop":
+        from _lib.doc_sync import sync
+        try:
+            sync(root)  # keep visible document dates true before judging the end of the turn
+        except Exception as exc:
+            print(f"cgspec_hook: document date sync failed: {exc!r}", file=sys.stderr)
+        errors, summary = doctor_state(root)
         allow, message = session.stop_decision(root, session.stop_problems(root, errors))
         if args.tool == "antigravity":
             if not allow:
@@ -256,6 +262,40 @@ def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str) -> int
             return EXIT_FAIL
         return EXIT_OK
     raise CgspecError(f"unknown event: {event}")
+
+
+def post_tool(root: Path, tool: str, raw: str) -> int:
+    """Never blocks the finished tool; exit 2 only to show the agent a budget warning."""
+    from _lib.post_tool import HELPER_TOOLS, count_helper, mark_stale
+    try:
+        payload = json.loads(raw) if raw.strip() else {}
+        if not isinstance(payload, dict):
+            return EXIT_OK
+        ctx = Context.load(root)
+        call, changed = normalize(payload, tool), []
+        if call["kind"] == "write":
+            changed = [ctx.relative(p, call.get("cwd")) for p in call["paths"]]
+        elif call["kind"] == "shell":
+            targets, deletes, _, _ = write_targets(call["command"], call.get("cwd") or str(root))
+            changed = [ctx.relative(p) for p in targets + deletes]
+        mark_stale(root, [c for c in changed if c])
+        warning = count_helper(root) if payload.get("tool_name") in HELPER_TOOLS else None
+    except Exception as exc:
+        print(f"cgspec_hook: post-tool failed (not blocking): {exc!r}", file=sys.stderr)
+        return EXIT_OK
+    if warning:
+        print(warning, file=sys.stderr)
+        return EXIT_BLOCK if tool == "claude" else EXIT_OK
+    return EXIT_OK
+
+
+def cmd_doc(root: Path, args: argparse.Namespace) -> int:
+    from _lib.doc_sync import sync
+    if (args.rest[:1] or [""])[0] != "sync":
+        raise CgspecError("usage: cgspec_hook.py doc sync")
+    changed = sync(root)
+    print("\n".join(f"dated {rel}" for rel in changed) or "document dates already up to date")
+    return EXIT_OK
 
 
 def cmd_tier(root: Path, args: argparse.Namespace) -> int:
@@ -308,6 +348,10 @@ def main(argv: list[str] | None = None) -> int:
             return pre_tool(root, args.tool, sys.stdin.read())
         if args.event == "pre-commit":
             return pre_commit(root)
+        if args.event == "post-tool":
+            return post_tool(root, args.tool, sys.stdin.read())
+        if args.event == "doc":
+            return cmd_doc(root, args)
         if args.event == "ci":
             return ci(root, args.base, not args.no_rerun, args)
         if args.event in ("user-message", "session-start", "session-check", "pre-compact", "stop", "commit-msg"):
