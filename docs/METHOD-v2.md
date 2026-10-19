@@ -80,6 +80,10 @@ How the agent talks to you:
 
 IDs: ledger entries `M-YYYYMMDD-xxxx` (date + 4 random hex), so parallel branches and repos never collide. ADRs and slices keep sequential numbers for readability: drafts on a branch use `ADR-draft-<slug>`, and the number is assigned when merged. In multi-repo setups every ID gets the repo prefix (`api:ADR-004`).
 
+**Document dates visible on open.** Every new human-readable CGSpec Markdown document starts with its title followed by a compact provenance line: `Created: <ISO-8601 UTC> · Last edited: <ISO-8601 UTC>`. The agent updates `Last edited` whenever it changes that document's content, including generated index content; an unchanged file keeps its prior dates. The date line belongs to the document so it is visible in a plain text editor, Markdown preview, and Git diff. The two fields mean document creation and the last content edit made under CGSpec, not Git commit time or filesystem metadata. An automated check must catch a changed CGSpec document whose `Last edited` value was not advanced, without rewriting it silently.
+
+During adoption or upgrade, preserve existing date fields if their source is known. If creation cannot be established, write `Created: unknown` and add `First seen in available Git history: <date>` only when the history actually contains that file; do not relabel Git's first appearance or filesystem birth time as proven creation. Imported documents get `Last edited` when their content is transformed by the upgrade, with their earlier source retained in the migration record. Append-only ledger and inbox entries retain their own entry timestamps; their file-level date line records creation and latest append. Frozen snapshots and machine JSON are outside this human-readable document rule. A rename alone does not reset creation. The installer, document-writing flows, upgrader, and doctor/commit checks must implement this before claiming the rule is enforced.
+
 | Record | Statuses |
 | --- | --- |
 | Decision | Draft, Proposed, Approved, Delegated, Rejected, Superseded, Imported |
