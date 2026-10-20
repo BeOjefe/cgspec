@@ -1,4 +1,5 @@
 # CGSpec Method v0.2 — Specification
+Created: unknown · Last edited: 2026-10-20T15:19:55Z
 
 Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Source for the rebuild in `cgspec-next`.
 
@@ -40,7 +41,7 @@ What changed from v0.1: every round-1 and round-2 review finding is resolved in 
 How the agent talks to you:
 
 - Plain English first; every term explained by its behavior; no unexplained product names.
-- The one-line compass (`Where we are: Brainstorming > [Design] > ...`) opens substantive replies about the part being discussed; the index holds the per-part matrix. Quick exchanges skip it.
+- Orient once when starting a new goal. During longer work, use a brief progress line only when it adds useful orientation, such as when the current step changes, after a long interruption, or when the user asks where things stand. Do not prepend it to every design answer or repeat the full path; answer quick questions and clear feedback directly.
 - Decisions come as structured choices: concrete options, recommended one first, one decision at a time.
 - Clear feedback is applied, not interviewed. Only ambiguous or intent-changing feedback gets one focused question.
 - Diagrams (Mermaid) over walls of text; details live in files.
@@ -74,7 +75,7 @@ How the agent talks to you:
 | `docs/_cgspec/07-state/` | `checkpoint.json`, `budget.json`, `frozen.json`, `tier.json` | Hooks and main agent |
 | `docs/_cgspec/_archive/` | Superseded material, with a redirect table | Main agent |
 | `.cgspec-scratch/` (git-ignored) | Throwaway work, cleaned automatically | Anyone |
-| docs/\_cgspec/07-state/quota.json, legacy-baseline.json | Quota reading from the tool; list of legacy files exempt from size and test rules | Status-line script; adopt |
+| docs/\_cgspec/07-state/quota.json, legacy-baseline.json | Provider quota reading, when a host adapter exists; list of legacy files exempt from size and test rules | Host adapter (quota writer not implemented in this checkout); adopt |
 | docs/spines/\<NN-NAME>/INDEX.md | Folder form of a spine once it outgrows one file | Main agent |
 | docs/00-REGISTRY.md (governance repo), packages/\<x>/docs/ (large monorepo) | Multi-repo registry; package-local docs | Adopt; slice workflow |
 
@@ -214,7 +215,7 @@ flowchart LR
 
 | Layer | You see | Not in it yet | Lock scope |
 | --- | --- | --- | --- |
-| 0 References + words | AI-found references (up to 6, deliberately contrasting) as links + screenshots, each captioned; your words, images, videos; shared glossary; 0–3 existing design systems that passed the enforceability check (6b) | Any design of ours | Global |
+| 0 References + words | AI-found references (up to 6, deliberately contrasting) as links + screenshots, each captioned; your words, images, videos; an `IMAGE-WORD` brief that aligns the visual words and image references; shared glossary; 0–3 existing design systems that passed the enforceability check (6b) | Any design of ours or generated asset | Global |
 | 5a Register | One paragraph locked right after you react to references: density, type feel, light/dark stance, mood, one accent and its job, the signature element, what to avoid, and deliberate choices a generic-look warning would flag | Token values, screens | Global, locked at layer 0–1 because layout and look depend on each other |
 | 1 Task map | What each actor does, v0.1 only | Visuals | Global |
 | 2 Screen map + flows | Every screen, its purpose, how you move between them | Layout | Global |
@@ -222,12 +223,14 @@ flowchart LR
 | 4 Behavior | Clickable grey prototype: navigation, every state, actions; test IDs on every interactive element; motion described in words + a reference clip | Final look | Per screen |
 | 5b Token sheet | One token sheet (DTCG format) derived from the register and measured references, every value with its source: type scale, surfaces, color roles, spacing unit, radius, icons, motion durations and easings | Screens | Global, opens after layer 4 is locked for all v0.1 screens |
 | 6 High fidelity | Real frontend screens (chosen stack, mocked data) matching the locked wireframes, tokens applied; locked only after a different reviewer scores the screenshots against the critique rubric (no score below 3, mean at least 3.5) | Layout changes | Per screen |
-| 7 Motion | Layer 4 behaviors animated with motion tokens, in the real frontend | New behaviors | Per screen |
+| 7 Motion | Layer 4 behaviors animated with motion tokens, in the real frontend; for hero or story-led pages, a time-based storyboard coordinates video cuts, text and UI transitions | New behaviors | Per screen |
 
 Rules:
 
-- **The AI leads.** It brings references first because it can search far more than you; you react ("this is mine", "not this", "mix 2 and 4"). Feedback by sketching on a screenshot is preferred over ranking options. The AI casts a wide net by default, not only when you have no idea: 3-5 quick, deliberately different variations of the key screen are shown side by side, you react, the AI iterates on the winner and throws the rest away (sketch agents count toward the tier cap; beyond it they run one after another). Variations and references are always real pages, opened in a browser and screenshotted, never generated pictures; the host's own image or video generation is only for content inside a design (photos, illustrations), and paid services are suggested with their cost and used only with your explicit yes.
+- **The AI leads.** It brings references first because it can search far more than you; you react ("this is mine", "not this", "mix 2 and 4"). Feedback by sketching on a screenshot is preferred over ranking options. The AI casts a wide net by default, not only when you have no idea: 3-5 quick, deliberately different variations of the key screen are shown side by side, you react, the AI iterates on the winner and throws the rest away (sketch agents count toward the tier cap; beyond it they run one after another). Variations and references are always real pages, opened in a browser and screenshotted, never generated pictures. When photography, illustration or video would improve the actual product (especially a landing page or immersive space), first show real visual references, align on the `IMAGE-WORD` brief, then propose and create only the assets that fit it. Use a connected Antigravity media tool from any lead model when it is actually reachable; otherwise send the approved prompt unchanged to a directly available image/video generator. Paid services or new tools are suggested with their cost and license and used only with your explicit yes.
+- **Media prompt integrity.** The lead model prepares one complete prompt packet for the chosen generator: the agreed image words, subject, composition, lighting, material, palette, crop/aspect ratio, dimensions, motion/timing where relevant, text-safe area, exclusions and source references. Show it to the user for alignment, then pass it to the generator verbatim; do not paraphrase it through another model between approval and generation. Preserve the returned asset and the exact prompt/provider/model/version in the asset record. If the tool cannot accept the packet unchanged or is unavailable, report that and offer the exact prompt for another tool; do not claim to have generated it.
 - **Naming what you feel.** If you like an animation or effect without knowing its name, the AI names it, or asks for a screen recording; if the model cannot watch video, it sends you to a tool that can (for example Gemini) and records the answer.
+- **Motion with media.** For a page where video and typography carry the story, the AI proposes a short visual sequence before implementation: shot and cut points, what the words do with each beat, transition timing, and the asset frame rate. Match text and UI motion to the video's actual timeline; keep playback smooth, pause or simplify off-screen motion, respect reduced-motion settings, and provide a still or lightweight fallback. Do not add motion merely because video is present.
 - **Tweaks vs changes.** A tweak inside approved tokens and zones is applied directly (T0). Changing a zone, a flow or a token reopens that layer; a token change reopens layers 6 and 7 on every screen.
 - **Constrained UI.** Prototypes assemble registered components with typed props instead of inventing layouts each time (RES-002), which keeps results stable and repeatable.
 - **Generic-look tells.** The audit flags known AI-default patterns (RES-004: untouched component-library look, unprompted purple, gradient text, neon glows, centered hero + three cards, cream + serif "tasteful default") as warnings; usability breakers are errors.
@@ -312,6 +315,8 @@ flowchart LR
 
 - **Every consequential choice gets a council** (stack, data store, auth, hosting, service boundaries, sync model): three lenses (simplicity and cost; security and reliability; scale and maintainability), debaters from at least two different models (with only one model available the council is marked PARTIAL), a supervisor; a council has its own cap of 4 agents, outside the tier helper cap, one log file per round, outcome as a Proposed ADR you approve.
 - **Backed, not opinion:** each option cites sources, and where numbers matter a spike measures them (latency, memory, cost per month) instead of guessing.
+- **Match model to work.** Before a substantial or expensive task, the main agent checks models actually reachable in the host, including configured cross-provider options when available, and recommends a fit in one short sentence: for example, a fast, lower-cost model for broad brainstorming, a balanced model for ordinary implementation, and a strong reasoning model for a difficult security or architecture review. Name a model or compare cost only when the live host catalogue or reliable pricing source supports the claim. Recommend a cheaper adequate option when it can do the job; reserve stronger models for work where their added scrutiny is useful. A lower model number or older release is not evidence of lower usage: compare measured cost or quota consumed per completed task when available, and do not confuse API token prices with subscription limits. Check data access and provider boundaries before sending project material cross-provider. Do not interrupt quick, routine work with a model menu. If the host cannot switch models from the current session, give the user a concise handoff prompt or explain the limitation once.
+- **Final challenge for consequential architecture.** After a T3 council synthesizes its result, a reviewer who did not author the proposal or supervise the council uses the strongest suitable available model to challenge the proposed ADR, source quality, assumptions, threat model, failure modes, and reversibility before it reaches the user. The reviewer reports findings and limitations; it does not approve the architecture. If a suitably independent model or access to the evidence is unavailable, mark the review PARTIAL. The user remains the authority who approves the decision.
 - **Deliverables:** Mermaid diagrams at three zoom levels (system context, containers, components); data model; contracts (OpenAPI, AsyncAPI or JSON Schema); budgets for latency, memory and cost with how each is measured; a threat model for anything touching auth, money or personal data.
 - **Architecture enforced as tests (fitness functions):** layer and dependency rules checked on every commit (dependency-cruiser for JS/TS, import-linter for Python); ports and adapters where boundaries are expected to change; other stacks use their equivalent (for example ArchUnit for Java). An ADR is reopened when a measured budget is breached in production or a constraint behind it changes.
 
@@ -419,7 +424,7 @@ On tools without hooks, the commit hook and CI still enforce every rule in the f
 
 ## 9. Tokens, checkpoints and resume
 
-**Zero brutal stops (target): the agent lands safely before a limit instead of stopping mid-turn, saves, tells you, and wakes up only when it is allowed to.** These are your rules; the quota reading comes from the tool when it provides one (Claude Code status line `rate_limits`, written to `07-state/quota.json` for hooks), otherwise the agent works in bounded mode and says the reading is unavailable.
+**Zero brutal stops (target): the agent lands safely before a limit instead of stopping mid-turn, saves, tells you, and wakes up only when it is allowed to.** Distinguish provider quota (for example, a five-hour or weekly allowance) from the current conversation's context capacity; a reading for one is not evidence about the other. At the start of substantial work and before launching a long or parallel task, the agent checks a fresh reading from an available host integration. The engine can consume quota written to `07-state/quota.json`, but this checkout contains no quota collector or writer: the method describes a Claude Code `rate_limits` status-line source, while the engine only reads a pre-existing file. Codex and Antigravity have no quota adapters here. If no host reading is available or its timestamp is stale, record it as unavailable and work in bounded mode; never infer remaining quota from elapsed time, turn count, or context length, and do not make the user manage internal token accounting. The agent should checkpoint before compaction or interruption when the host signals context pressure, but this is not automatic until the host and engine integration is built and tested. The quota and checkpoint behavior is therefore an implementation gap, not a universal guarantee.
 
 | 5-hour window remaining | Action |
 | --- | --- |
@@ -433,7 +438,7 @@ On tools without hooks, the commit hook and CI still enforce every rule in the f
 | Above 10% | Wake-up scheduled for when the 5-hour window refills |
 | 10% or less | No wake-up at all; workers parked; waits for your decision |
 
-Standing rules: pre-flight quota check before any expensive task (near 15%: park and write the plan); chunked output; no brute-force retry loops when quota is tight; never weaker tests to save tokens; per-task budget in `07-state/budget.json` (helper agents, review rounds, research passes) counted by hooks.
+Standing rules: pre-flight quota check before any expensive task (near 15%: park and write the plan); chunked output; no brute-force retry loops when quota is tight; never weaker tests to save tokens; per-task budget in `07-state/budget.json` (helper agents, review rounds, research passes) counted by hooks. When telemetry is missing, prefer one small, resumable unit and avoid optional councils, broad research, or parallel helpers; if a consequential task cannot be completed safely in bounded work, save the plan and ask the user whether to continue in another session. These task counters do not measure generated tokens or replace provider quota telemetry.
 
 Checkpoint (`07-state/checkpoint.json`, committed): goal, stage per part, accepted constraints, revisions, evidence done, pending changes, open issues, owners, next action, and an "in flight" note written before each batch so a crash leaves a clear trail. Commit points: after every green slice, every locked design layer, and every checkpoint at 15%; never auto-commit unrelated changes.
 
