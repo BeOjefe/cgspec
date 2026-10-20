@@ -29,7 +29,6 @@ def _strings(value, skip=frozenset()) -> list[str]:
     if isinstance(value, list):
         return [s for v in value for s in _strings(v, skip)]
     return []
-LATER: set[str] = set()
 
 
 def normalize(payload: dict, tool: str) -> dict:
@@ -388,9 +387,6 @@ def main(argv: list[str] | None = None) -> int:
             return ci(root, args.base, not args.no_rerun, args)
         if args.event in ("user-message", "session-start", "session-check", "pre-compact", "stop", "commit-msg"):
             return lifecycle(root, args.event, args, "" if args.event == "commit-msg" else sys.stdin.read())
-        if args.event in LATER:
-            print(f"cgspec_hook: '{args.event}' is not built yet (build step 2f)", file=sys.stderr)
-            return EXIT_INTERNAL
         raise CgspecError(f"unknown event: {args.event}")
     except CgspecError as exc:
         print(f"cgspec_hook: {exc}", file=sys.stderr)

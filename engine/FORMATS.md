@@ -1,4 +1,5 @@
 # CGSpec engine: file formats and hook contract
+Created: unknown · Last edited: 2026-10-20T17:48:52Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
@@ -18,9 +19,9 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | `docs/_cgspec/05-runs/<run-id>/run.json` | `run` | inspector | `criteria` and `tests` hold sha256 of each file; once `frozen_at` is set they may not change. `approval` is written only by the message hook or read from a commit trailer, never by the agent. |
 | `docs/_cgspec/07-state/frozen.json` | `frozen` | `bundle_prototype.py`, `cgspec_hook.py freeze` | Append-only. CI rejects any change to an existing entry (spec 8, trust root). |
 | `docs/_cgspec/04-checks/manifest.json` | `checks-manifest` | registration flow | Append-only for the same reason. A check runs as a gate only when listed here with a matching hash. Written only by `cgspec_hook.py check register` (source must be under `.cgspec-scratch/checks/`). |
-| `docs/_cgspec/07-state/checkpoint.json` | `checkpoint` | main agent, pre-compact hook | `in_flight` is written before each batch and cleared after. |
+| `docs/_cgspec/07-state/checkpoint.json` | `checkpoint` | main agent via checkpoint command | `in_flight` is written before each batch and cleared after. |
 | `docs/_cgspec/07-state/budget.json` | `budget` | hooks | Counts helpers, review rounds and research passes against limits. |
-| `docs/_cgspec/07-state/quota.json` | `quota` | Host quota adapter; no collector/writer is included in this checkout | `source: unavailable` puts the agent in bounded mode (spec 9). |
+| `docs/_cgspec/07-state/quota.json` | `quota` | Host quota adapter; no collector/writer is included in this checkout | `quota.py --root <project> [--json]` and session packs validate freshness (five minutes), windows and thresholds. Missing or invalid readings give bounded advice; the command does not collect usage or enforce a task gate (spec 9). |
 | `docs/_cgspec/06-evidence/tests/<test-id>.json` | `test-pair` | slice workflow | `failed_at` is the commit where the test failed; CI checks it out and re-runs `command` to confirm. |
 | `docs/_cgspec/06-evidence/<scope>/<check>.json` | `evidence` | whoever ran the check | `state` becomes `Stale` when a covered file changes. |
 | `docs/prototypes/<screen>/journeys/<name>.json` | journey (checked by `journey.py`) | main agent at layer 4 | `name`, `url` (file next to the screen, or `http://` for the real frontend), optional `viewports` (`desktop`, `mobile`) and `covers`, and `steps`. Each step has one action on a `data-testid` (`click`, `fill`+`value`, `press`+`key`, `select`+`value`, `check`, `hover`, `goto`, `screenshot`) or `expect` with `visible`, `hidden`, `text`+`equals`/`contains`, `value`+`equals`, `count`+`equals`, `enabled`, `disabled`, `url`; a `state` label may go with any step. Evidence goes to `06-evidence/journeys/`, visual audits to `06-evidence/visual/`, registered checks to `06-evidence/checks/`. |
@@ -77,7 +78,7 @@ and `--tool` tells the hook how to read it. Events:
 | `user-message` | each user message | never; scrubs secrets, saves to inbox, records approvals |
 | `pre-tool` | before a write or shell tool | yes |
 | `post-tool` | after a write, shell or helper-agent tool | no; marks evidence whose `covers` globs match a changed file `Stale`, counts helper agents in `budget.json` (exit 2 only to show a budget warning) |
-| `pre-compact` | before compaction | no; writes checkpoint |
+| `pre-compact` | before compaction | no; prints the existing session pack, does not write a checkpoint |
 | `stop` | agent wants to end | yes, at most 2 times in a row (counter on disk) |
 | `pre-commit` | git pre-commit | yes |
 | `commit-msg` | git commit-msg | yes |

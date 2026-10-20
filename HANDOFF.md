@@ -1,6 +1,7 @@
 # Historical handoff: CGSpec v0.2 rebuild
+Created: unknown · Last edited: 2026-10-20T17:54:17Z
 
-**Current continuation:** read [`../cgspec-audit-2026-10-18/27-AGY-LIVE-HOOK-FIX-AND-CLAUDE-HANDOFF-2026-10-19.md`](../cgspec-audit-2026-10-18/27-AGY-LIVE-HOOK-FIX-AND-CLAUDE-HANDOFF-2026-10-19.md), then [`../cgspec-audit-2026-10-18/25-ANTIGRAVITY-HOOK-AND-UPDATE-2026-10-19.md`](../cgspec-audit-2026-10-18/25-ANTIGRAVITY-HOOK-AND-UPDATE-2026-10-19.md) and [`docs/METHOD-v0.2.md`](docs/METHOD-v0.2.md). The details below are the older handoff as it stood before subsequent implementation and review; its test counts, branch and release status are historical.
+**Current entry:** read [docs/STATUS.md](docs/STATUS.md) and [AGENTS.md](AGENTS.md). Everything below is a historical handoff, including its branch names, commands, counts and old isolation instructions; none overrides the current entry. In this workspace development continues only in `cgspec`, not `cgspec-next`.
 
 Date: 2026-10-19. Previous owner: Claude (claude.ai session). Read this first, then
 `docs/METHOD-v0.2.md` (the spec, source of truth) and `engine/FORMATS.md` (file formats and hook contract).
@@ -10,7 +11,7 @@ Date: 2026-10-19. Previous owner: Claude (claude.ai session). Read this first, t
 | What | Where |
 | --- | --- |
 | Spec (historical at rev 48) | Claude Doc then matched the repo copy; later branch edits and the v0.2 rename make the old digest obsolete. The current repo spec is `docs/METHOD-v0.2.md`. |
-| Code | This historical handoff began on `method-v2`; current work is on `claude/design-craft` (see current continuation above). |
+| Code | This handoff originally covered `method-v2`, then `claude/design-craft`; both names describe earlier work, not the current branch. |
 | Audit dossier, history, reviews | `~/Documents/Project/cgspec-audit-2026-10-18/` (09-RESUME-STATE.md is the running log; 10-13 are re-audit, reviews, research) |
 | Live repos | `~/Documents/Project/cgspec` and `~/Documents/Project/cortexgate`: NOT touched. Do not edit them until step 5 of the plan. |
 

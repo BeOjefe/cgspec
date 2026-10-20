@@ -1,4 +1,5 @@
 # ADR-006: Branch governance for `main` on `BeOjefe/cgspec`
+Created: unknown · Last edited: 2026-10-20T17:54:17Z
 
 - **Status:** Accepted
 - **Date:** 2026-10-20
@@ -35,10 +36,10 @@ The user chose the **free path** over paying ~$4/mo for GitHub Team (which would
 
 - Every commit on `main`, going forward, has a corresponding entry in the CI workflow's run log showing which merged PR it came from.
 - Once credential isolation is in place: the agent's working token/remote cannot push to `BeOjefe/cgspec` directly, only to its own fork.
-- Until then: a direct push to `main` from this machine is caught locally by the pre-push hook, and if that's bypassed, by the CI workflow after the fact — never silently.
+- Until then: a direct push to `main` from this machine is caught locally by the pre-push hook, and if that's bypassed, by the CI workflow after the fact — when the local hook or unchanged workflow actually runs. The same writer can alter or remove that workflow, so it is not an independent security boundary.
 
 ## Consequences
 
 - No recurring cost. Real-time prevention is not yet in place for anyone with the current push credentials; what exists today is a local best-effort guard plus an after-the-fact, GitHub-API-backed detector that cannot be fooled by squash merges' single-parent history.
-- The gap closes once the user sets up the bot account + fork (their action, not something performed on their behalf).
+- The gap can close only after effective credential isolation is verified: a bot/fork alone does not suffice while the agent shell can still use owner GitHub logins or SSH credentials. Private-fork policy and the complete PR/merge flow also need rehearsal. The user performs the account setup.
 - `main`'s merge button now only offers squash, matching the chosen default.

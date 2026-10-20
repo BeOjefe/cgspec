@@ -1,4 +1,7 @@
 # ADR-001: First-Principles Architecture of the CGSpec Specification Engine
+Created: unknown · Last edited: 2026-10-20T17:54:17Z
+
+> Historical v0.1 record; not current v0.2 rules or approval. See [the ADR index](README.md) and [the current method](../METHOD-v0.2.md).
 
 - **Status:** Accepted
 - **Date:** 2026-10-16

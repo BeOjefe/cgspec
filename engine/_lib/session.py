@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .checkpoint_cmd import CMD
 from .common import MEMLOG_FILE, STATE_DIR, read_json, utc_now, write_json
+from .quota import snapshot, summary
 
 RETRIES = STATE_DIR / "stop-retries.json"
 MAX_STOP_BLOCKS = 2
@@ -33,7 +34,6 @@ def last_ledger(root: Path, count: int = 5) -> list[str]:
 def pack(root: Path, doctor_summary: str) -> str:
     cp = _load(root, STATE_DIR / "checkpoint.json")
     tier = _load(root, STATE_DIR / "tier.json").get("active")
-    quota = _load(root, STATE_DIR / "quota.json")
     lines = ["CGSpec session pack (read docs/_cgspec/01-engine/CONTRACT.md before acting)",
              f"goal: {cp.get('goal') or '(not set)'}",
              "stages: " + (", ".join(f"{k}: {v}" for k, v in cp.get("stages", {}).items()) or "(none yet)"),
@@ -42,12 +42,7 @@ def pack(root: Path, doctor_summary: str) -> str:
              f"active tier: {tier['tier'] + ' ' + tier['id'] + ' - ' + tier['reason'] if tier else 'none'}"]
     if cp.get("open_issues"):
         lines.append("open issues: " + "; ".join(cp["open_issues"]))
-    if quota.get("source") and quota.get("source") != "unavailable":
-        five = quota.get("five_hour", {}).get("used_pct")
-        week = quota.get("weekly", {}).get("used_pct")
-        lines.append(f"quota used: 5h {five}%, weekly {week}% (read {quota.get('read_at')})")
-    else:
-        lines.append("quota: no reading available; work in bounded mode (spec 9)")
+    lines.append(summary(snapshot(root)))
     lines.append("recent ledger:")
     lines += [f"  {l}" for l in last_ledger(root)] or ["  (empty)"]
     lines.append(f"doctor: {doctor_summary}")

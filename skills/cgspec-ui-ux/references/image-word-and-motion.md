@@ -1,13 +1,13 @@
 # Aligning image words, generated media and motion
-Created: 2026-10-20T15:19:11Z · Last edited: 2026-10-20T15:19:11Z
+Created: 2026-10-20T15:19:11Z · Last edited: 2026-10-20T17:48:52Z
 
-Use this reference only when a product needs original imagery, video, or a coordinated media moment. For a text-only app or a screen where real product data is the visual focus, skip it.
+For general brainstorming and visual comparisons, use [visual choices](visual-choices.md). Use this reference only when a product needs original imagery, video, or a coordinated media moment. For a text-only app or a screen where real product data is the visual focus, skip it.
 
 ## 1. Find the visual direction before generation
 
 Before asking an image or video model to create an asset:
 
-1. Browse and show the user a small set of real references: the actual sites, photographs, film frames, illustrations or motion examples that express different directions. Prefer four to six useful examples, not a large moodboard. Include source links and label whether an item is inspiration only or can be reused under its license.
+1. Browse and show the user a small set of real references: the actual sites, photographs, film frames, illustrations or motion examples that express different directions. Prefer two to four useful examples, reusing an already chosen direction rather than reopening it. Include source links and label whether an item is inspiration only or can be reused under its license.
 2. Let the user react in their own words or point at a reference. Name the visual qualities they appear to mean, but do not assume a word such as “premium”, “calm” or “bold” has one fixed visual meaning.
 3. Prepare an **IMAGE-WORD card** that pairs the user's words with the visible reference and a plain-language reading of both. Show the card. Resolve only a real mismatch; do not make the user fill out a technical brief.
 4. Propose the asset and where it will appear in the real page. Generate after the direction is aligned. A generated picture is page content, never a substitute for a working screen or a reference.

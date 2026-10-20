@@ -1,5 +1,5 @@
 # CGSpec Method v0.2 — Specification
-Created: unknown · Last edited: 2026-10-20T15:19:55Z
+Created: unknown · Last edited: 2026-10-20T17:54:17Z
 
 Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Source for the rebuild in `cgspec-next`.
 
@@ -198,6 +198,8 @@ Upgrade mode (older CGSpec version): a path map from old to new locations, a lin
 
 ## 6. Design path
 
+**Visual choices start during brainstorming.** Whenever images would clarify an option, the agent displays real reference images beside short labelled descriptions before asking the user to choose. Use the skill's `references/visual-choices.md`; links, image paths or screenshots saved only on disk do not count as a displayed comparison. If display is unavailable, state the limitation and leave that visual decision open. Purely technical or verbal choices do not need decorative images.
+
 **Design walks eight layers, UX before UI, each with a fixed deliverable and a list of what is deliberately left out; the AI leads with references and never polishes a lucky AI screen into the product.** Design can take days; code is no longer the hard part.
 
 ```mermaid
@@ -368,7 +370,7 @@ Pipeline on GitHub Actions by default; the CGSpec governance stage runs first an
 
 ## 8. Enforcement engine
 
-**Every hard rule is enforced by at least two independent layers, so an agent cannot route around one (the CortexGate snapshot incident came from a rule that existed only as text).**
+**Defense in depth is the target. The controls below have different scopes and host support; they are not independent security boundaries when the same agent controls the files, shell and remote credentials. Treat enforcement as active only after the installed hooks, trusted CI and required remote settings have been verified.**
 
 ```mermaid
 flowchart TB
@@ -380,7 +382,7 @@ flowchart TB
 
 | Rule | Tool hook | Disk | Commit hook | CI |
 | --- | --- | --- | --- | --- |
-| Frozen snapshots and criteria never change | Refuses edits, and shell commands that write to listed paths (`sed -i`, redirects, `cp`, `mv`, python writes; best effort, the disk lock and hashes are the real guarantee) | Files set read-only | Hashes vs `07-state/frozen.json` | Same check |
+| Frozen snapshots and criteria never change | Refuses edits, and shell commands that write to listed paths (`sed -i`, redirects, `cp`, `mv`, python writes; best effort; read-only flags deter accidents, while hashes detect changes against a trusted baseline) | Files set read-only | Hashes vs `07-state/frozen.json` | Same check |
 | No code outside the active tier or slice scope | Checks `tier.json` / slice file list | — | Line counts, file list | Same check |
 | Test-first | — | — | Failing-then-passing pair required | Same check |
 | Only registered scripts | Refuses new `.py`/`.js`/`.sh` outside `src/`, tests, `04-checks/` or `.cgspec-scratch/` | — | Unregistered scripts rejected | Same check |
@@ -391,7 +393,7 @@ flowchart TB
 
 **Ownership without trusting identity.** Each run lists units, owners and allowed paths in `run.json`. Where the tool passes the agent's identity to hooks, writes outside an owner's paths are refused. Everywhere, frozen criteria are protected by hashes checked at commit and in CI, which needs no identity at all.
 
-**Trust root.** The agent can write files and runs in your shell, so nothing on your disk is fully tamper-proof on its own. CGSpec makes tampering detectable by CI, and impossible to merge once two GitHub settings are on:
+**Trust root.** The agent can write files and runs in your shell, so nothing on your disk is fully tamper-proof on its own. CGSpec aims to make tampering detectable by trusted CI. Preventing a merge requires server-side rules, protected workflow changes and effective separation from credentials that can bypass those controls:
 
 - **CI never runs the engine inside the commit it judges.** It downloads the published plugin release (the newer of the version before and after the change, from the source recorded before the change) and checks every commit in the push with it. Engine files may change only to match that release exactly.
 - **Append-only records.** `frozen.json`, `04-checks/manifest.json` and `07-state/approvals.json` are compared with git history; existing entries can never change.
@@ -400,7 +402,7 @@ flowchart TB
 
 **First-install trust bootstrap.** Before a repository has a trusted CGSpec selector on its default branch, governance CI deliberately fails closed. Publish and inspect the pinned CGSpec release first. Put the installer output, `plugin_source`, initial `approver_keys` (if wanted), workflow and selection script into one proposed installation change. The repository owner reviews that exact change under a protected branch rule requiring owner review; the first merge cannot claim a passing CGSpec governance check because no prior trusted selector exists. After that reviewed baseline is on the default branch, enable the CGSpec governance check as a required status, then verify it on a subsequent harmless PR before treating the protection as active. Do not add the first approver key later through an ordinary PR: the engine cannot verify GitHub review as an authorization source yet, so it fails closed. A trusted key can rotate keys by signing with the previously trusted key. If owner review or the published release cannot be established, mark bootstrap BLOCKED rather than using the proposed change's engine as its own judge.
 
-What remains possible, and how to close it: the candidate now requires an exact, named approval phrase, reads signer keys from the trusted base, and fails closed when the CI selector cannot establish its trusted source. Those fixes passed bounded adversarial review; they do not certify the whole system. An agent with your shell could still write a fake approval together with a fake inbox line in one change. The first installation also has no earlier selector to judge it and therefore requires the owner-reviewed bootstrap above. The merge protection guarantee holds only when GitHub branch protection requires the CGSpec check and your review for changes to `.github/`, `docs/_cgspec/` and `docs/slices/`, and the agent lacks your GitHub admin credentials. A hardware signing key that requires your touch can strengthen approval evidence. Install prints the GitHub steps. The `v0.2.0` release and a live protected-branch rehearsal are still pending, so this section describes the intended guarantee, not a deployed one.
+What remains possible, and how to close it: the implementation now requires an exact, named approval phrase, reads signer keys from the trusted base, and fails closed when the CI selector cannot establish its trusted source. Those fixes passed bounded adversarial review; they do not certify the whole system. An agent with your shell could still write a fake approval together with a fake inbox line in one change. The first installation also has no earlier selector to judge it and therefore requires the owner-reviewed bootstrap above. The merge protection guarantee holds only when GitHub branch protection requires the CGSpec check and your review for changes to `.github/`, `docs/_cgspec/` and `docs/slices/`, and the agent lacks your GitHub admin credentials. A hardware signing key that requires your touch can strengthen approval evidence. Install prints the GitHub steps. The `v0.2.0` release and a live protected-branch rehearsal are still pending, so this section describes the intended guarantee, not a deployed one.
 
 **Session lifecycle hooks:**
 
@@ -408,7 +410,7 @@ What remains possible, and how to close it: the candidate now requires an exact,
 | --- | --- |
 | Session start (and again after compaction) | Load the session pack: goal, stage per part, open decisions, latest checkpoint, what changed on disk since; run the session check (cgspec\_hook.py session-check) |
 | Your message | Scrub likely secrets, save to inbox |
-| Before compaction | Write the checkpoint |
+| Before compaction | Agent should save through the checkpoint command before context pressure. The current hook only prints the existing session pack; it does not write a fresh summary. |
 | Before a tool | Gates above |
 | After a tool | Mark evidence whose covered files changed as stale, count helper agents against the budget (index and document dates are refreshed at the end of the turn) |
 | Stop | Refuse to end until doctor passes, ledger updated, checkpoint fresh, decisions list written; allowed to end with a recorded BLOCKED or PARTIAL; respects the tool's loop flag (`stop_hook_active`) and a retry counter on disk (max 2) |
@@ -420,22 +422,22 @@ What remains possible, and how to close it: the candidate now requires an exact,
 | Codex | No hooks | Git hooks + CI; checkpoint after every batch |
 | Cursor | Rules file | Git hooks + CI |
 
-On tools without hooks, the commit hook and CI still enforce every rule in the first table; only the instant feedback is lost.
+On tools without tool hooks, commit and trusted CI checks cover the implemented repository invariants. They cannot recover uncaptured user messages, prove every shell action, or prevent remote writes by an agent with bypass credentials. Verify host-specific coverage rather than treating all rows as universal guarantees.
 
 ## 9. Tokens, checkpoints and resume
 
-**Zero brutal stops (target): the agent lands safely before a limit instead of stopping mid-turn, saves, tells you, and wakes up only when it is allowed to.** Distinguish provider quota (for example, a five-hour or weekly allowance) from the current conversation's context capacity; a reading for one is not evidence about the other. At the start of substantial work and before launching a long or parallel task, the agent checks a fresh reading from an available host integration. The engine can consume quota written to `07-state/quota.json`, but this checkout contains no quota collector or writer: the method describes a Claude Code `rate_limits` status-line source, while the engine only reads a pre-existing file. Codex and Antigravity have no quota adapters here. If no host reading is available or its timestamp is stale, record it as unavailable and work in bounded mode; never infer remaining quota from elapsed time, turn count, or context length, and do not make the user manage internal token accounting. The agent should checkpoint before compaction or interruption when the host signals context pressure, but this is not automatic until the host and engine integration is built and tested. The quota and checkpoint behavior is therefore an implementation gap, not a universal guarantee.
+**Zero brutal stops (target): the agent lands safely before a limit instead of stopping mid-turn, saves, tells you, and wakes up only when it is allowed to.** Distinguish provider quota (for example, a five-hour or weekly allowance) from the current conversation's context capacity; a reading for one is not evidence about the other. At the start of substantial work and before launching a long or parallel task, the agent checks a fresh reading from an available host integration. The engine can consume quota written to `07-state/quota.json`, but this checkout contains no quota collector or writer: the method describes a Claude Code `rate_limits` status-line source, while the engine only reads a pre-existing file. Codex and Antigravity have no quota adapters here. If no host reading is available or its timestamp is stale, record it as unavailable and work in bounded mode; never infer remaining quota from elapsed time, turn count, or context length, and do not make the user manage internal token accounting. The agent should checkpoint before compaction or interruption when the host signals context pressure, but this is not automatic until the host and engine integration is built and tested. The quota collector and automatic context-pressure integration remain implementation gaps, not universal guarantees. Run `python3 docs/_cgspec/01-engine/quota.py --root <project> --json` before substantial work: the evaluator and session pack reject snapshots older than five minutes, future/invalid timestamps and unusable reset windows. Modes are `normal`, `frugal`, `checkpoint`, `emergency` or `bounded`; inspect the mode rather than interpreting exit 0 as permission to spend. Missing windows keep the result bounded, unless a valid known window already requires checkpoint/emergency. This is snapshot interpretation and agent guidance, not a provider measurement or a hard task gate. The work ladder uses the lowest valid remaining window conservatively. `weekly_resume` is `blocked` at 10% or less, `quota-permits` above 10%, or `unknown` without a usable weekly reading; permission under this quota rule does not establish scheduler availability or create a wake-up.
 
-| 5-hour window remaining | Action |
+| Lowest valid remaining quota window | Action |
 | --- | --- |
 | Above 25% | Normal work |
 | 25% | Frugal: core acceptance work only; no tangents, optional tests or refactors |
-| 15% | Safe harbor: no new files or sub-tasks; finish the atomic unit, check syntax, write checkpoint, tell you, schedule resume |
+| 15% | Safe harbor: no new files or sub-tasks; finish the atomic unit, check syntax, write checkpoint, tell you; schedule resume only with verified host support and sufficient weekly quota |
 | 5% | Emergency reserve: only commit, save logs, alert. No code generation |
 
 | Weekly window remaining | Resume |
 | --- | --- |
-| Above 10% | Wake-up scheduled for when the 5-hour window refills |
+| Above 10% | A wake-up may be scheduled after the 5-hour window refills only when host scheduling is verified |
 | 10% or less | No wake-up at all; workers parked; waits for your decision |
 
 Standing rules: pre-flight quota check before any expensive task (near 15%: park and write the plan); chunked output; no brute-force retry loops when quota is tight; never weaker tests to save tokens; per-task budget in `07-state/budget.json` (helper agents, review rounds, research passes) counted by hooks. When telemetry is missing, prefer one small, resumable unit and avoid optional councils, broad research, or parallel helpers; if a consequential task cannot be completed safely in bounded work, save the plan and ask the user whether to continue in another session. These task counters do not measure generated tokens or replace provider quota telemetry.

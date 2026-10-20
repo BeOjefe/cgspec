@@ -9,6 +9,8 @@ Read only what the current step needs, once per session: the [agent contract](..
 
 Write `docs/spines/01-INTENT.md` with the goal, actors, real tasks, anti-goals, v0.1 boundary and parked ideas. Write `02-OOUX.md` with nouns, attributes, relations, hierarchy, permissions and important states. Trace each actor task to its nouns; check that none are orphaned. In a larger project, update only the relevant spine parts and links rather than rewriting all of them.
 
-Open with the orientation from the contract: in at most five short lines, what we will do together (understand the idea, then design it with them, then build it), how this first part works (a few questions, then a one-page summary to confirm), and what you need from them. Begin later replies with one plain progress line, for example "Part 1 of 3: understanding what you want". When this part is confirmed, say so and move into design, where the design skill's six steps take over.
+Open with the orientation from the contract: in at most five short lines, what we will do together, how this first part works, and what you need from them. Give a short progress update only when something materially changes or the user asks; do not prefix every reply. When this part is confirmed, move into design without repeating the introduction.
+
+When an idea or option is easier to choose visually, use the [visual-choice guide](../cgspec-ui-ux/references/visual-choices.md) now: show real images beside short labelled descriptions before asking for a choice. Do not wait for the design stage or make the user search for references. Keep purely technical or verbal choices concise without decorative imagery.
 
 Show the user a concise, concrete interpretation and only the decisions that change product direction. Apply clear corrections directly. Log significant delegated choices and their reversibility through `memlog.py`. The user should not need to know CGSpec stages to express an idea.

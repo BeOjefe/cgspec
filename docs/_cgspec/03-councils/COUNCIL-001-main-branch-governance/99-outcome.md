@@ -1,4 +1,5 @@
 # COUNCIL-001 — Outcome
+Created: unknown · Last edited: 2026-10-20T17:54:17Z
 
 **Lenses:** simplicity & cost (Claude Opus 5.5 / claude_jfe), security & reliability (Gemini 4 Argon High / antigravity_4), scale & maintainability (OpenCode Big Pickle). **Supervisor:** Claude Sonnet 5 (this session), synthesized, did not debate. **Independent final-challenge reviewer:** Gemini 4 Argon High / antigravity_4 — a second, separate delegated run, not the debater run; it did not author the synthesis.
 
@@ -21,4 +22,4 @@ The independent reviewer (round-03) found the round-02 synthesis had two factual
 
 ## Proposed ADR — now Accepted
 
-See [ADR-006: Branch governance for `main` on `BeOjefe/cgspec`](../../adr/ADR-006-main-branch-governance.md). The user chose the free path, no human approval gate, and squash merge. `BeOjefe/cgspec` is now set to squash-merge only, a deterministic CI detector and a local pre-push guard are in place; the fork-based credential isolation that gives true prevention against the agent is still the user's own action to complete.
+See [ADR-006: Branch governance for `main` on `BeOjefe/cgspec`](../../../adr/ADR-006-main-branch-governance.md). The user chose the free path, no human approval gate, and squash merge. `BeOjefe/cgspec` is now set to squash-merge only, a deterministic CI detector and a local pre-push guard are in place; effective credential isolation remains unfinished. A fork alone is insufficient while the agent can still use owner credentials.
