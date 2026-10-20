@@ -1,0 +1,44 @@
+name: Main branch governance
+
+# Deterministic, server-side detector for ADR-006: every commit that lands on
+# `main` must be associated with a pull request merged into `main`. This does
+# not block a direct push (GitHub Rulesets would be required for that, and
+# are gated behind a paid plan for this private repo - see ADR-006); it fails
+# the workflow loudly so a bypass is never silent.
+#
+# Caveat for squash merges: a squash commit on `main` has a single parent, so
+# this cannot be checked by inspecting commit parents. It calls the GitHub
+# API (`commits/{sha}/pulls`) instead, which works for any merge method.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-pr-origin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check every new commit came from a merged PR into main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          failed=0
+          for sha in $(git rev-list "${{ github.event.before }}..${{ github.sha }}" 2>/dev/null || echo "${{ github.sha }}"); do
+            prs=$(gh api "repos/$REPO/commits/$sha/pulls" --jq '.[] | select(.base.ref == "main" and .merged_at != null) | .number')
+            if [ -z "$prs" ]; then
+              echo "::error::Commit $sha landed on main without an associated merged PR into main."
+              failed=1
+            else
+              echo "Commit $sha: OK (PR #$prs)"
+            fi
+          done
+          if [ "$failed" -eq 1 ]; then
+            echo "::error::One or more commits bypassed the pull-request process. See ADR-006 (docs/adr/ADR-006-main-branch-governance.md)."
+            exit 1
+          fi
+        shell: bash
