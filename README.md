@@ -1,4 +1,5 @@
 # CGSpec
+Created: unknown · Last edited: 2026-10-20T17:48:52Z
 
 CGSpec is a project method carried by the agent. You describe the goal, constraints and taste in ordinary language. The agent maps what exists, brings evidence and design references, implements bounded changes, runs checks, and records decisions and gaps. Machine checks enforce what they can; human judgment remains with you.
 
@@ -6,7 +7,7 @@ The canonical [method specification](docs/METHOD-v0.2.md) defines the contract, 
 
 ## Development status
 
-This `claude/design-craft` branch is a CGSpec v0.2 candidate, not a published release. The version marker is `0.2.0` for compatibility testing; the plugin release tag and its CI trust bootstrap are pending. The installer, doctor, ledger, hooks, source ingestion and v0.1 adoption path are under test. Browser journeys, visual audit, prototype bundling and change impact checks are implemented but still need browser-backed and agent-driven review. A passing source check does not establish runtime behavior, design quality, or deployment readiness.
+CGSpec v0.2 is implemented on `main` but is not a published release. [Current implementation status](docs/STATUS.md) is the single status reference, including release blockers and the distinction between implemented checks and unproven outcomes. The `0.2.0` marker is used for compatibility testing. A passing source check does not establish runtime behavior, design quality, or deployment readiness.
 
 The current package has nine workflows: init, adopt, forge, ui-ux, council, slice, migrate, operate and team-review. `cgspec-pivot` is a compatibility alias. The eight role definitions support bounded team work; routine changes use only the workers that add value.
 

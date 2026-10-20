@@ -4,7 +4,8 @@ name: Main branch governance
 # `main` must be associated with a pull request merged into `main`. This does
 # not block a direct push (GitHub Rulesets would be required for that, and
 # are gated behind a paid plan for this private repo - see ADR-006); it fails
-# the workflow loudly so a bypass is never silent.
+# the workflow when it runs. A writer who can remove this workflow can bypass
+# the detector too; this is not an independent prevention boundary.
 #
 # Caveat for squash merges: a squash commit on `main` has a single parent, so
 # this cannot be checked by inspecting commit parents. It calls the GitHub
