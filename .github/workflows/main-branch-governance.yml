@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   verify-pr-origin:
@@ -25,10 +26,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
+          COMMIT_SHAS: ${{ join(github.event.commits.*.id, ' ') }}
         run: |
           set -eu
           failed=0
-          for sha in $(git rev-list "${{ github.event.before }}..${{ github.sha }}" 2>/dev/null || echo "${{ github.sha }}"); do
+          for sha in ${COMMIT_SHAS:-${{ github.sha }}}; do
             prs=$(gh api "repos/$REPO/commits/$sha/pulls" --jq '.[] | select(.base.ref == "main" and .merged_at != null) | .number')
             if [ -z "$prs" ]; then
               echo "::error::Commit $sha landed on main without an associated merged PR into main."
