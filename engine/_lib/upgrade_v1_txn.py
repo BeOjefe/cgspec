@@ -1,4 +1,4 @@
-"""Journaled publication and rollback for a staged v1 project upgrade."""
+"""Journaled publication and rollback for a staged v0.1 project adoption."""
 
 from __future__ import annotations
 

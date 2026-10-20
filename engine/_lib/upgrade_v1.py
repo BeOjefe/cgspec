@@ -1,4 +1,4 @@
-"""Conservative v1 adoption: prove a staged conversion before changing a project."""
+"""Conservative v0.1 adoption: prove a staged conversion before changing a project."""
 
 from __future__ import annotations
 
@@ -314,7 +314,7 @@ def run(root: Path, options: dict, apply: bool, rollback: bool = False) -> tuple
         report["unresolved"].append(f"existing upgrade archive at {ARCHIVE}; review it first")
         return 2, report
     if not (root / "docs/_cgspec/01-script").is_dir():
-        report["unresolved"].append("v1 marker docs/_cgspec/01-script is missing")
+        report["unresolved"].append("v0.1 layout marker docs/_cgspec/01-script is missing")
         return 2, report
     if options["topology"].startswith("polyrepo") and not options["repo_prefix"]:
         report["unresolved"].append("polyrepo upgrade requires --repo-prefix")
@@ -329,8 +329,8 @@ def run(root: Path, options: dict, apply: bool, rollback: bool = False) -> tuple
 
 def add_cli_args(parser, plugin_source: str) -> None:
     parser.add_argument("--from-v1", action="store_true", help="stage and check an old-layout adoption")
-    parser.add_argument("--apply", action="store_true", help="publish a verified v1 upgrade")
-    parser.add_argument("--rollback", action="store_true", help="restore an unmodified v1 upgrade")
+    parser.add_argument("--apply", action="store_true", help="publish a verified v0.1 adoption")
+    parser.add_argument("--rollback", action="store_true", help="restore an unmodified v0.1 adoption")
     parser.add_argument("--profile", default="web-workspace", choices=["website", "web-workspace", "mobile", "cli", "headless", "small"])
     parser.add_argument("--topology", default="single", choices=["single", "monorepo", "large-monorepo", "polyrepo-governance", "polyrepo-member"])
     parser.add_argument("--tools", default="git")

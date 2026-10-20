@@ -102,6 +102,67 @@ async function journey(browser, run, shots) {
   return { label: run.label, viewports: out };
 }
 
+// Runs in the page: contrast of visible text, font sizes, spacing values and saturated hues in use.
+function measureQuality() {
+  const parse = (c) => { const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return null;
+    const v = m[1].split(/[\s,\/]+/).filter(Boolean).map(Number); return { r: v[0], g: v[1], b: v[2], a: v.length > 3 ? v[3] : 1 }; };
+  const lum = (c) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
+  const blend = (top, under) => ({ r: top.r * top.a + under.r * (1 - top.a), g: top.g * top.a + under.g * (1 - top.a),
+    b: top.b * top.a + under.b * (1 - top.a), a: 1 });
+  const background = (el) => { const layers = [];
+    for (let e = el; e; e = e.parentElement) { const st = getComputedStyle(e);
+      if (st.backgroundImage && st.backgroundImage !== "none") return null;
+      const c = parse(st.backgroundColor); if (c && c.a > 0) { layers.push(c); if (c.a >= 1) break; } }
+    let out = { r: 255, g: 255, b: 255, a: 1 }; for (let i = layers.length - 1; i >= 0; i--) out = blend(layers[i], out); return out; };
+  const hue = (c) => { const r = c.r / 255, g = c.g / 255, b = c.b / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    const l = (mx + mn) / 2, s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1)); if (s < 0.35 || l < 0.15 || l > 0.9) return null;
+    let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return Math.round(((h * 60) + 360) % 360); };
+  const visible = (el) => { const r = el.getBoundingClientRect(); const st = getComputedStyle(el);
+    return r.width > 0 && r.height > 0 && st.visibility !== "hidden" && st.display !== "none" && Number(st.opacity) > 0.05; };
+  const fails = [], sizes = {}, spacing = {}, hues = {}; let texts = 0;
+  for (const el of document.body.querySelectorAll("*")) {
+    if (!visible(el)) continue;
+    const st = getComputedStyle(el);
+    for (const prop of ["paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "marginTop", "marginBottom", "rowGap", "columnGap"]) {
+      const v = parseFloat(st[prop]); if (v > 0) spacing[Math.round(v)] = (spacing[Math.round(v)] || 0) + 1; }
+    for (const prop of ["backgroundColor", "color", "borderTopColor"]) {
+      const c = parse(st[prop]); if (!c || c.a < 0.5) continue;
+      if (prop === "borderTopColor" && parseFloat(st.borderTopWidth) === 0) continue;
+      const h = hue(c); if (h !== null) { const bin = Math.round(h / 30) * 30 % 360; hues[bin] = (hues[bin] || 0) + 1; } }
+    const own = Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim());
+    if (!own) continue;
+    texts++;
+    const size = parseFloat(st.fontSize); sizes[Math.round(size * 10) / 10] = (sizes[Math.round(size * 10) / 10] || 0) + 1;
+    const fg = parse(st.color), bg = background(el); if (!fg || !bg) continue;
+    const top = blend(fg, bg), a = lum(top), b = lum(bg), ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    const large = size >= 24 || (size >= 18.66 && Number(st.fontWeight) >= 700);
+    if (ratio < (large ? 3 : 4.5)) fails.push({ text: el.textContent.trim().slice(0, 30), ratio: Math.round(ratio * 100) / 100,
+      need: large ? 3 : 4.5, id: el.getAttribute("data-testid") || "" });
+  }
+  return { texts, contrastFails: fails.slice(0, 10), contrastFailCount: fails.length, sizes, spacing, hues };
+}
+
+// Tab through the first controls; each focused control must show a visible focus style.
+async function focusCheck(page) {
+  const missing = [];
+  let checked = 0;
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press("Tab");
+    const info = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return null;
+      const st = getComputedStyle(el);
+      const ring = (st.outlineStyle !== "none" && parseFloat(st.outlineWidth) > 0) || (st.boxShadow && st.boxShadow !== "none");
+      return { ring, name: el.getAttribute("data-testid") || el.textContent.trim().slice(0, 30) || el.tagName.toLowerCase() };
+    });
+    if (!info) continue;
+    checked++;
+    if (!info.ring) missing.push(info.name);
+  }
+  return { checked, missing: Array.from(new Set(missing)).slice(0, 8) };
+}
+
 async function audit(browser, run, shots) {
   const out = [];
   for (const viewport of ["desktop", "mobile"]) {
@@ -121,8 +182,10 @@ async function audit(browser, run, shots) {
         return { overflow: doc.scrollWidth > doc.clientWidth + 1, scrollWidth: doc.scrollWidth, width: doc.clientWidth,
                  small: small.slice(0, 10), smallCount: small.length };
       }, viewport === "mobile");
+      const quality = await page.evaluate(measureQuality);
+      quality.focus = await focusCheck(page);
       await page.screenshot({ path: path.join(shots, `${run.label}-${viewport}.png`), fullPage: true });
-      return { viewport, errors, ...facts };
+      return { viewport, errors, ...facts, quality };
     }));
   }
   return { label: run.label, viewports: out };

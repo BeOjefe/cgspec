@@ -93,12 +93,12 @@ class InstallTests(unittest.TestCase):
             self.assertFalse((root / "docs/_cgspec/01-engine").exists())
             self.assertFalse((root / "CLAUDE.md").exists())
 
-    def test_refuses_v1_layout(self):
+    def test_refuses_earlier_layout(self):
         with TempDir() as root:
             (root / "docs/_cgspec/01-script").mkdir(parents=True)
             result = install(root)
             self.assertEqual(result.returncode, 1)
-            self.assertIn("v1", result.stderr)
+            self.assertIn("v0.1", result.stderr)
 
     def test_verify_detects_engine_tampering(self):
         with TempDir() as root:

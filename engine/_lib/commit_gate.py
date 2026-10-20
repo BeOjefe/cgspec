@@ -124,8 +124,8 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     reasons += _test_pairs(view, code_changes, tier, classes, project)
     reasons += _document_dates(view, changes)
     for change in changes:
-        if change.path.startswith(trust.ENGINE):
-            continue  # engine files are checked against the release or manifest above
+        if change.path.startswith(trust.ENGINE) or change.path in exempt:
+            continue  # engine files are checked above; install-owned files (e.g. copied skills) come from the plugin
         if change.status in "AC" and _is_script_name(change.path, None):
             content = (view.read_new(change.path) or b"").decode("utf-8", "replace")
             if not _script_allowed(ctx, change.path, content):

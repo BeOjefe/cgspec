@@ -11,7 +11,7 @@ import json
 import os
 from pathlib import Path
 
-from .common import STATE_DIR, utc_now, write_json
+from .common import CgspecError, STATE_DIR, utc_now, write_json
 
 HOOK = "docs/_cgspec/01-engine/cgspec_hook.py"
 MARK = "cgspec_hook.py"
@@ -139,7 +139,14 @@ hooks, so the git hooks and CI enforce the rules; run doctor.py before ending a 
 
 
 def _command(event: str, tool: str) -> str:
-    base = '"$CLAUDE_PROJECT_DIR"/' if tool == "claude" else ""
+    if tool == "claude":
+        base = '"$CLAUDE_PROJECT_DIR"/'
+    elif tool == "antigravity":
+        # Antigravity starts hooks in .agents/ on some hosts, not the repo root.
+        # A Git root handles nested working directories; the fallback covers installs before git init.
+        base = '"$(git rev-parse --show-toplevel 2>/dev/null || { [ -f ' + HOOK + ' ] && pwd || (cd .. && pwd); })"/'
+    else:
+        base = ""
     return f"python3 {base}{HOOK} {event} --tool {tool}"
 
 
@@ -234,6 +241,11 @@ def wire(root: Path, tools: list[str], owned: dict) -> list[str]:
     if "antigravity" in tools:
         record["antigravity"] = {"path": ".agents/hooks.json", "created": _merge_json(root / ".agents/hooks.json", _antigravity)}
         notes.append("wired .agents/hooks.json (Antigravity sends no user message to hooks: inbox capture unavailable there)")
+        from .agent_skills import install as install_skills
+        skills = install_skills(root, Path(__file__).resolve().parents[2])
+        if skills:
+            record["antigravity"]["skills"] = skills
+            notes.append(f"copied {sum(1 for f in skills if f.endswith('SKILL.md'))} CGSpec skills into .agents/skills/")
     if "git" in tools:
         notes += _wire_git(root, record)
     if "ci" in tools:
@@ -252,6 +264,41 @@ def wire(root: Path, tools: list[str], owned: dict) -> list[str]:
         notes.append(note)
         if ok:
             record["cursor"] = ".cursor/rules/cgspec.mdc"
+    return notes
+
+
+def refresh(root: Path, owned: dict) -> list[str]:
+    """Refresh installed AI-host adapters without changing unrelated user hooks."""
+    record, notes = owned.get("adapters", {}), []
+    if "claude" in record:
+        path = root / ".claude/settings.json"
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            hooks = data.get("hooks", {})
+            for event in list(hooks):
+                hooks[event] = [entry for entry in hooks[event] if MARK not in json.dumps(entry)]
+                if not hooks[event]:
+                    del hooks[event]
+            _claude(data)
+            write_json(path, data)
+        except (OSError, ValueError, TypeError, AttributeError) as exc:
+            raise CgspecError(f"cannot refresh Claude hooks: {exc}") from exc
+        notes.append("refreshed Claude hooks")
+    if "antigravity" in record:
+        path = root / ".agents/hooks.json"
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict) or "cgspec" not in data:
+                raise ValueError("CGSpec hook block is missing")
+        except (OSError, ValueError) as exc:
+            raise CgspecError(f"cannot refresh Antigravity hooks: {exc}") from exc
+        from .agent_skills import refresh as refresh_skills
+        files, backups = refresh_skills(root, Path(__file__).resolve().parents[2],
+                                        record["antigravity"].get("skills", []))
+        _antigravity(data)
+        write_json(path, data)
+        record["antigravity"]["skills"] = files
+        notes.append(f"refreshed Antigravity hooks and {len(files)} skill files; archived {backups} old copies")
     return notes
 
 
@@ -285,6 +332,8 @@ def unwire(root: Path, owned: dict) -> None:
                 write_json(path, data)
             else:
                 path.unlink()
+        from .agent_skills import uninstall as uninstall_skills
+        uninstall_skills(root, record["antigravity"].get("skills", []))
     paths = [root / r for r in record.get("git", []) + [record[k] for k in ("ci", "ci_select", "cursor") if k in record]]
     for path in paths + [Path(p) for p in record.get("git_abs", [])]:
         if path.is_file() and not path.is_symlink() and (MARK in path.read_text(errors="replace") or "CGSpec" in path.read_text(errors="replace")):

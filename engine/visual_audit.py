@@ -5,9 +5,11 @@ Static checks always run: controls that do nothing, references to IDs that do no
 duplicate IDs, images without alt text, controls without an accessible name, emojis, missing
 viewport, controls without a test ID, and the generic-look tells (RES-004) as warnings.
 Rendered checks run when the project's Playwright can start Chromium: page errors, horizontal
-overflow on mobile, small touch targets, and desktop/mobile screenshots in .cgspec-scratch/visual/.
+overflow on mobile, text contrast (WCAG AA) and visible keyboard focus as errors; small touch targets,
+font sizes outside the token scale, spacing off the base grid and too many accent hues as warnings;
+desktop/mobile screenshots in .cgspec-scratch/visual/ for the critique rubric.
 Exit 0 PASS, 1 FAIL, 2 PARTIAL (static checks passed, no browser for rendered checks), 3 internal.
-Allow a deliberate tell with a CSS comment, e.g. /* cgspec-allow: purple */.
+A tell is accepted only when the locked experience register lists its exact ID and reason.
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _lib import browser, evidence  # noqa: E402
+from _lib import browser, evidence, visual_quality  # noqa: E402
 from _lib.common import EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, PROJECT_FILE, CgspecError, resolve_root  # noqa: E402
 from _lib.gates import EMOJI  # noqa: E402
 from _lib.layout import GUI_PROFILES  # noqa: E402
@@ -126,8 +128,8 @@ def _hsl(match) -> tuple[float, float, float] | None:
     return hue * 360, sat, light
 
 
-def tells(css: str, page: Page) -> list[str]:
-    allowed = set(re.findall(r"cgspec-allow:\s*([a-z-]+)", css))
+def tells(css: str, page: Page, accepted: set[str] | None = None) -> list[str]:
+    allowed = accepted or set()
     found = []
     colors = [c for c in (_hsl(m) for m in COLOR.finditer(css)) if c]
     if "purple" not in allowed and any(255 <= h <= 295 and s >= 0.35 and 0.2 <= l <= 0.8 for h, s, l in colors):
@@ -147,7 +149,7 @@ def tells(css: str, page: Page) -> list[str]:
     return found
 
 
-def static_audit(path: Path, profile: str) -> tuple[list[str], list[str]]:
+def static_audit(path: Path, profile: str, accepted: set[str] | None = None) -> tuple[list[str], list[str]]:
     raw = path.read_text(encoding="utf-8", errors="replace")
     page = Page()
     page.feed(raw)
@@ -196,12 +198,15 @@ def static_audit(path: Path, profile: str) -> tuple[list[str], list[str]]:
         (errors if profile == "mobile" else warnings).append("viewport meta tag missing; the page will not fit phones")
     if not any(el["tag"] == "html" and el["attrs"].get("lang") for el in page.elements):
         warnings.append("W-LANG: <html> has no lang attribute")
-    return errors, warnings + tells(css, page)
+    return errors, warnings + tells(css, page, accepted)
 
 
-def rendered(item: dict) -> tuple[list[str], list[str]]:
+def rendered(item: dict, tokens: dict | None = None) -> tuple[list[str], list[str]]:
     errors, warnings = [], []
     for vp in item["viewports"]:
+        quality_errors, quality_warnings = visual_quality.analyse(vp, tokens or {})
+        errors += quality_errors
+        warnings += quality_warnings
         errors += [f"E-RUNTIME ({vp['viewport']}): {e}" for e in vp["errors"][:5]]
         if vp["viewport"] == "mobile" and vp["overflow"]:
             errors.append(f"E-OVERFLOW: page is {vp['scrollWidth']}px wide on a {vp['width']}px phone screen")
@@ -231,18 +236,25 @@ def targets_of(root: Path, raw: list[str]) -> list[tuple[str, Path, list[str]]]:
 
 def audit(root: Path, raw: list[str], write: bool = True) -> tuple[int, list[str]]:
     try:
-        profile = json.loads((root / PROJECT_FILE).read_text(encoding="utf-8")).get("profile", "")
+        project = json.loads((root / PROJECT_FILE).read_text(encoding="utf-8"))
+        profile = project.get("profile", "")
     except (OSError, ValueError):
+        project = {}
         profile = ""
     if profile and profile not in GUI_PROFILES:
         return EXIT_OK, [f"NOT_APPLICABLE: profile {profile} has no user interface"]
     items = targets_of(root, raw)
-    results = {label: static_audit(path, profile) for label, path, _ in items}
+    accepted = visual_quality.deliberate(root)
+    tokens = visual_quality.find_tokens(root, project)
+    results = {label: static_audit(path, profile, accepted) for label, path, _ in items}
+    if tokens.get("issue"):
+        for errors, warnings in results.values():
+            warnings.append(tokens["issue"])
     runs = [{"kind": "audit", "label": label, "url": path.resolve().as_uri()} for label, path, _ in items]
     shown = browser.run(root, runs, root / ".cgspec-scratch/visual")
     blocked = shown.get("blocked")
     for item in shown.get("results", []):
-        errs, warns = rendered(item)
+        errs, warns = rendered(item, tokens)
         results[item["label"]][0].extend(errs)
         results[item["label"]][1].extend(warns)
     rank, lines = {"PASS": EXIT_OK, "PARTIAL": EXIT_PARTIAL, "FAIL": EXIT_FAIL}, []

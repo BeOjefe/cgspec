@@ -24,12 +24,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib.common import (  # noqa: E402
     ENGINE_DIR, EXIT_FAIL, EXIT_OK, PROJECT_FILE, CgspecError, read_json, sha256_file, utc_now, write_json,
 )
-from _lib.adapters import unwire, wire  # noqa: E402
+from _lib.adapters import refresh as refresh_adapters, unwire, wire  # noqa: E402
 from _lib.document_dates import stamp_new  # noqa: E402
 from _lib.layout import GUI_PROFILES  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-PLUGIN_SOURCE = "https://github.com/mrojefe/cgspec.git"
+PLUGIN_SOURCE = "https://github.com/BeOjefe/cgspec.git"
 OWNED = ENGINE_DIR / "owned-files.json"
 MANIFEST = ENGINE_DIR / "manifest.json"
 ARCHIVE = Path("docs/_cgspec/_archive/pre-cgspec")
@@ -178,7 +178,7 @@ def new_owned() -> dict:
 
 def cmd_install(root: Path, args: argparse.Namespace) -> int:
     if (root / "docs/_cgspec/01-script").exists() and not (root / PROJECT_FILE).exists():
-        raise CgspecError("CGSpec v1 layout found (docs/_cgspec/01-script); use the cgspec-adopt upgrade mode")
+        raise CgspecError("Earlier CGSpec v0.1 layout found (docs/_cgspec/01-script); use the cgspec-adopt upgrade mode")
     if (root / PROJECT_FILE).exists():
         current = read_json(root / PROJECT_FILE).get("cgspec_version")
         if current == version():
@@ -242,8 +242,6 @@ def cmd_verify(root: Path, _args: argparse.Namespace) -> int:
 
 def version_tuple(text: str) -> tuple[int, ...]:
     return tuple(int(x) for x in text.split("."))
-
-
 def cmd_upgrade(root: Path, args: argparse.Namespace) -> int:
     if args.from_v1:
         from _lib.upgrade_v1 import run as upgrade_v1
@@ -255,7 +253,7 @@ def cmd_upgrade(root: Path, args: argparse.Namespace) -> int:
     project = read_json(root / PROJECT_FILE)
     old = project.get("cgspec_version", "0.0.0")
     if str(old).startswith("1.") or (root / "docs/_cgspec/01-script").exists():
-        raise CgspecError("v1 layout needs 'upgrade --from-v1' with a reviewed dry-run")
+        raise CgspecError("Earlier CGSpec v0.1 layout needs 'upgrade --from-v1' with a reviewed dry-run")
     if version_tuple(version()) < version_tuple(old) and not args.force:
         raise CgspecError(f"refusing downgrade {old} -> {version()} (use --force if you mean it)")
     owned = read_json(root / OWNED) if (root / OWNED).is_file() else new_owned()
@@ -268,6 +266,8 @@ def cmd_upgrade(root: Path, args: argparse.Namespace) -> int:
         if not safe_target(root, rel).exists():  # add what a newer template introduced; never overwrite
             place_file(root, rel, src, owned)
     copy_engine(root)
+    for note in refresh_adapters(root, owned):
+        print(note)
     update_gitignore(root, owned)
     owned["cgspec_version"] = version()
     write_json(root / OWNED, owned)

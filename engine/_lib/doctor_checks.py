@@ -107,7 +107,8 @@ def _real_content(text: str, spine: str) -> bool:
     words = 0
     for line in text.splitlines():
         stripped = line.strip()
-        if (not stripped or stripped.startswith("#") or STAMP.fullmatch(stripped) or FIRST_SEEN.fullmatch(stripped)
+        if (not stripped or stripped.startswith("#") or STAMP.fullmatch(stripped)
+                or (stripped.startswith("<!--") and stripped.endswith("-->")) or FIRST_SEEN.fullmatch(stripped)
                 or L.EMPTY_MARKER in stripped or stripped == template
                 or re.match(L.PLACEHOLDER_LINE, stripped, re.I)):
             continue

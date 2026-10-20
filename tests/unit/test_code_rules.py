@@ -55,6 +55,18 @@ class SourceHygieneTests(unittest.TestCase):
 
 
 class PackageHygieneTests(unittest.TestCase):
+    def test_portable_plugin_matches_engine_and_claude_version(self):
+        import json
+        from tests.helpers import REPO
+        portable = json.loads((REPO / "plugin.json").read_text())
+        claude = json.loads((REPO / ".claude-plugin/plugin.json").read_text())
+        market = json.loads((REPO / ".agents/plugins/marketplace.json").read_text())
+        version = (REPO / "engine/VERSION").read_text().strip()
+        self.assertEqual(portable["version"], claude["version"])
+        self.assertEqual(portable["version"], version)
+        self.assertEqual(portable["name"], market["plugins"][0]["name"])
+        self.assertEqual(market["plugins"][0]["source"], {"source": "local", "path": "./"})
+
     def test_no_symlinks_are_tracked_in_the_plugin(self):
         import subprocess
         from tests.helpers import REPO

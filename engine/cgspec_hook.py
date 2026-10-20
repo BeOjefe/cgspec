@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
-"""cgspec_hook.py: the one entry point every tool adapter calls (contract: FORMATS.md).
-
-  cgspec_hook.py tier set|show|clear ...     declare the change tier before editing (spec 3)
-  cgspec_hook.py pre-tool --tool claude       gate a write or shell call; payload on stdin
-
-Exit codes: 0 allow, 1 failed, 2 blocked (reason on stderr), 3 internal error.
-"""
+"""CGSpec tool adapter entry point; see FORMATS.md for payloads and exit codes."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -77,6 +72,9 @@ def shell_reasons(ctx: Context, command: str, cwd: str | None) -> list[str]:
     targets, deletes, inline, broad = write_targets(command, cwd or str(ctx.root))
     guarded = protected_list(ctx)
     reasons = []
+    if re.search(r"\binstall\.py\b[^;&|]*\b(uninstall|upgrade|install)\b", command):
+        reasons.append("installing, upgrading or uninstalling CGSpec is done by the user, not the agent; "
+                       "tell the user the exact install.py command to run")
     for raw in targets:
         rel = ctx.relative(raw)
         if rel is not None and rel != ".":
@@ -122,6 +120,7 @@ def pre_tool(root: Path, tool: str, raw: str) -> int:
             raise ValueError("payload is not a JSON object")
         call = normalize(payload, tool)
         if call["kind"] == "other":
+            if tool == "antigravity": print('{"decision":"allow"}')
             return EXIT_OK
         if call["kind"] == "shell":
             reasons = shell_reasons(ctx, call["command"], call.get("cwd"))
@@ -136,9 +135,11 @@ def pre_tool(root: Path, tool: str, raw: str) -> int:
         if ctx and any(ctx.protected(rel) for rel in touched):
             return block(tool, f"CGSpec blocked (internal error on a protected path): {exc!r}")
         print(f"CGSpec hook internal error (not blocking; commit hook and CI still check): {exc!r}", file=sys.stderr)
-        return EXIT_INTERNAL
+        if tool == "antigravity": print('{"decision":"allow"}')
+        return EXIT_OK if tool == "antigravity" else EXIT_INTERNAL
     if reasons:
         return block(tool, "Blocked by CGSpec:\n- " + "\n- ".join(dict.fromkeys(reasons)))
+    if tool == "antigravity": print('{"decision":"allow"}')
     return EXIT_OK
 
 
@@ -220,15 +221,18 @@ def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str) -> int
     from _lib import inbox, session
     if event == "user-message":
         try:
-            prompt = read_payload(raw).get("prompt") or ""
+            payload = read_payload(raw)
+            prompt = payload.get("prompt") or ""
             if prompt:
-                inbox.record(root, prompt)
+                inbox.record(root, prompt, session_id=payload.get("session_id"))
         except Exception as exc:  # never block the user's message
             print(f"cgspec_hook: inbox capture failed: {exc!r}", file=sys.stderr)
         return EXIT_OK
     errors, summary = doctor_state(root)
     if event in ("session-start", "pre-compact"):
-        print(session.pack(root, summary))
+        pack = session.pack(root, summary)
+        print(json.dumps({"injectSteps": [{"systemMessage": {"systemMessage": pack}}]})
+              if args.tool == "antigravity" else pack)
         return EXIT_OK
     if event == "session-check":
         from install import verify_engine
@@ -246,8 +250,9 @@ def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str) -> int
         if args.tool == "antigravity":
             if not allow:
                 print(json.dumps({"decision": "continue", "reason": message}))
-            elif message:
-                print(message, file=sys.stderr)
+            else:
+                print('{"decision":"allow"}')
+                if message: print(message, file=sys.stderr)
             return EXIT_OK
         if message:
             print(message, file=sys.stderr)
@@ -275,6 +280,7 @@ def post_tool(root: Path, tool: str, raw: str) -> int:
     try:
         payload = json.loads(raw) if raw.strip() else {}
         if not isinstance(payload, dict):
+            if tool == "antigravity": print("{}")
             return EXIT_OK
         ctx = Context.load(root)
         call, changed = normalize(payload, tool), []
@@ -287,10 +293,13 @@ def post_tool(root: Path, tool: str, raw: str) -> int:
         warning = count_helper(root) if payload.get("tool_name") in HELPER_TOOLS else None
     except Exception as exc:
         print(f"cgspec_hook: post-tool failed (not blocking): {exc!r}", file=sys.stderr)
+        if tool == "antigravity": print("{}")
         return EXIT_OK
     if warning:
         print(warning, file=sys.stderr)
+        if tool == "antigravity": print("{}")
         return EXIT_BLOCK if tool == "claude" else EXIT_OK
+    if tool == "antigravity": print("{}")
     return EXIT_OK
 
 
@@ -338,6 +347,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--files", help="T0: comma-separated existing files")
     parser.add_argument("--slice", help="T1+: SLICE-NNN")
     parser.add_argument("--base", help="ci: base commit of the range to check")
+    parser.add_argument("--next", help="checkpoint: the next action")
+    parser.add_argument("--in-flight", dest="in_flight", help="checkpoint: work started and not finished")
+    parser.add_argument("--done", action="store_true", help="checkpoint: in-flight work is finished")
+    parser.add_argument("--blocked", help="checkpoint: why the in-flight work cannot finish (recorded as open issue)")
+    parser.add_argument("--goal", help="checkpoint: the current goal")
     parser.add_argument("--file", help="check register: proposed script under .cgspec-scratch/checks/")
     parser.add_argument("--applies-to", dest="applies_to", help="check register: comma-separated globs")
     parser.add_argument("--description", help="check register: what the check verifies")
@@ -362,6 +376,11 @@ def main(argv: list[str] | None = None) -> int:
             return post_tool(root, args.tool, sys.stdin.read())
         if args.event == "doc":
             return cmd_doc(root, args)
+        if args.event == "checkpoint":
+            from _lib.checkpoint_cmd import update
+            cp = update(root, args)
+            print(f"checkpoint updated: next: {cp['next_action'] or '(none)'}; in flight: {cp['in_flight'] or 'nothing'}")
+            return EXIT_OK
         if args.event == "check":
             from _lib.checks import cli
             return cli(root, args)

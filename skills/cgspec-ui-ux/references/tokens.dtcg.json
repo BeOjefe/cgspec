@@ -1,0 +1,85 @@
+{
+  "$description": "CGSpec token sheet template (DTCG). Copy into the real frontend at layer 5b, replace every value, and give each a $description saying which reference or register field it comes from. Delete roles the product does not use; do not add colours outside these roles.",
+  "font": {
+    "family": {
+      "base": {"$type": "fontFamily", "$value": ["<family>", "system-ui", "sans-serif"], "$description": "register: Type"},
+      "numbers": {"$type": "fontFamily", "$value": ["<family>", "ui-monospace", "monospace"], "$description": "only if the register gives numbers their own family"}
+    },
+    "size": {
+      "$description": "One scale: base x ratio^n, rounded. Every rendered size must be one of these.",
+      "xs": {"$type": "dimension", "$value": "12px"},
+      "sm": {"$type": "dimension", "$value": "13px"},
+      "base": {"$type": "dimension", "$value": "14px", "$description": "register: Density"},
+      "md": {"$type": "dimension", "$value": "16px"},
+      "lg": {"$type": "dimension", "$value": "20px"},
+      "xl": {"$type": "dimension", "$value": "24px"},
+      "display": {"$type": "dimension", "$value": "32px", "$description": "focal figure"}
+    },
+    "weight": {
+      "regular": {"$type": "fontWeight", "$value": 400},
+      "medium": {"$type": "fontWeight", "$value": 500},
+      "strong": {"$type": "fontWeight", "$value": 600}
+    },
+    "lineHeight": {
+      "body": {"$type": "number", "$value": 1.45},
+      "display": {"$type": "number", "$value": 1.15}
+    }
+  },
+  "space": {
+    "$description": "Multiples of the base unit only.",
+    "unit": {"$type": "dimension", "$value": "4px", "$description": "register: Density"},
+    "1": {"$type": "dimension", "$value": "4px"},
+    "2": {"$type": "dimension", "$value": "8px"},
+    "3": {"$type": "dimension", "$value": "12px"},
+    "4": {"$type": "dimension", "$value": "16px"},
+    "6": {"$type": "dimension", "$value": "24px"},
+    "8": {"$type": "dimension", "$value": "32px"},
+    "12": {"$type": "dimension", "$value": "48px"}
+  },
+  "size": {
+    "row": {"$type": "dimension", "$value": "36px"},
+    "control": {"$type": "dimension", "$value": "32px"},
+    "touch": {"$type": "dimension", "$value": "44px", "$description": "minimum tap area on phones"}
+  },
+  "radius": {
+    "control": {"$type": "dimension", "$value": "6px"},
+    "panel": {"$type": "dimension", "$value": "8px"}
+  },
+  "color": {
+    "surface": {
+      "canvas": {"$type": "color", "$value": "#000000"},
+      "surface": {"$type": "color", "$value": "#000000"},
+      "raised": {"$type": "color", "$value": "#000000"},
+      "overlay": {"$type": "color", "$value": "#000000"}
+    },
+    "text": {
+      "primary": {"$type": "color", "$value": "#000000", "$description": "at least 4.5:1 on every surface"},
+      "secondary": {"$type": "color", "$value": "#000000", "$description": "at least 4.5:1 on every surface"},
+      "tertiary": {"$type": "color", "$value": "#000000", "$description": "at least 3:1; hints and disabled only"}
+    },
+    "border": {
+      "hairline": {"$type": "color", "$value": "#000000"},
+      "focus": {"$type": "color", "$value": "#000000", "$description": "at least 3:1 against its neighbours"}
+    },
+    "accent": {
+      "default": {"$type": "color", "$value": "#000000", "$description": "register: Accent; its one job"},
+      "hover": {"$type": "color", "$value": "#000000"},
+      "onAccent": {"$type": "color", "$value": "#000000", "$description": "text on accent, at least 4.5:1"}
+    },
+    "status": {
+      "success": {"$type": "color", "$value": "#000000"},
+      "warning": {"$type": "color", "$value": "#000000"},
+      "danger": {"$type": "color", "$value": "#000000"},
+      "info": {"$type": "color", "$value": "#000000"}
+    }
+  },
+  "motion": {
+    "duration": {
+      "fast": {"$type": "duration", "$value": "120ms"},
+      "base": {"$type": "duration", "$value": "200ms"}
+    },
+    "easing": {
+      "standard": {"$type": "cubicBezier", "$value": [0.2, 0, 0, 1]}
+    }
+  }
+}

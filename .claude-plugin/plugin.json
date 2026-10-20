@@ -1,9 +1,9 @@
 {
   "name": "cgspec",
   "displayName": "CGSpec",
-  "version": "2.0.0",
+  "version": "0.2.0",
   "description": "Project adoption, evidence-based design, bounded delivery, migration, and operations workflows with a vendored enforcement engine.",
   "author": { "name": "JeanFranck" },
-  "repository": "https://github.com/mrojefe/cgspec",
+  "repository": "https://github.com/BeOjefe/cgspec",
   "keywords": ["project-management", "software-engineering", "design", "governance"]
 }

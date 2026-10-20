@@ -2,14 +2,14 @@
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
-numbers refer to `docs/METHOD-v2.md`.
+numbers refer to `docs/METHOD-v0.2.md`.
 
 All state files carry `"schema": 1`. A future breaking change bumps it and ships a migration
 in `install.py upgrade`.
 
 ## Files
 
-Human-readable CGSpec Markdown documents (except the append-only inbox and ledger, engine files, and archived originals) show `Created: ... · Last edited: ...` immediately below the title. New template documents get both dates at install. The v1 upgrader uses `Created: unknown` when source creation cannot be proven. The commit gate rejects missing or unchanged edit dates on changed documents, future dates, new documents dated before install or marked unknown outside install/upgrade, date-only edits, invented creation dates on pre-existing documents, and changed creation across renames; doctor warns about untouched legacy documents missing the line. Date metadata does not count as substantive spine content.
+Human-readable CGSpec Markdown documents (except the append-only inbox and ledger, engine files, and archived originals) show `Created: ... · Last edited: ...` immediately below the title. New template documents get both dates at install. The v0.1 upgrader uses `Created: unknown` when source creation cannot be proven. The commit gate rejects missing or unchanged edit dates on changed documents, future dates, new documents dated before install or marked unknown outside install/upgrade, date-only edits, invented creation dates on pre-existing documents, and changed creation across renames; doctor warns about untouched legacy documents missing the line. Date metadata does not count as substantive spine content.
 
 | File (in a project) | Schema | Written by | Notes |
 | --- | --- | --- | --- |
@@ -20,7 +20,7 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | `docs/_cgspec/04-checks/manifest.json` | `checks-manifest` | registration flow | Append-only for the same reason. A check runs as a gate only when listed here with a matching hash. Written only by `cgspec_hook.py check register` (source must be under `.cgspec-scratch/checks/`). |
 | `docs/_cgspec/07-state/checkpoint.json` | `checkpoint` | main agent, pre-compact hook | `in_flight` is written before each batch and cleared after. |
 | `docs/_cgspec/07-state/budget.json` | `budget` | hooks | Counts helpers, review rounds and research passes against limits. |
-| `docs/_cgspec/07-state/quota.json` | `quota` | status-line script | `source: unavailable` puts the agent in bounded mode (spec 9). |
+| `docs/_cgspec/07-state/quota.json` | `quota` | Host quota adapter; no collector/writer is included in this checkout | `source: unavailable` puts the agent in bounded mode (spec 9). |
 | `docs/_cgspec/06-evidence/tests/<test-id>.json` | `test-pair` | slice workflow | `failed_at` is the commit where the test failed; CI checks it out and re-runs `command` to confirm. |
 | `docs/_cgspec/06-evidence/<scope>/<check>.json` | `evidence` | whoever ran the check | `state` becomes `Stale` when a covered file changes. |
 | `docs/prototypes/<screen>/journeys/<name>.json` | journey (checked by `journey.py`) | main agent at layer 4 | `name`, `url` (file next to the screen, or `http://` for the real frontend), optional `viewports` (`desktop`, `mobile`) and `covers`, and `steps`. Each step has one action on a `data-testid` (`click`, `fill`+`value`, `press`+`key`, `select`+`value`, `check`, `hover`, `goto`, `screenshot`) or `expect` with `visible`, `hidden`, `text`+`equals`/`contains`, `value`+`equals`, `count`+`equals`, `enabled`, `disabled`, `url`; a `state` label may go with any step. Evidence goes to `06-evidence/journeys/`, visual audits to `06-evidence/visual/`, registered checks to `06-evidence/checks/`. |

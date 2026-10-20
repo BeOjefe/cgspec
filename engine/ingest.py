@@ -2,7 +2,7 @@
 """Evidence-first, partial source inventory; never an approved baseline.
 
 Default: JSON to stdout, no writes. --output creates a manifest or replaces a
-prior CGSpec v2 inventory. --registry accepts {id, path} entries; missing repos
+prior CGSpec v0.2 inventory. --registry accepts {id, path} entries; missing repos
 are unavailable, never created. Exit 0: selected parsers had no known omissions;
 2: partial/invalid input; 1: output I/O failure. Exit 0 is not full discovery.
 Python AST and limited SQL DDL yield candidates; other files are unsupported.
@@ -338,7 +338,7 @@ def main(argv=None):
                 previous, expected_output = read_regular_json(output, 'output')
                 if (not isinstance(previous, dict) or previous.get('schema_version') != '2.0' or
                         previous.get('approval') != 'unreviewed'):
-                    raise ValueError('existing output is not a CGSpec v2 inventory manifest')
+                    raise ValueError('existing output is not a CGSpec v0.2 inventory manifest')
         manifest = {'schema_version': '2.0', 'observed_at': datetime.now(timezone.utc).isoformat(),
                     'approval': 'unreviewed', 'coverage': 'partial'}
         if args.registry:
