@@ -33,7 +33,12 @@ class BundleTests(unittest.TestCase):
         (src / "img/dot.png").write_bytes(PNG)
 
     def tearDown(self):
+        # Skip .git: walking its loose-object tree races with git's own
+        # internal housekeeping and can raise FileNotFoundError mid-scan.
+        # Permissions only need resetting on the project's own files anyway.
         for p in self.root.rglob("*"):
+            if ".git" in p.parts:
+                continue
             if p.is_file() and not p.is_symlink():
                 os.chmod(p, 0o644)
         self._tmp.__exit__(None, None, None)
