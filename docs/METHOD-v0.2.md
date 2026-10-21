@@ -1,5 +1,5 @@
 # CGSpec Method v0.2 — Specification
-Created: unknown · Last edited: 2026-10-21T17:32:07Z
+Created: unknown · Last edited: 2026-10-21T17:56:34Z
 
 Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Source for the rebuild in `cgspec-next`.
 
@@ -412,7 +412,7 @@ What remains possible, and how to close it: the implementation now requires an e
 | --- | --- |
 | Session start (and again after compaction) | Load the session pack: goal, stage per part, open decisions, latest checkpoint, what changed on disk since; run the session check (cgspec\_hook.py session-check) |
 | Your message | Scrub likely secrets, save to inbox |
-| Before compaction | Agent should save through the checkpoint command before context pressure. The current hook only prints the existing session pack; it does not write a fresh summary. |
+| Before compaction | Agent saves semantic progress before context pressure. The hook captures bounded mechanical source context and prints the pack; it does not invent a fresh semantic summary. Unavailable hooks cannot guarantee a save. |
 | Before a tool | Gates above |
 | After a tool | Mark evidence whose covered files changed as stale, count helper agents against the budget (index and document dates are refreshed at the end of the turn) |
 | Stop | Refuse to end until doctor passes, ledger updated, checkpoint fresh, decisions list written; allowed to end with a recorded BLOCKED or PARTIAL; respects the tool's loop flag (`stop_hook_active`) and a retry counter on disk (max 2) |
@@ -444,7 +444,7 @@ On tools without tool hooks, commit and trusted CI checks cover the implemented 
 
 Standing rules: pre-flight quota check before any expensive task (near 15%: park and write the plan); chunked output; no brute-force retry loops when quota is tight; never weaker tests to save tokens; per-task budget in `07-state/budget.json` (helper agents, review rounds, research passes) counted by hooks. When telemetry is missing, prefer one small, resumable unit and avoid optional councils, broad research, or parallel helpers; if a consequential task cannot be completed safely in bounded work, save the plan and ask the user whether to continue in another session. These task counters do not measure generated tokens or replace provider quota telemetry.
 
-Checkpoint (`07-state/checkpoint.json`, committed): goal, stage per part, accepted constraints, revisions, evidence done, pending changes, open issues, owners, next action, and an "in flight" note written before each batch so a crash leaves a clear trail. Commit points: after every green slice, every locked design layer, and every checkpoint at 15%; never auto-commit unrelated changes.
+Checkpoint (`07-state/checkpoint.json`, committed): goal, stage per part, accepted constraints, revisions, evidence done, pending changes, open issues, owners, next action, and an "in flight" note written before each batch so a crash leaves a clear trail. Commit points: after every green slice, every locked design layer, and every checkpoint at 15%; never auto-commit unrelated changes. The checkpoint command validates existing state and preserves damaged records for explicit recovery. Structured updates use top-level replacement, not a second project hierarchy. Optional source observations report changed worktree context and partial coverage, not tested-byte evidence. Session packs expose saved constraints, evidence references, pending work, owners and retained stop problems. The bounded stop escape persists unresolved reasons without refreshing semantic progress; if saving fails it reports that explicitly. See engine/FORMATS.md for capture bounds and exclusions. Task reservations and host receipt reconciliation remain pending; these checkpoint changes do not prevent duplicate remote writers.
 
 | Tool can... | Wake-up |
 | --- | --- |

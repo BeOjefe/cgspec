@@ -1,38 +1,236 @@
 {
-  "title": "docs/_cgspec/07-state/checkpoint.json — enough to resume after any interruption",
+  "title": "docs/_cgspec/07-state/checkpoint.json \u2014 enough to resume after any interruption",
   "type": "object",
-  "required": ["schema", "updated", "goal", "stages", "next_action", "in_flight"],
+  "required": [
+    "schema",
+    "updated",
+    "goal",
+    "stages",
+    "next_action",
+    "in_flight"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schema": {"const": 1},
-    "updated": {"type": "string"},
-    "goal": {"type": "string"},
+    "schema": {
+      "const": 1
+    },
+    "updated": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
     "stages": {
       "type": "object",
-      "additionalProperties": {"enum": ["brainstorming", "design", "architecture", "milestones", "coding", "testing", "cicd", "follow-up"]}
+      "additionalProperties": {
+        "enum": [
+          "brainstorming",
+          "design",
+          "architecture",
+          "milestones",
+          "coding",
+          "testing",
+          "cicd",
+          "follow-up"
+        ]
+      }
     },
-    "constraints": {"type": "array", "items": {"type": "string"}},
-    "revision": {"type": "string"},
-    "evidence_done": {"type": "array", "items": {"type": "string"}},
-    "pending": {"type": "array", "items": {"type": "string"}},
-    "open_issues": {"type": "array", "items": {"type": "string"}},
-    "owners": {"type": "object", "additionalProperties": {"type": "string"}},
-    "next_action": {"type": "string"},
-    "in_flight": {"anyOf": [{"type": "null"}, {"type": "string"}]},
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "revision": {
+      "type": "string"
+    },
+    "evidence_done": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pending": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "open_issues": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "owners": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "next_action": {
+      "type": "string"
+    },
+    "in_flight": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
     "wakeup": {
       "anyOf": [
-        {"type": "null"},
+        {
+          "type": "null"
+        },
         {
           "type": "object",
-          "required": ["kind"],
+          "required": [
+            "kind"
+          ],
           "properties": {
-            "kind": {"enum": ["scheduler", "timer", "paste", "none"]},
-            "id": {"type": "string"},
-            "at": {"type": "string"},
-            "paste_line": {"type": "string"}
+            "kind": {
+              "enum": [
+                "scheduler",
+                "timer",
+                "paste",
+                "none"
+              ]
+            },
+            "id": {
+              "type": "string"
+            },
+            "at": {
+              "type": "string"
+            },
+            "paste_line": {
+              "type": "string"
+            }
           }
         }
       ]
+    },
+    "unresolved_stop": {
+      "type": "object",
+      "required": [
+        "at",
+        "problems"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "type": "string"
+        },
+        "problems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "observed_at",
+        "head",
+        "branch",
+        "entries",
+        "complete",
+        "gaps",
+        "excluded",
+        "identity"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "observed_at": {
+          "type": "string"
+        },
+        "head": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "branch": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "status",
+              "sha256"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "identity": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
     }
   }
 }
