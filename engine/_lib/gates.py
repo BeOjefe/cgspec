@@ -12,6 +12,7 @@ from . import layout as L
 from . import tiers
 from .common import ENGINE_DIR, MEMLOG_FILE, PROJECT_FILE, STATE_DIR
 from .globs import match_any
+from .path_policy import needs_tier
 
 EMOJI = re.compile(
     "[\\U0001F000-\\U0001FAFF]"  # pictographs, emoticons, transport, flags
@@ -30,7 +31,6 @@ ALWAYS_PROTECTED = [
 ]
 GUARD_FILES = [".claude/settings.json", ".agents/hooks.json"]  # lab finding: an agent disabled its own hooks
 GUARD_DIRS = [".git/hooks/", ".agents/skills/"]
-NO_TIER_NEEDED = ("docs/", ".cgspec-scratch/")
 
 
 @dataclass
@@ -123,7 +123,7 @@ def _script_allowed(ctx: Context, rel: str, content: str | None) -> bool:
 
 
 def _tier_reason(ctx: Context, rel: str, is_new: bool) -> str | None:
-    if rel.startswith(NO_TIER_NEEDED) or git_ignored(ctx.root, rel):
+    if not needs_tier(rel) or git_ignored(ctx.root, rel):
         return None
     tier = tiers.active(ctx.root)
     hint = "declare it first: python3 docs/_cgspec/01-engine/cgspec_hook.py tier set --tier T0|T1|T2|T3 ..."

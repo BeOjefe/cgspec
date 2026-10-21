@@ -20,6 +20,14 @@ def _git(rest: list[str], cwd: str) -> tuple[list[str], list[str]]:
     return [], []
 
 
+def _move_targets(rest: list[str], files: list[str]) -> list[str]:
+    # Moving mutates the source too; a prose destination cannot hide it.
+    dest = _option_value(rest, "-t", "--target-directory")
+    dest = next((a.split("=", 1)[1] for a in rest if a.startswith("--target-directory=")), dest)
+    dest = next((a[2:] for a in rest if a.startswith("-t") and len(a) > 2), dest)
+    return files + ([dest] if dest else [])
+
+
 def segment(seg: list[str], cwd: str, recurse) -> tuple[list[str], list[str], list[str], list[str]]:
     """(write targets, delete targets, inline code, broad dirs) for one simple command."""
     targets, deletes, inline, broad, args = [], [], [], [], []
@@ -53,6 +61,8 @@ def segment(seg: list[str], cwd: str, recurse) -> tuple[list[str], list[str], li
         (deletes if name in ("rm", "unlink", "rmdir", "shred") else targets).extend(files)
     elif name in MODE_FIRST:
         targets += files[1:]
+    elif name == "mv":
+        targets += _move_targets(rest, files)
     elif name in LAST_ARG:
         dest = _option_value(rest, "-t")
         targets.append(dest) if dest else (targets.append(files[-1]) if files else None)

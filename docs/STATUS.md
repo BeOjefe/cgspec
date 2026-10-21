@@ -1,5 +1,5 @@
 # CGSpec v0.2 implementation status
-Created: 2026-10-20T17:46:07Z · Last edited: 2026-10-20T17:54:17Z
+Created: 2026-10-20T17:46:07Z · Last edited: 2026-10-21T17:14:25Z
 
 This is the current status reference. The method describes required behavior; this page identifies limits of its implementation. Historical audit results are tied to their source revision and do not automatically apply to later changes.
 
@@ -13,6 +13,7 @@ The source tree is a plugin package, not an installed consumer layout. Run the p
 
 - Nine workflow skills, one pivot compatibility alias and eight role definitions are packaged with the engine. Their presence does not prove every host loads or follows them.
 - Installer, updater, v0.1 adoption, doctor, ledger, hooks, ingestion, impact map, prototype bundling, browser journeys and visual audit have source tests. Test results must cite a revision, environment and skipped checks.
+- Prototype HTML, styles, scripts and configuration now participate in pre-tool and commit/CI scope checks; ordinary Markdown notes remain exempt from code-tier requirements. Live prototype sources participate in test-pair checks. This is source behavior pending review and consumer upgrade, not evidence that existing installations enforce it.
 - `quota.py --root <project> [--json]` reads an existing quota file. Session packs use the same evaluator. Missing, malformed, future, older-than-five-minute and reset-window readings cannot be presented as current full quota. At 25% remaining the advice is frugal work; at 15% finish an atomic unit, checkpoint and pause; at 5% only save logs/state without new code. The ladder uses the lowest valid remaining window conservatively. Weekly quota at 10% or less blocks automatic wake-up advice; missing weekly data leaves that advice unknown. This is agent guidance, not a hard task gate, provider telemetry collector or scheduler.
 - Model-fit advice, reference-led design, IMAGE-WORD alignment, exact media-prompt relay and independent architecture challenges are workflow requirements. They are not automatic routing or proof of design quality.
 - This repository's squash-only merge setting, local main-push guard and post-push PR-origin workflow are in place. They do not prevent direct upstream pushes with the current owner credentials. See [ADR-006](adr/ADR-006-main-branch-governance.md).
