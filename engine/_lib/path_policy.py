@@ -1,16 +1,16 @@
 """Shared scope policy: browser prototypes are implementation, not ordinary prose."""
 from pathlib import PurePosixPath
 
-from .layout import PROTOTYPE_ASSET_SUFFIXES, SCRIPT_SUFFIXES
-
-PROTOTYPE_SOURCES = PROTOTYPE_ASSET_SUFFIXES | {
-    ".html", ".htm", ".css", ".scss", ".sass", ".less", ".svg", ".json",
-    ".vue", ".svelte",
+REFERENCE_ASSETS = {
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".ico",
+    ".mp4", ".webm", ".mp3", ".wav", ".ogg", ".woff", ".woff2", ".ttf", ".otf",
 }
 
 
 def prototype_source(rel: str) -> bool:
-    return rel.startswith("docs/prototypes/") and PurePosixPath(rel).suffix.lower() in PROTOTYPE_SOURCES
+    # Unknown suffixes can be loaded by a browser too. Only ordinary Markdown
+    # notes are prose-exempt; even reference assets retain scope checks.
+    return rel.startswith("docs/prototypes/") and PurePosixPath(rel).suffix.lower() != ".md"
 
 
 def needs_tier(rel: str) -> bool:
@@ -18,11 +18,16 @@ def needs_tier(rel: str) -> bool:
         return False
     if not rel.startswith("docs/"):
         return True
-    return prototype_source(rel) or PurePosixPath(rel).suffix.lower() in SCRIPT_SUFFIXES
+    return prototype_source(rel)
+
+
+def prototype_journey(rel: str) -> bool:
+    parts = PurePosixPath(rel).parts
+    return (len(parts) == 5 and parts[:2] == ("docs", "prototypes")
+            and parts[3] == "journeys" and parts[4].endswith(".json"))
 
 
 def live_prototype_source(rel: str) -> bool:
-    # Generated frozen snapshots and historical copies still need scope, but
-    # do not need new behavior tests merely because they preserve old bytes.
-    parts = PurePosixPath(rel).parts
-    return prototype_source(rel) and not ({"_archive", "_snapshots"} & set(parts))
+    return (prototype_source(rel) and not prototype_journey(rel)
+            and PurePosixPath(rel).suffix.lower() not in REFERENCE_ASSETS
+            and PurePosixPath(rel).name != ".gitkeep")

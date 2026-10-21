@@ -4,7 +4,7 @@ from __future__ import annotations
 import unittest
 
 from tests.helpers import (
-    TempDir, claude_payload, git, git_project, hook, make_slice, run_script,
+    TempDir, approve, claude_payload, git, git_project, hook, make_slice, run_script,
     set_test_command, write_json,
 )
 
@@ -44,9 +44,10 @@ class PrototypeScopeTests(unittest.TestCase):
         return hook(self.root, "pre-commit", None, "--tool", "git")
 
     def test_new_prototype_assets_need_scope_before_write(self):
-        for suffix in ("js", "mjs", "tsx", "html", "css", "svg", "json"):
+        for suffix in ("js", "mjs", "tsx", "html", "css", "svg", "json",
+                       "txt", "wasm", "webmanifest", ""):
             with self.subTest(suffix=suffix):
-                result = self.pretool("docs/prototypes/files/new." + suffix)
+                result = self.pretool("docs/prototypes/files/new" + ("." + suffix if suffix else ""))
                 self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
                 self.assertIn("tier", result.stderr)
 
@@ -58,6 +59,21 @@ class PrototypeScopeTests(unittest.TestCase):
                       claude_payload(self.root, "Bash", command="echo changed > " + rel),
                       "--tool", "claude")
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+
+    def test_shell_rename_to_prose_still_checks_source_scope(self):
+        rel = "docs/prototypes/files/app.js"
+        self.put(rel)
+        for command in (
+            f"mv {rel} docs/prototypes/files/README.md",
+            f"mv -t docs/spines {rel}",
+            f"mv --target-directory=docs/spines {rel}",
+        ):
+            with self.subTest(command=command):
+                result = hook(self.root, "pre-tool",
+                              claude_payload(self.root, "Bash", command=command),
+                              "--tool", "claude")
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertIn("tier", result.stderr)
 
     def test_t1_allows_only_declared_prototype_paths(self):
         self.assertEqual(self.tier().returncode, 0)
@@ -132,6 +148,61 @@ class PrototypeScopeTests(unittest.TestCase):
             with self.subTest(rel=rel):
                 self.assertEqual(self.pretool(rel).returncode, 2)
 
+    def test_journey_tests_do_not_require_tests_of_their_own(self):
+        self.tier()
+        self.put("docs/prototypes/files/journeys/open.json",
+                 '{"name":"open","url":"index.html","steps":[]}\n')
+        result = self.commit_gate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_new_archive_code_requires_test_evidence(self):
+        self.tier(scope="docs/prototypes/_archive/**")
+        self.put("docs/prototypes/_archive/old/app.js")
+        result = self.commit_gate()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("without a failing-test record", result.stdout)
+
+    def test_modified_archive_code_requires_test_evidence(self):
+        rel = "docs/prototypes/_archive/old/app.js"
+        self.put(rel, "export const ready = false;\n")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "baseline historical source")
+        self.tier(scope="docs/prototypes/_archive/**")
+        self.put(rel)
+        result = self.commit_gate()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("without a failing-test record", result.stdout)
+
+    def test_unknown_prototype_suffix_cannot_bypass_commit_scope(self):
+        self.put("docs/prototypes/files/logic.txt", "document.title = 'changed';\n")
+        result = self.commit_gate()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("no change tier", result.stdout)
+
+    def test_unchanged_archive_rename_preserves_history_without_new_test(self):
+        old = "docs/prototypes/files/app.js"
+        new = "docs/prototypes/_archive/files/app.js"
+        self.put(old)
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "baseline prototype")
+        self.tier(scope="docs/prototypes/**")
+        (self.root / new).parent.mkdir(parents=True, exist_ok=True)
+        (self.root / old).rename(self.root / new)
+        result = self.commit_gate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_snapshot_cut_can_commit_with_explicit_snapshot_scope(self):
+        self.put("docs/prototypes/files/index.html", "<main>Ready</main>\n")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "baseline prototype")
+        self.tier(scope="docs/prototypes/files/**, docs/prototypes/_snapshots/files-v*.html")
+        ref = approve(self.root, "approved, lock layer 2")
+        result = run_script("bundle_prototype.py", "files", "--root", str(self.root),
+                            "--layer", "2", "--approval", ref)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        result = self.commit_gate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_deleting_or_renaming_prototype_needs_scope(self):
         rel = "docs/prototypes/files/app.js"
         self.put(rel)
@@ -141,6 +212,25 @@ class PrototypeScopeTests(unittest.TestCase):
         result = self.commit_gate()
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("no change tier", result.stdout)
+
+    def test_modified_rename_cannot_bypass_t1_line_limit_in_commit_or_ci(self):
+        old = "docs/prototypes/_archive/old.css"
+        new = "docs/prototypes/_archive/new.css"
+        lines = [f".item-{i} {{ color: red; }}\n" for i in range(2000)]
+        self.put(old, "".join(lines))
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "baseline historical stylesheet")
+        self.tier(scope="docs/prototypes/_archive/**")
+        (self.root / old).rename(self.root / new)
+        lines[:250] = [f".item-{i} {{ color: blue; }}\n" for i in range(250)]
+        self.put(new, "".join(lines))
+        result = self.commit_gate()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("T1 allows 400", result.stdout)
+        git(self.root, "commit", "-q", "-m", "bypass local hook with oversized rename")
+        result = hook(self.root, "ci", None, "--tool", "git", "--base", self.base)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("T1 allows 400", result.stdout)
 
 
 if __name__ == "__main__":

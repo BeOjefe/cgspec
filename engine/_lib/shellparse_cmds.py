@@ -53,6 +53,15 @@ def segment(seg: list[str], cwd: str, recurse) -> tuple[list[str], list[str], li
         (deletes if name in ("rm", "unlink", "rmdir", "shred") else targets).extend(files)
     elif name in MODE_FIRST:
         targets += files[1:]
+    elif name == "mv":
+        # Moving mutates the source as well as the destination. In particular,
+        # a prose destination must not hide removal of scoped source code.
+        targets += files
+        dest = _option_value(rest, "-t", "--target-directory")
+        dest = next((a.split("=", 1)[1] for a in rest if a.startswith("--target-directory=")), dest)
+        dest = next((a[2:] for a in rest if a.startswith("-t") and len(a) > 2), dest)
+        if dest:
+            targets.append(dest)
     elif name in LAST_ARG:
         dest = _option_value(rest, "-t")
         targets.append(dest) if dest else (targets.append(files[-1]) if files else None)

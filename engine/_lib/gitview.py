@@ -66,9 +66,19 @@ class View:
 
     def changed_line_count(self, paths: set[str]) -> int:
         total = 0
-        for row in git(self.root, *self._diff_args(), "--numstat", "-z").stdout.split("\0"):
-            parts = row.split("\t")
-            if len(parts) == 3 and parts[2] in paths and parts[0] != "-":
+        rows = git(self.root, *self._diff_args(), "--numstat", "-z").stdout.split("\0")
+        i = 0
+        while i < len(rows):
+            parts = rows[i].split("\t", 2)
+            i += 1
+            if len(parts) != 3:
+                continue
+            names = {parts[2]}
+            if parts[2] == "" and i + 1 < len(rows):
+                # -z emits a rename as counts<TAB><NUL>old<NUL>new<NUL>.
+                names = {rows[i], rows[i + 1]}
+                i += 2
+            if names & paths and parts[0] != "-":
                 total += int(parts[0]) + int(parts[1])
         return total
 

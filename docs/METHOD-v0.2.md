@@ -1,5 +1,5 @@
 # CGSpec Method v0.2 — Specification
-Created: unknown · Last edited: 2026-10-21T17:14:25Z
+Created: unknown · Last edited: 2026-10-21T17:23:32Z
 
 Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Source for the rebuild in `cgspec-next`.
 
@@ -389,7 +389,7 @@ flowchart TB
 | Your input is captured | Inbox hook saves your message (secrets scrubbed first) | — | Decisions have ledger lines | Doctor |
 | No emojis | Refuses them in written content | — | Staged files scanned | Same check |
 
-**Prototype scope.** Browser implementation under `docs/prototypes/` follows the same tier and slice scope rules as source code, including HTML, styles, scripts, SVG and JSON configuration. Ordinary Markdown notes remain outside code-tier requirements. Commit and CI checks include both sides of a source rename, so renaming code to a document does not remove its scope requirement. Live prototype sources require the tier's test evidence; historical copies in `_archive` and generated `_snapshots` still require scope but do not need new behavior tests merely to preserve old content. Frozen-file and approval checks remain separate. This path classification does not prove that a test exercises the right interaction or that an archived file cannot be loaded by a browser.
+**Prototype scope.** All files under `docs/prototypes/` except ordinary Markdown notes follow the same tier and slice scope rules as source code; unknown suffixes are not a bypass. Commit and CI include both sides of a source rename and its changed-line count. Live sources require the tier's test evidence. Journey JSON is test material, while reference media and fonts are assets; neither requires another failing test of itself, but both remain scoped. Only unchanged renames of existing prototype sources into `_archive` and newly frozen, hash-matched snapshot HTML receive preservation exemptions from test-pair coverage. New or modified archive code does not. Include snapshot destinations in the approved scope before cutting a layer lock; lock approval does not replace scope approval. Frozen-file and approval checks remain separate. These checks do not prove interaction quality or that an archived file cannot be loaded by a browser.
 
 **Script registration** (so pillar 0 keeps working): a new check starts in the run folder as a proposal → the inspector or reviewer shows it to you with what it checks → you approve → it is registered in `04-checks/` with its hash in `manifest.json` and starts running as a gate. Commands: the AI writes the proposal to `.cgspec-scratch/checks/`, then `cgspec_hook.py check register --file … --applies-to 'src/**' --description … --approval A-…` copies it in and records the hash; `check run [--files …]` runs it and writes `06-evidence/checks/CHK-NNN.json`. From then on the commit hook runs every check whose `applies_to` matches a staged file, and CI runs those matching files changed in the pushed range. A check whose file no longer matches its hash fails without running. Anything else, like an ad-hoc `generate_v15_screenshots.py` in a docs folder, is refused.
 

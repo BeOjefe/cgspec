@@ -25,6 +25,8 @@ The layers below are for you. The user sees a simple path, in plain words:
 
 ## What to do at each layer, and what to load
 
+Prototype files other than ordinary Markdown need the active change scope. Before a layer lock, include `docs/prototypes/_snapshots/<screen>-v*.html` in the approved slice scope as well as that screen's sources and journeys; if missing, amend the scope through the existing approval path before cutting the snapshot. Use the tier appropriate to the total change size. The lock approval and frozen hash do not replace scope approval. Journey JSON is test material and does not require another test of itself.
+
 | Layer | Do | Load |
 | --- | --- | --- |
 | 0 References | Start from the user's [personal inspiration library](references/inspiration-library.md) when it exists, then find two to four contrasting **real** references, with links and screenshots in `docs/prototypes/_vision/`, actually displayed per the [visual-choice guide](references/visual-choices.md); measure those the user likes. Search with available web tools and project links. If original images or video matter, align the user-visible IMAGE-WORD card before generation. If access fails, record the gap, invite optional links, and continue independent grey work without inventing references or locking reference-derived choices. | [inspiration library](references/inspiration-library.md), [reference-extraction](references/reference-extraction.md); load [IMAGE-WORD and motion](references/image-word-and-motion.md) only when media matters; [RES-001](../../docs/_cgspec/02-research/RES-001-ui-design-systems-and-surface-profiles-benchmark.md), [RES-004](../../docs/_cgspec/02-research/RES-004-vibecoded-design-tells-and-high-craft-ergonomics.md) |
