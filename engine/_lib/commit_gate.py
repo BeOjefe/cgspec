@@ -10,10 +10,8 @@ from . import commit_trust as trust
 from .gates import EMOJI, Context, _is_script_name, _script_allowed
 from .gitview import View
 from .document_dates import managed_doc, validate_change
+from .path_policy import live_prototype_source, needs_tier
 from .globs import match_any
-
-NO_TIER = ("docs/", ".cgspec-scratch/")
-
 
 def _slice(view: View, slice_id: str) -> tuple[str, list[str], str] | None:
     """(status, scope globs, approval id) of SLICE-NNN in the new tree."""
@@ -29,6 +27,7 @@ def _tier_rules(view: View, code_changes, tier: dict | None) -> list[str]:
     if not code_changes:
         return []
     paths = {c.path for c in code_changes}
+    paths |= {c.old_path for c in code_changes if c.old_path and needs_tier(c.old_path)}
     if not tier:
         return [f"no change tier declared for {sorted(paths)} (07-state/tier.json)"]
     lines = view.changed_line_count(paths | {c.old_path for c in code_changes if c.old_path})
@@ -55,7 +54,8 @@ def _test_pairs(view: View, code_changes, tier: dict | None, classes: dict, proj
     if not tier or tier.get("tier") == "T0":
         return []
     command = project.get("test_command")
-    code = [c.path for c in code_changes if c.status != "D" and match_any(c.path, classes.get("code", []))
+    code = [c.path for c in code_changes if c.status != "D"
+            and (live_prototype_source(c.path) or match_any(c.path, classes.get("code", [])))
             and not match_any(c.path, classes.get("tests", []))]
     paths = [p for p in view.files_new("docs/_cgspec/06-evidence/tests") if p.endswith(".json")]
     records = [r for r in (trust.load(view.read_new(p)) for p in paths) if r.get("slice") == tier.get("slice")]
@@ -118,7 +118,8 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     reasons += trust.test_command_change(view) + trust.approver_key_change(view) + trust.single_use(view)
     reasons += [f"{c.path}: cache files may not be committed (__pycache__/.pyc)" for c in changes
                 if c.status != "D" and ("__pycache__/" in c.path or c.path.endswith(".pyc"))]
-    code_changes = [c for c in changes if not c.path.startswith(NO_TIER) and c.path not in exempt
+    code_changes = [c for c in changes if (needs_tier(c.path) or (c.old_path and needs_tier(c.old_path)))
+                    and c.path not in exempt
                     and not trust.engine_file(c.path) and not c.path.startswith(trust.ENGINE)]
     reasons += _tier_rules(view, code_changes, tier)
     reasons += _test_pairs(view, code_changes, tier, classes, project)
