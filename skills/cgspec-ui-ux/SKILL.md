@@ -9,7 +9,7 @@ Read only what the current step needs, once per session: the [agent contract](..
 
 ## Start from the problem, not the look
 
-Before you draw, write three lines in the experience spine: who it is for, what job they are trying to get done, and how we will know it works. If the user cannot answer, offer your concrete reading of the problem and let them correct it. Do not ask for a blank brief.
+Before you draw, check that `docs/spines/01-INTENT.md` says three things: who it is for, what job they are trying to get done, and how we will know it works. If any is missing, add it there. If the user cannot answer, offer your concrete reading of the problem and let them correct it. Do not ask for a blank brief.
 
 Then classify the request, because each kind keeps something different:
 
@@ -35,7 +35,7 @@ Pick the artifact by the question the user must answer now, not by a fixed seque
 | Which direction feels right? | side-by-side comparison of real pages, with your recommendation marked |
 | Does it actually work? | clickable prototype with named states (see behavior coverage) |
 
-Tell the user in one line: the current question, what you will show next, and the one decision you need from them. Explain the overall path once, in plain words, only when a new product starts. Pause for real choices: direction, scope, business rules, taste. Continue authorized craft work and checks without asking. Connected screens that serve one task are reviewed together as a journey, not approved one by one. If they want to go back, go back without arguing.
+Tell the user in one line: the current question, what you will show next, and the one decision you need from them. Explain the overall path once, in plain words, only when a new product starts. Pause for real choices: direction, scope, business rules, taste. Continue authorized craft work and checks without asking. Locking a layer still needs the user's recorded approval. Connected screens that serve one task are reviewed together as a journey, not approved one by one. If they want to go back, go back without arguing.
 
 ## Keep screens from rewriting the data
 
