@@ -10,7 +10,7 @@ REFERENCE_ASSETS = {
 def prototype_source(rel: str) -> bool:
     # Unknown suffixes can be loaded by a browser too. Only ordinary Markdown
     # notes are prose-exempt; even reference assets retain scope checks.
-    return rel.startswith("docs/prototypes/") and PurePosixPath(rel).suffix.lower() != ".md"
+    return rel.startswith("docs/prototypes/") and not rel.endswith(".md")
 
 
 def needs_tier(rel: str) -> bool:

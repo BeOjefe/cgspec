@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from tests.helpers import (
     TempDir, approve, claude_payload, git, git_project, hook, make_slice, run_script,
@@ -178,6 +179,53 @@ class PrototypeScopeTests(unittest.TestCase):
         result = self.commit_gate()
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("no change tier", result.stdout)
+
+    def test_mixed_case_markdown_requires_scope_in_all_gates(self):
+        for suffix in ("MD", "Md"):
+            with self.subTest(suffix=suffix):
+                result = self.pretool("docs/prototypes/files/logic." + suffix)
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.put("docs/prototypes/files/logic.MD")
+        result = self.commit_gate()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("no change tier", result.stdout)
+        git(self.root, "commit", "-q", "-m", "bypass hook with uppercase extension")
+        result = hook(self.root, "ci", None, "--tool", "git", "--base", self.base)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("no change tier", result.stdout)
+
+    def assert_asset_cannot_become_archived_code_without_evidence(self, old):
+        new = "docs/prototypes/_archive/files/logic.js"
+        self.put(old)
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "baseline asset")
+        self.tier(scope="docs/prototypes/**")
+        (self.root / new).parent.mkdir(parents=True, exist_ok=True)
+        (self.root / old).rename(self.root / new)
+        result = self.commit_gate()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("without a failing-test record", result.stdout)
+
+    def test_reference_asset_cannot_launder_archive_test_exemption(self):
+        self.assert_asset_cannot_become_archived_code_without_evidence("docs/prototypes/files/logic.png")
+
+    def test_journey_cannot_launder_archive_test_exemption(self):
+        self.assert_asset_cannot_become_archived_code_without_evidence("docs/prototypes/files/journeys/logic.json")
+
+    def test_unchanged_rename_count_ignores_environment_rename_setting(self):
+        old = "docs/prototypes/files/style.css"
+        new = "docs/prototypes/_archive/files/style.css"
+        self.put(old, "".join(f".item-{i} {{ color: red; }}\n" for i in range(2000)))
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "baseline stylesheet")
+        self.tier(scope="docs/prototypes/**")
+        (self.root / new).parent.mkdir(parents=True, exist_ok=True)
+        (self.root / old).rename(self.root / new)
+        with patch.dict("os.environ", {"GIT_CONFIG_COUNT": "1",
+                                     "GIT_CONFIG_KEY_0": "diff.renames",
+                                     "GIT_CONFIG_VALUE_0": "false"}):
+            result = self.commit_gate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_unchanged_archive_rename_preserves_history_without_new_test(self):
         old = "docs/prototypes/files/app.js"

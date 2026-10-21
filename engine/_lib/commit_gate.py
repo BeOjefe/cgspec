@@ -11,7 +11,7 @@ from . import commit_trust as trust
 from .gates import EMOJI, Context, _is_script_name, _script_allowed
 from .gitview import View
 from .document_dates import managed_doc, validate_change
-from .path_policy import live_prototype_source, needs_tier, prototype_journey, prototype_source
+from .path_policy import live_prototype_source, needs_tier, prototype_journey
 from .globs import match_any
 
 
@@ -21,7 +21,8 @@ def _preserved_prototype(view: View, change) -> bool:
     content = view.read_new(change.path)
     if content is None:
         return False
-    if (change.status == "R" and change.old_path and prototype_source(change.old_path)
+    if (change.status == "R" and change.old_path and live_prototype_source(change.old_path)
+            and Path(change.old_path).suffix == Path(change.path).suffix
             and change.path.startswith("docs/prototypes/_archive/")):
         return content == view.read_old(change.old_path)
     if (change.status == "A" and change.path.startswith("docs/prototypes/_snapshots/")

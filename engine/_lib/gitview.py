@@ -66,7 +66,7 @@ class View:
 
     def changed_line_count(self, paths: set[str]) -> int:
         total = 0
-        rows = git(self.root, *self._diff_args(), "--numstat", "-z").stdout.split("\0")
+        rows = git(self.root, *self._diff_args(), "--numstat", "-z", "-M").stdout.split("\0")
         i = 0
         while i < len(rows):
             parts = rows[i].split("\t", 2)
