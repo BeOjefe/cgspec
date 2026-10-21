@@ -1,5 +1,5 @@
 # CGSpec engine: file formats and hook contract
-Created: unknown · Last edited: 2026-10-20T17:48:52Z
+Created: unknown · Last edited: 2026-10-21T17:56:34Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
@@ -19,7 +19,7 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | `docs/_cgspec/05-runs/<run-id>/run.json` | `run` | inspector | `criteria` and `tests` hold sha256 of each file; once `frozen_at` is set they may not change. `approval` is written only by the message hook or read from a commit trailer, never by the agent. |
 | `docs/_cgspec/07-state/frozen.json` | `frozen` | `bundle_prototype.py`, `cgspec_hook.py freeze` | Append-only. CI rejects any change to an existing entry (spec 8, trust root). |
 | `docs/_cgspec/04-checks/manifest.json` | `checks-manifest` | registration flow | Append-only for the same reason. A check runs as a gate only when listed here with a matching hash. Written only by `cgspec_hook.py check register` (source must be under `.cgspec-scratch/checks/`). |
-| `docs/_cgspec/07-state/checkpoint.json` | `checkpoint` | main agent via checkpoint command | `in_flight` is written before each batch and cleared after. |
+| `docs/_cgspec/07-state/checkpoint.json` | `checkpoint` | main agent via checkpoint command | `in_flight` is written before each batch and cleared after; clearing it is not project completion. Optional source observations and unresolved-stop diagnostics support recovery. |
 | `docs/_cgspec/07-state/budget.json` | `budget` | hooks | Counts helpers, review rounds and research passes against limits. |
 | `docs/_cgspec/07-state/quota.json` | `quota` | Host quota adapter; no collector/writer is included in this checkout | `quota.py --root <project> [--json]` and session packs validate freshness (five minutes), windows and thresholds. Missing or invalid readings give bounded advice; the command does not collect usage or enforce a task gate (spec 9). |
 | `docs/_cgspec/06-evidence/tests/<test-id>.json` | `test-pair` | slice workflow | `failed_at` is the commit where the test failed; CI checks it out and re-runs `command` to confirm. |
@@ -78,7 +78,7 @@ and `--tool` tells the hook how to read it. Events:
 | `user-message` | each user message | never; scrubs secrets, saves to inbox, records approvals |
 | `pre-tool` | before a write or shell tool | yes |
 | `post-tool` | after a write, shell or helper-agent tool | no; marks evidence whose `covers` globs match a changed file `Stale`, counts helper agents in `budget.json` (exit 2 only to show a budget warning) |
-| `pre-compact` | before compaction | no; prints the existing session pack, does not write a checkpoint |
+| `pre-compact` | before compaction | no; captures bounded mechanical source context and prints the pack; does not invent semantic progress |
 | `stop` | agent wants to end | yes, at most 2 times in a row (counter on disk) |
 | `pre-commit` | git pre-commit | yes |
 | `commit-msg` | git commit-msg | yes |
@@ -109,3 +109,18 @@ Exit codes (same for every engine script):
 `pre-tool` fails closed on internal errors only when the target path is protected (frozen,
 engine, manifests, CI files); elsewhere it reports exit 3 so a bug in the engine cannot freeze
 every session, and the commit hook and CI still catch the change.
+
+
+## Checkpoint updates and recovery
+
+`cgspec_hook.py checkpoint --next '...' --in-flight '...'` updates validated existing state. `--done`, `--blocked` and `--in-flight` are mutually exclusive. Damaged or missing state is preserved and requires explicit repair from known records; the command never replaces it with empty defaults.
+
+`checkpoint --update-file <path>` (or `--update-file -` for stdin) accepts a JSON object containing semantic checkpoint fields. Use a unique file under `.cgspec-scratch/` or `/tmp`. Each named field replaces its entire value; omitted fields remain unchanged, arrays/maps replace rather than merge, and `null` is valid only for nullable schema fields. Derived `source`, `unresolved_stop`, `schema` and `updated` cannot be patched. Do not mix a patch key with a flag updating the same field. These commands assume one checkpoint writer; cross-process ownership remains pending.
+
+`checkpoint --capture` saves a bounded source observation without advancing the semantic `updated` time. It records HEAD, branch, hashes of the installed project/engine manifests and eligible dirty worktree files. The pack compares it with current disk state without refreshing the saved baseline. This is recovery context, not evidence that tests ran or that staged bytes match tested bytes. Capture is not an atomic snapshot across concurrent edits.
+
+Limits: Git commands have two-second timeouts and two-MiB output limits; capture hashes at most 200 dirty entries, two MiB per file and eight MiB total including identity files. Untracked directories are not enumerated. Missing Git, byte/count limits, unreadable/unstable files and omitted content produce explicit partial coverage. Sensitive-named paths (`.env*`, secret/credential names and private-key extensions) are omitted without names or hashes; this name heuristic does not discover all secrets. Symlinks and special files are not read. The saved exclusion list names skipped build/cache directories and transient hook files. Actual dependency lockfiles remain observed. An unchanged partial observation cannot establish an unchanged checkout.
+
+The pre-compaction hook captures only mechanical context; semantic goals, pending work and evidence still require the agent's update before a long batch or context pressure. Unavailable hooks cannot guarantee a last-minute save. After two stop refusals, the bounded exit retains exact unresolved reasons and their own timestamp, preserving `in_flight` and semantic `updated`. If checkpoint persistence fails, diagnostics fall back to `stop-retries.json`; if disk writes also fail, exit remains bounded with an explicit SAVE FAILED warning. The next pack shows retained diagnostics. A clean stop clears only the derived stop record, without rewriting an already clean checkpoint.
+
+These observations are not authenticated receipts or approvals. Direct checkpoint/stop-state tool edits are protected where the host's pre-tool hook detects them; shell parsing is partial. Run reservations, remote receipt reconciliation and cross-run writer exclusion are not implemented by this checkpoint repair. New optional fields remain readable by this engine, but older strict schema readers may reject them; release and installed-CI compatibility must be established before rollout.

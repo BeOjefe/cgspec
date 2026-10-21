@@ -229,6 +229,8 @@ def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str) -> int
         return EXIT_OK
     errors, summary = doctor_state(root)
     if event in ("session-start", "pre-compact"):
+        if event == "pre-compact":
+            session.capture_before_compact(root)
         pack = session.pack(root, summary)
         print(json.dumps({"injectSteps": [{"systemMessage": {"systemMessage": pack}}]})
               if args.tool == "antigravity" else pack)
@@ -346,11 +348,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--files", help="T0: comma-separated existing files")
     parser.add_argument("--slice", help="T1+: SLICE-NNN")
     parser.add_argument("--base", help="ci: base commit of the range to check")
-    parser.add_argument("--next", help="checkpoint: the next action")
-    parser.add_argument("--in-flight", dest="in_flight", help="checkpoint: work started and not finished")
-    parser.add_argument("--done", action="store_true", help="checkpoint: in-flight work is finished")
-    parser.add_argument("--blocked", help="checkpoint: why the in-flight work cannot finish (recorded as open issue)")
-    parser.add_argument("--goal", help="checkpoint: the current goal")
+    from _lib.checkpoint_cmd import add_arguments
+    add_arguments(parser)
     parser.add_argument("--file", help="check register: proposed script under .cgspec-scratch/checks/")
     parser.add_argument("--applies-to", dest="applies_to", help="check register: comma-separated globs")
     parser.add_argument("--description", help="check register: what the check verifies")

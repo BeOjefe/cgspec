@@ -7,11 +7,11 @@ import re
 from pathlib import Path
 
 from .checkpoint_cmd import CMD
-from .common import MEMLOG_FILE, STATE_DIR, read_json, utc_now, write_json
+from .common import MEMLOG_FILE, STATE_DIR
+from .recovery_pack import context
+from .stop_state import MAX_STOP_BLOCKS, RETRIES, stop_decision
 from .quota import snapshot, summary
 
-RETRIES = STATE_DIR / "stop-retries.json"
-MAX_STOP_BLOCKS = 2
 LEDGER_TIME = re.compile(r"^### \[[^\]]+\] (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)", re.M)
 
 
@@ -32,7 +32,7 @@ def last_ledger(root: Path, count: int = 5) -> list[str]:
 
 
 def pack(root: Path, doctor_summary: str) -> str:
-    cp = _load(root, STATE_DIR / "checkpoint.json")
+    cp, recovery = context(root)
     tier = _load(root, STATE_DIR / "tier.json").get("active")
     lines = ["CGSpec session pack (read docs/_cgspec/01-engine/CONTRACT.md before acting)",
              f"goal: {cp.get('goal') or '(not set)'}",
@@ -42,6 +42,7 @@ def pack(root: Path, doctor_summary: str) -> str:
              f"active tier: {tier['tier'] + ' ' + tier['id'] + ' - ' + tier['reason'] if tier else 'none'}"]
     if cp.get("open_issues"):
         lines.append("open issues: " + "; ".join(cp["open_issues"]))
+    lines += recovery
     lines.append(summary(snapshot(root)))
     lines.append("recent ledger:")
     lines += [f"  {l}" for l in last_ledger(root)] or ["  (empty)"]
@@ -54,7 +55,12 @@ def stop_problems(root: Path, doctor_errors: int) -> list[str]:
     if doctor_errors:
         problems.append(f"doctor reports {doctor_errors} errors; see them with python3 docs/_cgspec/01-engine/doctor.py, "
                         "fix them, or record why you cannot with: " + CMD + " --blocked '<why>'")
-    cp = _load(root, STATE_DIR / "checkpoint.json")
+    from .checkpoint_cmd import load
+    from .common import CgspecError
+    try:
+        cp = load(root)
+    except CgspecError:
+        cp = {}  # doctor reports corruption; preserve it, keep the bounded stop protocol usable
     if cp.get("in_flight"):
         problems.append(f"work still in flight: {cp['in_flight']}; finish it and run {CMD} --done, "
                         f"or run {CMD} --blocked '<why>'")
@@ -66,15 +72,12 @@ def stop_problems(root: Path, doctor_errors: int) -> list[str]:
     return problems
 
 
-def stop_decision(root: Path, problems: list[str]) -> tuple[bool, str]:
-    """(allow, message). Blocks at most MAX_STOP_BLOCKS times in a row, then lets the agent end."""
-    state = _load(root, RETRIES)
-    if not problems:
-        write_json(root / RETRIES, {"count": 0, "updated": utc_now()})
-        return True, ""
-    count = int(state.get("count", 0))
-    if count >= MAX_STOP_BLOCKS:
-        write_json(root / RETRIES, {"count": 0, "updated": utc_now()})
-        return True, ("Ending with unresolved items; report them to the user as BLOCKED:\n- " + "\n- ".join(problems))
-    write_json(root / RETRIES, {"count": count + 1, "updated": utc_now()})
-    return False, "Not done yet (CGSpec stop check):\n- " + "\n- ".join(problems)
+
+def capture_before_compact(root: Path) -> None:
+    import sys
+    from .checkpoint_cmd import capture_only
+    from .common import CgspecError
+    try:
+        capture_only(root)
+    except CgspecError as exc:
+        print(f"CGSpec pre-compact capture failed: {exc}", file=sys.stderr)
