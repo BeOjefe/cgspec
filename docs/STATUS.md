@@ -1,5 +1,5 @@
 # CGSpec v0.2 implementation status
-Created: 2026-10-20T17:46:07Z · Last edited: 2026-10-21T21:25:05Z
+Created: 2026-10-20T17:46:07Z · Last edited: 2026-10-22T23:23:06Z
 
 This is the current status reference. The method describes required behavior; this page identifies limits of its implementation. Historical audit results are tied to their source revision and do not automatically apply to later changes.
 
@@ -13,6 +13,8 @@ The source tree is a plugin package, not an installed consumer layout. Run the p
 
 - Nine workflow skills, one pivot compatibility alias and eight role definitions are packaged with the engine. Their presence does not prove every host loads or follows them.
 - Installer, updater, v0.1 adoption, doctor, ledger, hooks, ingestion, impact map, prototype bundling, browser journeys and visual audit have source tests. Test results must cite a revision, environment and skipped checks.
+- Registered checks can include an approved, hash-pinned Markdown repair guide; failures print the guide, and tampering blocks execution. The dependency-free suppression ratchet example compares a JSON baseline to Git `HEAD` by default; projects must provide the right baseline path/base revision in its command.
+- GUI-profile pull requests get CI journeys and visual audits at the PR head, with revision-bound evidence and 14-day screenshot/video artifacts. Browser absence stays blocked/partial; the workflow does not install browsers or claim a pass. CI behavior itself requires a GitHub run to verify.
 - Prototype HTML, styles, scripts and configuration now participate in pre-tool and commit/CI scope checks; ordinary Markdown notes remain exempt from code-tier requirements. Live prototype sources participate in test-pair checks. Merged through PR #7 at d470e35 after independent jf27 Argon review; both Python versions ran 430 tests with six browser-dependent skips. Existing consumer installations require a separate upgrade; these checks are process gates, not a browser security boundary.
 - Checkpoint recovery merged through PR #8 at 4eb6948 after independent review: validated updates, bounded worktree observations, richer session packs and durable unresolved-stop diagnostics. Task reservations/receipts and cross-run writer exclusion remain unimplemented. No consumer update is implied.
 - Design collaboration guidance (Package E, guidance part): the contract requires the agent to push back when the user rushes to build, approves unread or skips definition, architecture or environment setup, and to record overrides as accepted risks. The design skill classifies a request by its effect, chooses the artifact by the open question, keeps a per-screen data inventory against the object model, records user and delegated decisions for recovery, and compares 2-3 mechanism-level variations only when a direction choice is open. Behavior coverage requires named states and repeated, stale and version-bound decision cases, labelled Executed or Specified. Text guards cover these rules; no agent trial has yet shown that agents follow them.

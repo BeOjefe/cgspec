@@ -1,5 +1,5 @@
 # CGSpec engine: file formats and hook contract
-Created: unknown · Last edited: 2026-10-21T17:56:34Z
+Created: unknown · Last edited: 2026-10-22T23:23:06Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
@@ -18,7 +18,7 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | `docs/_cgspec/07-state/tier.json` | `tier` | main agent via `cgspec_hook.py tier set` | Declared before editing. `files` required for T0; `slice` required for T1+. |
 | `docs/_cgspec/05-runs/<run-id>/run.json` | `run` | inspector | `criteria` and `tests` hold sha256 of each file; once `frozen_at` is set they may not change. `approval` is written only by the message hook or read from a commit trailer, never by the agent. |
 | `docs/_cgspec/07-state/frozen.json` | `frozen` | `bundle_prototype.py`, `cgspec_hook.py freeze` | Append-only. CI rejects any change to an existing entry (spec 8, trust root). |
-| `docs/_cgspec/04-checks/manifest.json` | `checks-manifest` | registration flow | Append-only for the same reason. A check runs as a gate only when listed here with a matching hash. Written only by `cgspec_hook.py check register` (source must be under `.cgspec-scratch/checks/`). |
+| `docs/_cgspec/04-checks/manifest.json` | `checks-manifest` | registration flow | Append-only for the same reason. A check runs as a gate only when listed here with a matching hash. Written only by `cgspec_hook.py check register` (script and optional Markdown guide must be regular files under `.cgspec-scratch/checks/`). Optional `guide` and `guide_sha256` pin the approved fix guidance beside the script; a missing or changed guide blocks execution. |
 | `docs/_cgspec/07-state/checkpoint.json` | `checkpoint` | main agent via checkpoint command | `in_flight` is written before each batch and cleared after; clearing it is not project completion. Optional source observations and unresolved-stop diagnostics support recovery. |
 | `docs/_cgspec/07-state/budget.json` | `budget` | hooks | Counts helpers, review rounds and research passes against limits. |
 | `docs/_cgspec/07-state/quota.json` | `quota` | Host quota adapter; no collector/writer is included in this checkout | `quota.py --root <project> [--json]` and session packs validate freshness (five minutes), windows and thresholds. Missing or invalid readings give bounded advice; the command does not collect usage or enforce a task gate (spec 9). |
