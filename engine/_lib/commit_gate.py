@@ -11,6 +11,7 @@ from . import commit_trust as trust
 from .gates import EMOJI, Context, _is_script_name, _script_allowed
 from .gitview import View
 from .document_dates import managed_doc, validate_change
+from .inbox import contains_secret
 from .path_policy import live_prototype_source, needs_tier, prototype_journey
 from .globs import match_any
 
@@ -155,6 +156,12 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
             if not _script_allowed(ctx, change.path, content):
                 reasons.append(f"new script {change.path} is not allowed here (spec 8)")
     for path, lines in view.added_lines().items():
-        if not path.startswith(trust.ENGINE) and any(EMOJI.search(line) for line in lines):
+        if path.startswith(trust.ENGINE):
+            continue
+        if any(EMOJI.search(line) for line in lines):
             reasons.append(f"decorative emoji added in {path} (spec 1)")
+        kind = next((k for line in lines if (k := contains_secret(line))), None)
+        if kind:
+            reasons.append(f"{path}: added content looks like a {kind} (spec 1: no secrets committed; "
+                           "use environment variables, and reference them by name only)")
     return list(dict.fromkeys(reasons))

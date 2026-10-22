@@ -44,6 +44,14 @@ def scrub(text: str) -> str:
     return ASSIGNMENT.sub(lambda m: f"{m.group(1)}[REDACTED:secret]", text)
 
 
+def contains_secret(text: str) -> str | None:
+    """First secret-like pattern found in text, or None. Shared by the write and commit gates."""
+    for kind, pattern in SECRETS:
+        if pattern.search(text):
+            return kind
+    return "secret" if ASSIGNMENT.search(text) else None
+
+
 def is_approval(text: str) -> bool:
     first = text.strip().splitlines()[0] if text.strip() else ""
     return bool(APPROVAL.match(first))

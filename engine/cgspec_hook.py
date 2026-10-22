@@ -65,12 +65,12 @@ def normalize(payload: dict, tool: str) -> dict:
 
 
 def shell_reasons(ctx: Context, command: str, cwd: str | None) -> list[str]:
-    from _lib.gates import git_tracked, protected_list
+    from _lib.gates import credential_read_reasons, git_tracked, protected_list
     from _lib.shellparse import WRITE_HINTS, mentions
     import posixpath
     targets, deletes, inline, broad = write_targets(command, cwd or str(ctx.root))
     guarded = protected_list(ctx)
-    reasons = []
+    reasons = credential_read_reasons(command)
     if re.search(r"\binstall\.py\b[^;&|]*\b(uninstall|upgrade|install)\b", command):
         reasons.append("installing, upgrading or uninstalling CGSpec is done by the user, not the agent; "
                        "tell the user the exact install.py command to run")
