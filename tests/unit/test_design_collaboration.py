@@ -39,6 +39,16 @@ class PushBackContractTests(unittest.TestCase):
     def test_contract_checks_understanding_before_consequential_approval(self):
         self.assertIn("understood", self.push)
 
+    def test_quick_agreement_does_not_skip_the_understanding_check(self):
+        agreement = next(line for line in self.contract.splitlines()
+                         if line.startswith("- Ordinary agreement"))
+        self.assertIn("hard-to-undo", agreement)
+        self.assertIn("understanding check", agreement)
+        method = read("docs/METHOD-v0.2.md")
+        clear = next(line for line in method.splitlines()
+                     if line.startswith("- Clear feedback is applied"))
+        self.assertIn("understanding check", clear)
+
     def test_method_states_the_human_job(self):
         collab = section(read("docs/METHOD-v0.2.md"), "1. Collaboration contract").lower()
         self.assertIn("push back", collab)
@@ -74,6 +84,11 @@ class DesignGuidanceTests(unittest.TestCase):
         self.assertIn("delegated", lowered)
         self.assertIn("open-question", lowered)
         self.assertIn("without the user pasting", lowered)
+        # The session pack surfaces checkpoint `pending`, not ledger bodies.
+        self.assertIn("`pending`", self.skill)
+        self.assertIn("checkpoint --update-file", self.skill)
+        recovery = read("engine/_lib/recovery_pack.py")
+        self.assertIn('"pending"', recovery)
 
     def test_design_skill_has_pushback_examples(self):
         self.assertIn("push back", self.skill.lower())

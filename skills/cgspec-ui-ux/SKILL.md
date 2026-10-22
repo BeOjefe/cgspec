@@ -21,11 +21,11 @@ Then classify the request, because each kind keeps something different:
 | content | words, labels, data shown | layout, behavior and stored data |
 | motion | animation of existing behavior | behavior |
 
-A request worded as visual can still be a behavior change (a new status, a new permission). Classify it by its effect, not its wording. Behavior work such as approvals, permissions and audit trails is designed from the back: states, who may do what, what is recorded. Then come the screens.
+A request worded as visual can still be a behavior change (a new status, a new permission). Classify it by its effect, not its wording. An appearance tweak inside the locked visual direction is applied directly, without a comparison. Compare options only when the request would reopen that direction, and say so first. Behavior work such as approvals, permissions and audit trails is designed from the back: states, who may do what, what is recorded. Then come the screens.
 
 ## Show the artifact that answers the open question
 
-Pick the artifact by the question the user must answer now, not by a fixed sequence:
+Pick the artifact by the question the user must answer now. This chooses what to build within the layer you are working in; it never skips a layer whose lock is still open:
 
 | Open question | Artifact |
 | --- | --- |
@@ -39,7 +39,7 @@ Tell the user in one line: the current question, what you will show next, and th
 
 ## Keep screens from rewriting the data
 
-For each screen, write a data inventory next to its wireframe: what it reads, what it writes, and which noun in `docs/spines/02-OOUX.md` each item comes from. A field the screen needs but the model lacks goes to the object model as a data request. It does not become a migration on the spot. Keep these four apart:
+For each screen, write a data inventory in `docs/prototypes/<screen>/data-inventory.md` when you draw its wireframe: what it reads, what it writes, and which noun in `docs/spines/02-OOUX.md` each item comes from. A field the screen needs but the model lacks goes to the object model as a data request. It does not become a migration on the spot. Keep these four apart:
 
 - **Domain:** the lasting nouns, their states and rules.
 - **Storage:** the tables and columns.
@@ -56,7 +56,7 @@ As you go, record each design decision with `memlog.py`:
 - **Your own defaults**, with status `Delegated`.
 - **Questions only the user can answer**, tagged `open-question`.
 
-Put the next action in the checkpoint. A fresh session must be able to resume from these records without the user pasting the brief again.
+The session pack shows only the last few ledger headers, so also keep the open questions and your unconfirmed defaults in the checkpoint's `pending` list, along with the next action. Use `cgspec_hook.py checkpoint --update-file`. Remove an item from `pending` when the user answers it. A fresh session then resumes from the checkpoint, reading `docs/_memlog.md` only for detail, without the user pasting the brief again.
 
 ## Push back on design shortcuts
 
@@ -80,7 +80,7 @@ Prototype files other than ordinary Markdown need the active change scope. Befor
 | 0-1 Register (5a) | Write the one-paragraph register (density, type, stance, mood, accent, signature element, avoid, deliberate choices), show it, lock it with the user's approval. | [register](references/register.md) |
 | 1 Tasks | Actors and tasks in the spine, each with frequency and device. | — |
 | 2 Screens and flows | One row per screen with its main need (the focal point). | [craft](references/craft.md) section 1 |
-| 3 Wireframes | Grey shell, zone IDs, real-looking data in realistic amounts, density from the register. | [craft](references/craft.md) sections 1-5, 8 |
+| 3 Wireframes | Grey shell, zone IDs, real-looking data in realistic amounts, density from the register; the screen's data inventory. | [craft](references/craft.md) sections 1-5, 8 |
 | 4 Behavior | Clickable grey prototype with the [tweaks panel](references/tweaks-panel.js) included, so the user can try type, density, accent, radius and light/dark live and paste the values back, all states, `data-testid` on every control; journeys in `docs/prototypes/<screen>/journeys/`; run `visual_audit.py` and `journey.py`. Cut a snapshot with `bundle_prototype.py` when the user locks the layer. | [behavior coverage](references/behavior-coverage.md), [RES-002](../../docs/_cgspec/02-research/RES-002-anti-slop-constrained-ui-and-deterministic-gates.md) |
 | 5b Token sheet | Derive every token from the register and measured references; each value says where it comes from. Set `design_tokens` in `docs/_cgspec/project.json` to the token sheet's project-relative path, so visual audit checks the intended sheet. | [tokens template](references/tokens.dtcg.json), [reference-extraction](references/reference-extraction.md), [craft](references/craft.md) sections 3-7 |
 | 6 High fidelity | Real frontend, one key screen first, the tweaks panel kept until the user locks the look (then removed), components from recipes; review screenshots against the rubric with a different reviewer before rolling out and before locking. | [craft](references/craft.md), [components](references/components.md), [critique rubric](references/critique-rubric.md) |

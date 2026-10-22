@@ -1,5 +1,5 @@
 # CGSpec Method v0.2 — Specification
-Created: unknown · Last edited: 2026-10-21T21:25:05Z
+Created: unknown · Last edited: 2026-10-22T04:29:58Z
 
 Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Source for the rebuild in `cgspec-next`.
 
@@ -45,7 +45,7 @@ How the agent talks to you:
 - Plain English first; every term explained by its behavior; no unexplained product names.
 - Orient once when starting a new goal. During longer work, use a brief progress line only when it adds useful orientation, such as when the current step changes, after a long interruption, or when the user asks where things stand. Do not prepend it to every design answer or repeat the full path; answer quick questions and clear feedback directly.
 - Decisions come as structured choices: concrete options, recommended one first, one decision at a time.
-- Clear feedback is applied, not interviewed. Only ambiguous or intent-changing feedback gets one focused question.
+- Clear feedback is applied, not interviewed. Only ambiguous or intent-changing feedback gets one focused question, and a consequential or hard-to-undo approval gets one short understanding check (contract, "Push back when the work is at risk").
 - Diagrams (Mermaid) over walls of text; details live in files.
 - No decorative emojis in chat, docs or code (enforced by the commit hook).
 
