@@ -234,7 +234,7 @@ def targets_of(root: Path, raw: list[str]) -> list[tuple[str, Path, list[str]]]:
     return out
 
 
-def audit(root: Path, raw: list[str], write: bool = True) -> tuple[int, list[str]]:
+def audit(root: Path, raw: list[str], write: bool = True, video: bool = False) -> tuple[int, list[str]]:
     try:
         project = json.loads((root / PROJECT_FILE).read_text(encoding="utf-8"))
         profile = project.get("profile", "")
@@ -250,8 +250,9 @@ def audit(root: Path, raw: list[str], write: bool = True) -> tuple[int, list[str
     if tokens.get("issue"):
         for errors, warnings in results.values():
             warnings.append(tokens["issue"])
-    runs = [{"kind": "audit", "label": label, "url": path.resolve().as_uri()} for label, path, _ in items]
-    shown = browser.run(root, runs, root / ".cgspec-scratch/visual")
+    runs = [{"kind": "audit", "label": label, "url": path.resolve().as_uri(), "video": video}
+            for label, path, _ in items]
+    shown = browser.run(root, runs, root / ".cgspec-scratch/visual", video=video)
     blocked = shown.get("blocked")
     for item in shown.get("results", []):
         errs, warns = rendered(item, tokens)
@@ -277,10 +278,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("targets", nargs="*", help="screen names or HTML files (default: every prototype screen)")
     parser.add_argument("--no-evidence", action="store_true")
+    parser.add_argument("--video", action="store_true", help="record WebM browser video where rendered audit runs")
     parser.add_argument("--root")
     args = parser.parse_args(argv)
     try:
-        code, lines = audit(resolve_root(args.root), args.targets, not args.no_evidence)
+        code, lines = audit(resolve_root(args.root), args.targets, not args.no_evidence, args.video)
     except CgspecError as exc:
         print(f"visual_audit: {exc}", file=sys.stderr)
         return EXIT_FAIL

@@ -96,7 +96,7 @@ def missing_ids(screen: Path, ids: set[str]) -> list[str]:
     return sorted(i for i in ids if not re.search(rf"""["'`=]{re.escape(i)}["'`\s>]""", text))
 
 
-def run(root: Path, targets: list[str], write: bool = True) -> tuple[int, list[str]]:
+def run(root: Path, targets: list[str], write: bool = True, video: bool = False) -> tuple[int, list[str]]:
     lines, runs, meta, failed = [], [], {}, False
     for path in discover(root, targets):
         data = load(path, root)
@@ -114,10 +114,10 @@ def run(root: Path, targets: list[str], write: bool = True) -> tuple[int, list[s
                 evidence.write(root, "journeys", label, f"journey:{data['name']}", "FAIL", covers, detail, "journey.py")
             continue
         runs.append({"kind": "journey", "label": label, "url": url, "steps": data["steps"],
-                     "viewports": data["viewports"]})
+                     "viewports": data["viewports"], "video": video})
     if not runs:
         return (EXIT_FAIL if failed else EXIT_OK), lines
-    result = browser.run(root, runs, root / ".cgspec-scratch/journeys")
+    result = browser.run(root, runs, root / ".cgspec-scratch/journeys", video=video)
     if "blocked" in result:
         for item in runs:
             data, covers, _ = meta[item["label"]]
@@ -147,10 +147,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("targets", nargs="*", help="journey files, folders or screen names (default: all screens)")
     parser.add_argument("--no-evidence", action="store_true", help="do not write evidence records")
+    parser.add_argument("--video", action="store_true", help="record a WebM for each journey viewport")
     parser.add_argument("--root")
     args = parser.parse_args(argv)
     try:
-        code, lines = run(resolve_root(args.root), args.targets, not args.no_evidence)
+        code, lines = run(resolve_root(args.root), args.targets, not args.no_evidence, args.video)
     except CgspecError as exc:
         print(f"journey: {exc}", file=sys.stderr)
         return EXIT_FAIL

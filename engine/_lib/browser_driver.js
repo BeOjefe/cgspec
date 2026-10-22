@@ -73,13 +73,22 @@ async function step(page, s, shots, label) {
   throw new Error(`unknown step ${JSON.stringify(s)}`);
 }
 
-async function withPage(browser, viewport, fn) {
-  const context = await browser.newContext(VIEWPORTS[viewport] || VIEWPORTS.desktop);
+async function withPage(browser, viewport, fn, shots, label, video) {
+  const options = { ...(VIEWPORTS[viewport] || VIEWPORTS.desktop) };
+  if (video) options.recordVideo = { dir: shots, size: options.viewport };
+  const context = await browser.newContext(options);
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(`page error: ${e.message}`));
   page.on("console", (m) => { if (m.type() === "error") errors.push(`console error: ${m.text()}`); });
-  try { return await fn(page, errors); } finally { await context.close(); }
+  try { return await fn(page, errors); } finally {
+    await context.close();
+    if (video) {
+      const videoPath = await page.video().path();
+      const target = path.join(shots, `${label}.webm`);
+      if (videoPath !== target) fs.copyFileSync(videoPath, target);
+    }
+  }
 }
 
 async function journey(browser, run, shots) {
@@ -97,7 +106,7 @@ async function journey(browser, run, shots) {
         }
       }
       return { viewport, ok: errors.length === 0, state, errors };
-    }));
+    }, shots, label, Boolean(run.video)));
   }
   return { label: run.label, viewports: out };
 }
@@ -166,6 +175,7 @@ async function focusCheck(page) {
 async function audit(browser, run, shots) {
   const out = [];
   for (const viewport of ["desktop", "mobile"]) {
+    const label = `${run.label}-${viewport}`;
     out.push(await withPage(browser, viewport, async (page, errors) => {
       await page.goto(run.url, { waitUntil: "load" });
       const facts = await page.evaluate((mobile) => {
@@ -186,7 +196,7 @@ async function audit(browser, run, shots) {
       quality.focus = await focusCheck(page);
       await page.screenshot({ path: path.join(shots, `${run.label}-${viewport}.png`), fullPage: true });
       return { viewport, errors, ...facts, quality };
-    }));
+    }, shots, label, Boolean(run.video)));
   }
   return { label: run.label, viewports: out };
 }

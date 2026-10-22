@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import re
 import unittest
 
 from tests.helpers import TempDir, git, hook, install, run_script
@@ -103,10 +104,23 @@ class WiringTests(unittest.TestCase):
         self.assertTrue((self.root / ".git/hooks/commit-msg").exists())
         workflow = (self.root / ".github/workflows/cgspec.yml").read_text()
         self.assertIn("engine/cgspec_hook.py\" ci", workflow)
+        self.assertIn("CI visual proof (PR head)", workflow)
+        self.assertIn("actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce", workflow)
+        self.assertTrue(all(re.fullmatch(r"[0-9a-f]{40}", sha) for sha in
+                            re.findall(r"uses: [^@\s]+@([0-9a-f]+)", workflow)))
+        self.assertIn('revision": revision', workflow)
         frozen = json.loads((self.root / "docs/_cgspec/07-state/frozen.json").read_text())
         self.assertIn(".github/workflows/cgspec.yml", [e["path"] for e in frozen["entries"]])
         self.assertIn("CONTRACT.md", (self.root / ".cursor/rules/cgspec.mdc").read_text())
         self.assertEqual(run_script("doctor.py", "--root", str(self.root)).returncode, 0)
+
+    def test_headless_profile_has_no_visual_job(self):
+        root = self.root
+        result = run_script("install.py", "install", "--root", str(root), "--profile", "headless",
+                            "--topology", "single", "--tools", "ci")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        workflow = (root / ".github/workflows/cgspec.yml").read_text()
+        self.assertNotIn("CI visual proof", workflow)
 
     def test_antigravity_hook_resolves_engine_from_agents_working_directory(self):
         self.assertEqual(self.do_install().returncode, 0)

@@ -38,14 +38,16 @@ WORKFLOW = """name: cgspec-governance
 on:
   push:
   pull_request:
+permissions:
+  contents: read
 jobs:
   governance:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.12"
       - name: Pick the base and a trusted engine (never the engine inside this commit)
@@ -85,6 +87,56 @@ jobs:
           CGSPEC_TRUST_BASE="$TRUSTED" sh "$RUNNER_TEMP/cgspec-select.sh"
       - name: CGSpec governance (cannot be skipped)
         run: python3 "$CGSPEC_RELEASE/engine/cgspec_hook.py" ci --root "$GITHUB_WORKSPACE" --base "$CGSPEC_BASE" --release-dir "$CGSPEC_RELEASE" --tool git
+      # CGSPEC_VISUAL_JOB
+"""
+VISUAL_WORKFLOW = """      - name: CI visual proof (PR head)
+        if: github.event_name == 'pull_request'
+        env:
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set +e
+          mkdir -p artifacts/cgspec-visual
+          if ! git checkout --detach "$PR_HEAD"; then
+            echo "BLOCKED checkout: could not select exact PR head" > "$RUNNER_TEMP/journeys.log"
+            cp "$RUNNER_TEMP/journeys.log" "$RUNNER_TEMP/visual.log"
+            JOURNEY_CODE=2
+            AUDIT_CODE=2
+          else
+            python3 "$CGSPEC_RELEASE/engine/journey.py" --root "$GITHUB_WORKSPACE" --video > "$RUNNER_TEMP/journeys.log" 2>&1
+            JOURNEY_CODE=$?
+            python3 "$CGSPEC_RELEASE/engine/visual_audit.py" --root "$GITHUB_WORKSPACE" --video > "$RUNNER_TEMP/visual.log" 2>&1
+            AUDIT_CODE=$?
+          fi
+          cp -R .cgspec-scratch/journeys/. artifacts/cgspec-visual/ 2>/dev/null || true
+          cp -R .cgspec-scratch/visual/. artifacts/cgspec-visual/ 2>/dev/null || true
+          PR_HEAD="$PR_HEAD" JOURNEY_CODE="$JOURNEY_CODE" AUDIT_CODE="$AUDIT_CODE" python3 - <<'PY'
+          import json, os, pathlib, re
+          root = pathlib.Path("artifacts/cgspec-visual")
+          lines = []
+          for log in (pathlib.Path(os.environ["RUNNER_TEMP"]) / "journeys.log", pathlib.Path(os.environ["RUNNER_TEMP"]) / "visual.log"):
+              if log.exists(): lines += log.read_text(errors="replace").splitlines()
+          records = []
+          for line in lines:
+              m = re.match(r"(PASS|FAIL|PARTIAL|BLOCKED) (.*)", line)
+              if m: records.append({"item": m.group(2).rstrip(":"), "verdict": m.group(1)})
+          if not records:
+              blocked = "BLOCKED" in "\\n".join(lines) or int(os.environ["JOURNEY_CODE"]) == 2 or int(os.environ["AUDIT_CODE"]) == 2
+              records = [{"item": "Browser checks" if blocked else "Journey setup", "verdict": "BLOCKED" if blocked else "FAIL"}]
+          revision = os.environ["PR_HEAD"]
+          (root / "evidence.json").write_text(json.dumps({"schema": 1, "revision": revision, "journeys": records}, indent=2) + "\\n")
+          summary = ["## CGSpec visual proof", "", f"PR head: `{revision}`", "", "| Journey or audit | Verdict | Artifact |", "|---|---|---|"]
+          for row in records: summary.append(f"| {row['item']} | {row['verdict']} | `cgspec-visual-{revision[:12]}` |")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f: f.write("\\n".join(summary) + "\\n")
+          PY
+          echo "Journey exit: $JOURNEY_CODE; visual audit exit: $AUDIT_CODE" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+        if: always() && github.event_name == 'pull_request'
+        with:
+          name: cgspec-visual-${{ github.event.pull_request.head.sha }}
+          path: artifacts/cgspec-visual/
+          retention-days: 14
+          if-no-files-found: warn
 """
 SELECT = """#!/bin/sh
 # Installed by CGSpec. Chooses the range base and downloads the plugin release used to judge it.
@@ -233,7 +285,7 @@ def _wire_git(root: Path, record: dict) -> list[str]:
     return notes
 
 
-def wire(root: Path, tools: list[str], owned: dict) -> list[str]:
+def wire(root: Path, tools: list[str], owned: dict, profile: str = "") -> list[str]:
     notes, record = [], owned.setdefault("adapters", {})
     if "claude" in tools:
         record["claude"] = {"path": ".claude/settings.json", "created": _merge_json(root / ".claude/settings.json", _claude)}
@@ -250,7 +302,9 @@ def wire(root: Path, tools: list[str], owned: dict) -> list[str]:
         notes += _wire_git(root, record)
     if "ci" in tools:
         rel, select = ".github/workflows/cgspec.yml", ".github/cgspec-select.sh"
-        ok, note = _write_new(root, rel, WORKFLOW.format())
+        visual_job = VISUAL_WORKFLOW.rstrip() if profile in {"website", "web-workspace", "mobile", "small"} else ""
+        workflow = WORKFLOW.format().replace("      # CGSPEC_VISUAL_JOB", visual_job)
+        ok, note = _write_new(root, rel, workflow)
         ok2, note2 = _write_new(root, select, SELECT, 0o755)
         notes += [note, note2]
         if ok and ok2:

@@ -169,6 +169,15 @@ class StaticJourneyTests(Base):
 class BrowserTests(Base):
     browser = True
 
+    def test_video_flag_writes_webm_when_browser_is_available(self):
+        if not has_browser():
+            self.skipTest("Playwright is not installed")
+        result = self.journey("invoice", "--video")
+        if result.returncode == 2:
+            self.skipTest("Playwright Chromium is unavailable")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(any((self.root / ".cgspec-scratch/journeys").glob("*.webm")))
+
     def test_journey_passes_on_desktop_and_mobile_with_screenshots(self):
         result = self.journey("invoice")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

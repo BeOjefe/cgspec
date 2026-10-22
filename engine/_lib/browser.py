@@ -13,7 +13,7 @@ DRIVER = Path(__file__).with_name("browser_driver.js")
 TIMEOUT = 900
 
 
-def run(root: Path, runs: list[dict], shots: Path) -> dict:
+def run(root: Path, runs: list[dict], shots: Path, video: bool = False) -> dict:
     """{'results': [...]} or {'blocked': reason}."""
     if os.environ.get("CGSPEC_BROWSER", "").lower() == "none":
         return {"blocked": "browser checks disabled (CGSPEC_BROWSER=none)"}
@@ -23,7 +23,8 @@ def run(root: Path, runs: list[dict], shots: Path) -> dict:
     shots.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
     env["NODE_PATH"] = os.pathsep.join(filter(None, [str(root / "node_modules"), env.get("NODE_PATH", "")]))
-    job = {"runs": runs, "shots": str(shots), "executable": os.environ.get("CGSPEC_CHROMIUM") or None}
+    job = {"runs": runs, "shots": str(shots), "executable": os.environ.get("CGSPEC_CHROMIUM") or None,
+           "video": video}
     try:
         out = subprocess.run([node, str(DRIVER)], input=json.dumps(job), capture_output=True, text=True, cwd=root,
                              env=env, timeout=TIMEOUT)
