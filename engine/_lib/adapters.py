@@ -218,13 +218,21 @@ def _wire_git(root: Path, record: dict) -> list[str]:
         if target.is_symlink():
             notes.append(f"left symlinked git {event} hook alone")
             continue
-        if target.exists() and MARK not in target.read_text(encoding="utf-8", errors="replace"):
-            notes.append(f"left existing git {event} hook alone; add the CGSpec call to it yourself")
-            continue
+        expected = git_hooks.expected_hook_bytes(GIT_HOOK, HOOK, event)
+        if target.exists():
+            try:
+                current = target.read_bytes()
+            except OSError:
+                notes.append(f"left existing git {event} hook alone; add the CGSpec call to it yourself")
+                continue
+            if current != expected:
+                notes.append(f"left existing git {event} hook alone; add the CGSpec call to it yourself")
+                continue
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(GIT_HOOK.format(hook=HOOK, event=event), encoding="utf-8")
+        target.write_bytes(expected)
         os.chmod(target, 0o755)
-        record.setdefault("git_hooks", []).append(event)
+        if event not in record.get("git_hooks", []):
+            record.setdefault("git_hooks", []).append(event)
         notes.append(f"wired git {event} hook")
     return notes
 

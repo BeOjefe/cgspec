@@ -17,10 +17,10 @@ if str(ENGINE) not in sys.path:
 PY = sys.executable
 
 
-def run_script(script: str, *args: str, cwd: Path | None = None, stdin: str | None = None):
+def run_script(script: str, *args: str, cwd: Path | None = None, stdin: str | None = None, env: dict | None = None):
     return subprocess.run(
         [PY, str(ENGINE / script), *args],
-        cwd=cwd, input=stdin, capture_output=True, text=True, timeout=60,
+        cwd=cwd, input=stdin, capture_output=True, text=True, timeout=60, env=env,
     )
 
 
@@ -47,9 +47,9 @@ def snapshot_tree(root: Path) -> dict[str, bytes]:
     return out
 
 
-def install(root: Path, profile: str = "web-workspace", topology: str = "single", *extra: str):
+def install(root: Path, profile: str = "web-workspace", topology: str = "single", *extra: str, env: dict | None = None):
     return run_script("install.py", "install", "--root", str(root), "--profile", profile,
-                      "--topology", topology, "--tools", "claude,git", *extra)
+                      "--topology", topology, "--tools", "claude,git", *extra, env=env)
 
 
 def doctor(root: Path, *extra: str):
