@@ -21,7 +21,8 @@ def _preserved_prototype(view: View, change) -> bool:
     content = view.read_new(change.path)
     if content is None:
         return False
-    if (change.status == "R" and change.old_path and live_prototype_source(change.old_path)
+    if (change.status == "R" and change.old_path
+            and (live_prototype_source(change.old_path) or prototype_journey(change.old_path))
             and Path(change.old_path).suffix == Path(change.path).suffix
             and change.path.startswith("docs/prototypes/_archive/")):
         return content == view.read_old(change.old_path)
