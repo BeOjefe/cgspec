@@ -129,12 +129,6 @@ class HookScript(unittest.TestCase):
                               cwd=REPO, capture_output=True, text=True)
         self.assertIn(done.returncode, (0, 1))  # must run without crashing in the real tree
 
-    def test_repo_is_wired_to_this_hook(self):
-        """core.hooksPath must point at .githooks, or the gate is installed but inert."""
-        out = subprocess.run(["git", "config", "--get", "core.hooksPath"],
-                             cwd=REPO, capture_output=True, text=True)
-        self.assertEqual(out.stdout.strip(), ".githooks", "core.hooksPath is not .githooks")
-
     def test_hook_targets_exist(self):
         """Every path the hook can exec must exist, or it is a guard that cannot run."""
         text = (HOOK_DIR / "pre-commit").read_text(encoding="utf-8")
@@ -142,6 +136,97 @@ class HookScript(unittest.TestCase):
         self.assertTrue(targets)
         present = [t for t in targets if (REPO / t).exists()]
         self.assertTrue(present, f"none of the hook's checkers exist in this tree: {targets}")
+
+
+class WiringIsReproducible(unittest.TestCase):
+    """Git finds hooks through `core.hooksPath`, which is local config and cannot be committed.
+
+    Caught by CI on the first push of this branch: the gate worked only on the one checkout
+    where someone had set that value by hand, and a fresh clone had no hooks at all. Asserting
+    the live value was itself the bug, because it is legitimately unset in a fresh clone. What
+    has to be true everywhere is that activation is scripted and the script works.
+    """
+
+    ENABLE = HOOK_DIR / "enable"
+
+    def test_enable_script_is_executable(self):
+        self.assertTrue(self.ENABLE.is_file(), f"{self.ENABLE} is missing")
+        self.assertTrue(os.access(self.ENABLE, os.X_OK), f"{self.ENABLE} is not executable")
+
+    def _clone(self, root: Path) -> dict:
+        """A throwaway repository holding only what the enable script needs to find."""
+        env = {**os.environ, "GIT_CONFIG_GLOBAL": str(root / "gc"), "GIT_CONFIG_NOSYSTEM": "1"}
+        subprocess.run(["git", "init", "-q", "-b", "main"], cwd=root, env=env, check=True)
+        (root / ".githooks").mkdir()
+        for name in ("enable", "pre-commit", "source_precommit.py"):
+            target = root / ".githooks" / name
+            target.write_bytes((HOOK_DIR / name).read_bytes())
+            target.chmod(0o755)
+        return env
+
+    def hooks_path(self, root: Path, env: dict) -> str:
+        out = subprocess.run(["git", "config", "--local", "--get", "core.hooksPath"],
+                             cwd=root, env=env, capture_output=True, text=True)
+        return out.stdout.strip()
+
+    def test_a_fresh_clone_starts_unwired_and_the_script_wires_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env = self._clone(root)
+            self.assertEqual(self.hooks_path(root, env), "", "a fresh clone should have no hooks path")
+            done = subprocess.run(["sh", ".githooks/enable"], cwd=root, env=env,
+                                  capture_output=True, text=True)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertEqual(self.hooks_path(root, env), ".githooks")
+
+    def test_the_script_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env = self._clone(root)
+            for _ in range(2):
+                done = subprocess.run(["sh", ".githooks/enable"], cwd=root, env=env,
+                                      capture_output=True, text=True)
+                self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertEqual(self.hooks_path(root, env), ".githooks")
+
+    def test_the_script_refuses_to_hijack_another_tools_hook_path(self):
+        """Overwriting a foreign hooks path would disable whatever else the user installed."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env = self._clone(root)
+            subprocess.run(["git", "config", "--local", "core.hooksPath", ".husky"],
+                           cwd=root, env=env, check=True)
+            done = subprocess.run(["sh", ".githooks/enable"], cwd=root, env=env,
+                                  capture_output=True, text=True)
+            self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+            self.assertIn("refusing to overwrite", done.stderr)
+            self.assertEqual(self.hooks_path(root, env), ".husky", "the foreign path was changed")
+
+    def test_the_script_refuses_a_repository_without_the_checker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env = {**os.environ, "GIT_CONFIG_GLOBAL": str(root / "gc"), "GIT_CONFIG_NOSYSTEM": "1"}
+            subprocess.run(["git", "init", "-q", "-b", "main"], cwd=root, env=env, check=True)
+            script = root / "enable"
+            script.write_bytes(self.ENABLE.read_bytes())
+            done = subprocess.run(["sh", str(script)], cwd=root, env=env, capture_output=True, text=True)
+            self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+            self.assertEqual(self.hooks_path(root, env), "")
+
+    def test_this_checkout_is_not_wired_to_something_else(self):
+        """Unset is legitimate (fresh clone, CI). Set to a foreign path means the gate is dead."""
+        out = subprocess.run(["git", "config", "--get", "core.hooksPath"],
+                             cwd=REPO, capture_output=True, text=True)
+        value = out.stdout.strip()
+        if not value:
+            self.skipTest("this checkout has no core.hooksPath; run ./.githooks/enable to activate "
+                          "the gate (CI never commits, so it does not need it)")
+        self.assertEqual(value, ".githooks",
+                         "core.hooksPath points elsewhere, so the gate in .githooks never runs")
+
+    def test_activation_is_documented_where_a_contributor_will_look(self):
+        """A script nobody is told to run leaves the gate just as inert."""
+        self.assertIn(".githooks/enable", (REPO / "AGENTS.md").read_text(encoding="utf-8"))
 
 
 class NoInertAdapterConfig(unittest.TestCase):
