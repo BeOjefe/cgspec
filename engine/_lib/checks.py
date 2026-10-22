@@ -17,6 +17,20 @@ RUNNERS = {".py": ["python3"], ".sh": ["sh"], ".js": ["node"], ".mjs": ["node"]}
 TIMEOUT = 300
 
 
+def _proposal(root: Path, rel: str) -> Path | None:
+    path = Path(rel)
+    if not rel.startswith(PROPOSALS) or ".." in path.parts:
+        return None
+    candidate = root / path
+    if not candidate.is_file() or candidate.is_symlink():
+        return None
+    for length in range(1, len(path.parts) + 1):
+        if (root.joinpath(*path.parts[:length])).is_symlink():
+            return None
+    allowed = (root / PROPOSALS.rstrip("/")).resolve()
+    return candidate if candidate.resolve().is_relative_to(allowed) else None
+
+
 def _manifest(root: Path) -> dict:
     try:
         data = json.loads((root / MANIFEST).read_text(encoding="utf-8"))
@@ -26,15 +40,24 @@ def _manifest(root: Path) -> dict:
 
 
 def register(root: Path, file: str, applies_to: list[str], description: str, approval: str,
-             command: list[str] | None = None) -> dict:
+             command: list[str] | None = None, guide: str | None = None) -> dict:
     from .inbox import approval_exists
-    source = (root / file)
-    if not file.startswith(PROPOSALS) or ".." in Path(file).parts or not source.is_file() or source.is_symlink():
+    source = _proposal(root, file)
+    if source is None:
         raise CgspecError(f"a check is proposed as a regular file under {PROPOSALS} first")
     if approval != "trailer" and not approval_exists(root, approval):
         raise CgspecError(f"approval {approval} is not in 07-state/approvals.json (only your own message creates one)")
     if not applies_to or not description.strip():
         raise CgspecError("say which files the check applies to (--applies-to) and what it checks (--description)")
+    guide_source = None
+    guide_text = None
+    if guide:
+        guide_source = _proposal(root, guide)
+        if guide_source is None:
+            raise CgspecError(f"a guide is proposed as a regular file under {PROPOSALS} first")
+        guide_text = guide_source.read_text(encoding="utf-8")
+        if not guide_text.startswith("# "):
+            raise CgspecError("a check guide must start with a Markdown title")
     data = _manifest(root)
     dest = root / CHECKS_DIR / source.name
     if dest.exists():
@@ -43,6 +66,13 @@ def register(root: Path, file: str, applies_to: list[str], description: str, app
     if not command and source.suffix.lower() not in RUNNERS:
         raise CgspecError("unknown script type; pass --command as JSON, e.g. '[\"bash\", \"{path}\", \"{files}\"]'")
     shutil.copyfile(source, dest)
+    guide_dest = root / CHECKS_DIR / guide_source.name if guide_source else None
+    if guide_dest and guide_dest.exists():
+        dest.unlink()
+        raise CgspecError(f"{guide_dest.relative_to(root).as_posix()} already exists; registered checks never change")
+    if guide_dest:
+        from .document_dates import stamp_new
+        guide_dest.write_text(stamp_new(guide_text, utc_now()), encoding="utf-8")
     numbers = [int(c["id"][4:]) for c in data.get("checks", []) if str(c.get("id", "")).startswith("CHK-")]
     entry = {"id": f"CHK-{max(numbers, default=0) + 1:03d}", "path": dest.relative_to(root).as_posix(),
              "sha256": sha256_file(dest), "command": runner, "applies_to": applies_to,
@@ -50,6 +80,9 @@ def register(root: Path, file: str, applies_to: list[str], description: str, app
              "approval": {"source": "commit-trailer" if approval == "trailer" else "message-hook", "ref": approval,
                           "at": utc_now()},
              "added": utc_now()}
+    if guide_dest:
+        entry["guide"] = guide_dest.relative_to(root).as_posix()
+        entry["guide_sha256"] = sha256_file(guide_dest)
     data.setdefault("checks", []).append(entry)
     write_json(root / MANIFEST, data)
     return entry
@@ -81,6 +114,13 @@ def run(root: Path, files: list[str], run_all: bool = False, write_evidence: boo
         if not path.is_file() or sha256_file(path) != entry.get("sha256"):
             failures.append(f"{cid}: {entry.get('path')} changed since approval; it was not run")
             continue
+        guide_text = None
+        if entry.get("guide"):
+            guide_path = root / entry["guide"]
+            if not guide_path.is_file() or sha256_file(guide_path) != entry.get("guide_sha256"):
+                failures.append(f"{cid}: {entry.get('guide')} changed since approval; check was not run")
+                continue
+            guide_text = guide_path.read_text(encoding="utf-8", errors="replace").strip()
         try:
             result = subprocess.run(_command(entry, root, matched), cwd=root, capture_output=True, text=True,
                                     timeout=TIMEOUT)
@@ -89,7 +129,10 @@ def run(root: Path, files: list[str], run_all: bool = False, write_evidence: boo
             verdict, output = "FAIL", f"could not run: {exc}"
         notes.append(f"{cid} {verdict}: {entry.get('description', '')}")
         if verdict == "FAIL":
-            failures.append(f"{cid} failed ({entry.get('description', '')}):\n{output.strip()}")
+            message = f"{cid} failed ({entry.get('description', '')}):\n{output.strip()}"
+            if guide_text:
+                message += f"\n\nHow to fix this well ({cid} guide):\n{guide_text}"
+            failures.append(message)
         if write_evidence:
             write_json(root / EVIDENCE_DIR / "checks" / f"{cid}.json", {
                 "schema": 1, "check": cid, "revision": _revision(root), "verdict": verdict, "state": "Fresh",
@@ -109,7 +152,7 @@ def cli(root: Path, args) -> int:
                               "--description '...' --approval A-...")
         command = json.loads(args.command) if args.command else None
         entry = register(root, args.file, [g.strip() for g in args.applies_to.split(",") if g.strip()],
-                         args.description or "", args.approval, command)
+                         args.description or "", args.approval, command, args.guide)
         print(f"registered {entry['id']} at {entry['path']}")
         return 0
     if action == "run":

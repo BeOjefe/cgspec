@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import unittest
 
 from tests.helpers import TempDir, approve, git, git_project, hook, run_script
@@ -25,6 +26,8 @@ class RegisteredCheckTests(unittest.TestCase):
         proposal = self.root / ".cgspec-scratch/checks/no_hex.py"
         proposal.parent.mkdir(parents=True)
         proposal.write_text(NO_HEX)
+        self.guide = self.root / ".cgspec-scratch/checks/no_hex.md"
+        self.guide.write_text("# Fix the source cause\n\nDo not hide it with an exception.\n")
 
     def tearDown(self):
         for p in self.root.rglob("*"):
@@ -32,10 +35,12 @@ class RegisteredCheckTests(unittest.TestCase):
                 os.chmod(p, 0o644)
         self._tmp.__exit__(None, None, None)
 
-    def register(self, approval=None):
+    def register(self, approval=None, guide=False):
         approval = approval if approval is not None else approve(self.root, "approve CHK-001")
-        return check(self.root, "register", "--file", ".cgspec-scratch/checks/no_hex.py", "--applies-to", "src/**",
-                     "--description", "no raw hex colors in source", "--approval", approval)
+        args = ["register", "--file", ".cgspec-scratch/checks/no_hex.py", "--applies-to", "src/**",
+                "--description", "no raw hex colors in source", "--approval", approval]
+        if guide: args += ["--guide", ".cgspec-scratch/checks/no_hex.md"]
+        return check(self.root, *args)
 
     def manifest(self):
         return json.loads((self.root / "docs/_cgspec/04-checks/manifest.json").read_text())
@@ -54,6 +59,31 @@ class RegisteredCheckTests(unittest.TestCase):
         result = self.register(approval="A-20261019-ffff")
         self.assertEqual(result.returncode, 1)
         self.assertEqual(self.manifest()["checks"], [])
+
+    def test_register_copies_and_hashes_the_guide(self):
+        result = self.register(guide=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        entry = self.manifest()["checks"][0]
+        self.assertEqual(entry["guide"], "docs/_cgspec/04-checks/no_hex.md")
+        self.assertEqual(entry["guide_sha256"], __import__("hashlib").sha256(
+            (self.root / entry["guide"]).read_bytes()).hexdigest())
+
+    def test_register_refuses_a_guide_outside_scratch(self):
+        result = check(self.root, "register", "--file", ".cgspec-scratch/checks/no_hex.py", "--applies-to", "src/**",
+                       "--description", "x", "--approval", approve(self.root), "--guide", "AGENTS.md")
+        self.assertEqual(result.returncode, 1)
+
+    def test_failure_prints_guide_and_tampered_guide_skips_check(self):
+        self.register(guide=True)
+        (self.root / "src/a.ts").write_text("const x = '#ff0000';\n")
+        failed = check(self.root, "run", "--files", "src/a.ts")
+        self.assertIn("How to fix this well (CHK-001 guide):", failed.stdout)
+        self.assertIn("Fix the source cause", failed.stdout)
+        path = self.root / "docs/_cgspec/04-checks/no_hex.md"
+        path.write_text("tampered")
+        tampered = check(self.root, "run", "--files", "src/a.ts")
+        self.assertIn("changed since approval", tampered.stdout)
+        self.assertNotIn("failed (no raw hex", tampered.stdout)
 
     def test_register_refuses_files_outside_the_scratch_proposals(self):
         (self.root / "src/evil.py").write_text("print(1)\n")
@@ -114,6 +144,14 @@ class RegisteredCheckTests(unittest.TestCase):
         self.register()
         git(self.root, "add", "-A")
         result = hook(self.root, "pre-commit", None, "--tool", "git")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_pre_commit_accepts_newly_registered_check_and_guide(self):
+        self.register(guide=True)
+        subprocess.run(["git", "add", "-A"], cwd=self.root, check=True)
+        result = subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=t@example.com",
+                                 "commit", "-m", "register check guide"], cwd=self.root,
+                                capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_ci_runs_registered_checks_on_the_range(self):

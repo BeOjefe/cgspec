@@ -355,6 +355,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--description", help="check register: what the check verifies")
     parser.add_argument("--approval", help="check register: approval id from your message, or 'trailer'")
     parser.add_argument("--command", help="check register: JSON list with {path} and {files}")
+    parser.add_argument("--guide", help="check register: proposed Markdown guide under .cgspec-scratch/checks/")
     parser.add_argument("--no-rerun", action="store_true", help="ci: skip re-running failing-test records")
     parser.add_argument("--release-dir", help="ci: checkout of the CGSpec plugin release to verify engine changes")
     return parser
