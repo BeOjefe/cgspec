@@ -24,6 +24,8 @@ The source tree is a plugin package, not an installed consumer layout. Run the p
 
 ## Release and adoption blockers
 
+The Git hook relocation repair is scoped to hook ownership: portable event names, current Git directory discovery and preservation of modified/symlinked hooks. It does not complete portable-reference validation, adapter drift checks, shell conformance or per-worktree ownership of shared hooks. Exact palette/theme/state conformance and installed build identity remain unimplemented; reports 42–43 in the workspace audit folder specify their reproduced gaps and proposed acceptance tests.
+
 1. Publish and inspect the pinned `v0.2.0` release, complete the trusted installation bootstrap, and rehearse the installed CI path on a repository with the required server-side protection. This package's main-origin detector is a different workflow.
 2. Establish effective credential isolation or appropriate server-side protection before promising PR-only enforcement. A bot/fork is insufficient if the agent's shell can still use owner credentials. The accepted free/squash preference remains in force; private-fork permissions and the end-to-end merge flow still need validation.
 3. Build and test host quota collectors where real telemetry exists. Current schema sources are Claude statusline, manual and unavailable; Codex/Antigravity automatic adapters and context-pressure integration are absent. Never infer quota from model names, turn count or context size.

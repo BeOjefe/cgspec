@@ -321,8 +321,8 @@ def cmd_uninstall(root: Path, _args: argparse.Namespace) -> int:
     project = read_json(root / PROJECT_FILE) if (root / PROJECT_FILE).is_file() else {}
     files, dirs = template_files(project.get("profile", "web-workspace"), project.get("topology", "single"))
     allowed = set(files) | {PROJECT_FILE.as_posix(), ".gitignore"}
-    unwire(root, owned)
-    report = remove_created(root, owned, allowed)
+    report = unwire(root, owned)
+    report += remove_created(root, owned, allowed)
     restored, archive_needed = restore_replaced(root, owned)
     report += restored
     gitignore = root / ".gitignore"

@@ -185,7 +185,7 @@ def _prepare(stage: Path, options: dict, report: dict, hooks: list[dict]) -> Non
         write_json(marker, project)
         owned_path = stage / "docs/_cgspec/01-engine/owned-files.json"
         owned = json.loads(owned_path.read_text())
-        owned.setdefault("adapters", {})["git_abs"] = [h["path"] for h in hooks if h["created"]]
+        owned.setdefault("adapters", {})["git_hooks"] = [Path(h["path"]).name for h in hooks if h["created"]]
         write_json(owned_path, owned)
     _legacy_baseline(stage, original, report)
     doctor_fix(stage, options["profile"])

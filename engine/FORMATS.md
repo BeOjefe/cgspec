@@ -29,6 +29,16 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | `docs/_cgspec/07-state/approvals.json` | `approvals` | `user-message` hook only | One entry per user message that reads as an approval. A ledger entry with status Approved must cite one of these IDs (`--approval-ref A-...`). |
 | `docs/_cgspec/07-state/stop-retries.json` | none | `stop` hook | Counts consecutive stop refusals; reset when the agent ends cleanly. |
 
+## Git adapter ownership
+
+`owned-files.json` is installer state, not user approval. Under `adapters`,
+`git_hooks` stores only installed event names (`pre-commit`, `commit-msg`).
+Paths are discovered from the current Git checkout at operation time. Legacy
+`git_abs` and `git` entries are read for recognized event names only, never as
+filesystem targets; upgrade replaces them with `git_hooks`. Uninstall preserves
+scripts that differ from the installed template. Linked worktrees use Git's
+common directory and therefore share hooks; this is not per-worktree ownership.
+
 ## IDs
 
 | Kind | Form | Example |

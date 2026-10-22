@@ -13,6 +13,7 @@ from pathlib import Path
 
 from .ci_visual import VISUAL_WORKFLOW
 from .common import CgspecError, STATE_DIR, utc_now, write_json
+from . import git_hooks
 
 HOOK = "docs/_cgspec/01-engine/cgspec_hook.py"
 MARK = "cgspec_hook.py"
@@ -207,32 +208,23 @@ def _freeze_workflow(root: Path, rel: str) -> None:
         write_json(frozen_path, data)
 
 
-def _git_out(root: Path, *args: str) -> str | None:
-    import subprocess
-    result = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True)
-    return result.stdout.strip() if result.returncode == 0 else None
-
-
 def _wire_git(root: Path, record: dict) -> list[str]:
-    if _git_out(root, "rev-parse", "--git-dir") is None:
-        return ["not a git repository: git hooks not installed (run install.py upgrade after git init)"]
-    custom = _git_out(root, "config", "--get", "core.hooksPath")
-    if custom:
-        return [f"core.hooksPath is set to {custom}: CGSpec did not install git hooks there; add "
-                f"'python3 {HOOK} pre-commit --tool git' to your pre-commit hook and "
-                f"'python3 {HOOK} commit-msg --tool git \"$1\"' to commit-msg"]
-    hooks = Path(_git_out(root, "rev-parse", "--git-path", "hooks") or ".git/hooks")
-    hooks = hooks if hooks.is_absolute() else (root / hooks)
+    hooks, reason = git_hooks.directory(root)
+    if hooks is None:
+        return [reason]
     notes = []
     for event in ("pre-commit", "commit-msg"):
         target = hooks / event
+        if target.is_symlink():
+            notes.append(f"left symlinked git {event} hook alone")
+            continue
         if target.exists() and MARK not in target.read_text(encoding="utf-8", errors="replace"):
             notes.append(f"left existing git {event} hook alone; add the CGSpec call to it yourself")
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(GIT_HOOK.format(hook=HOOK, event=event), encoding="utf-8")
         os.chmod(target, 0o755)
-        record.setdefault("git_abs", []).append(str(target))
+        record.setdefault("git_hooks", []).append(event)
         notes.append(f"wired git {event} hook")
     return notes
 
@@ -276,6 +268,7 @@ def wire(root: Path, tools: list[str], owned: dict, profile: str = "") -> list[s
 def refresh(root: Path, owned: dict) -> list[str]:
     """Refresh installed AI-host adapters without changing unrelated user hooks."""
     record, notes = owned.get("adapters", {}), []
+    notes += git_hooks.migrate(root, record, GIT_HOOK, HOOK)
     if "claude" in record:
         path = root / ".claude/settings.json"
         try:
@@ -325,8 +318,9 @@ def _strip_claude(path: Path, created: bool) -> None:
         write_json(path, data)
 
 
-def unwire(root: Path, owned: dict) -> None:
+def unwire(root: Path, owned: dict) -> list[str]:
     record = owned.get("adapters", {})
+    notes = git_hooks.remove(root, record, GIT_HOOK, HOOK)
     if "claude" in record:
         _strip_claude(root / ".claude/settings.json", record["claude"].get("created", False))
     if "antigravity" in record:
@@ -340,8 +334,8 @@ def unwire(root: Path, owned: dict) -> None:
                 path.unlink()
         from .agent_skills import uninstall as uninstall_skills
         uninstall_skills(root, record["antigravity"].get("skills", []))
-    paths = [root / r for r in record.get("git", []) + [record[k] for k in ("ci", "ci_select", "cursor") if k in record]]
-    for path in paths + [Path(p) for p in record.get("git_abs", [])]:
+    paths = [root / record[k] for k in ("ci", "ci_select", "cursor") if k in record]
+    for path in paths:
         if path.is_file() and not path.is_symlink() and (MARK in path.read_text(errors="replace") or "CGSpec" in path.read_text(errors="replace")):
             os.chmod(path, 0o644)
             path.unlink()
@@ -350,3 +344,4 @@ def unwire(root: Path, owned: dict) -> None:
             (root / rel).rmdir()
         except OSError:
             pass
+    return notes

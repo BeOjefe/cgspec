@@ -280,7 +280,7 @@ class UpgradeV1Tests(unittest.TestCase):
                 self.assertTrue(path.is_file(), event)
                 self.assertIn("cgspec_hook.py", path.read_text())
             owned = json.loads((root / "docs/_cgspec/01-engine/owned-files.json").read_text())
-            self.assertEqual(len(owned["adapters"]["git_abs"]), 2)
+            self.assertEqual(owned["adapters"]["git_hooks"], ["pre-commit", "commit-msg"])
 
     def test_modes_and_empty_legacy_dirs_survive_upgrade_rollback(self):
         with TempDir() as root:
