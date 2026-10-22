@@ -1,5 +1,5 @@
 # Research queue
-Created: 2026-10-22T20:50:49Z · Last edited: 2026-10-22T20:50:49Z
+Created: 2026-10-22T20:50:49Z · Last edited: 2026-10-22T21:26:35Z
 
 Spikes that are queued but not yet run. A queued item is a question, not a finding: nothing
 here may be cited as evidence. When a spike concludes it becomes a `RES-NNN-<slug>.md` file
@@ -13,7 +13,8 @@ An item nobody can state a use for is deleted rather than carried.
 ## QUEUE-001 — AIS-OS: a prose-governed AI operating system
 
 - **Source:** <https://github.com/nateherkai/AIS-OS> (MIT, © 2026 Nate Herk). Same author as
-  `scroll-craft`, which is already imported under this directory as `scrollcraft/`.
+  `scroll-craft`, which is already imported under this directory as `scrollcraft/` and
+  analysed in [`RES-006`](RES-006-scroll-craft-skill-standard-and-verification.md).
 - **Status:** queued, not read. Nothing below is a finding.
 - **Added:** 2026-10-22, at the user's request, to deeply explore.
 
