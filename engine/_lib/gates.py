@@ -128,6 +128,8 @@ def _is_script_name(rel: str, content: str | None) -> bool:
 def _script_allowed(ctx: Context, rel: str, content: str | None) -> bool:
     if rel.startswith(".cgspec-scratch/"):
         return True
+    if rel in ctx.checks:
+        return True  # already approved and registered (spec 8); its hash is pinned in the manifest
     if not rel.startswith("docs/"):
         return match_any(rel, ctx.classes.get("code", []) + ctx.classes.get("tests", []) + L.CONFIG_GLOBS)
     from .doctor_checks import _browser_code_only  # local import keeps gates light

@@ -102,6 +102,20 @@ class RegisteredCheckTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("CHK-001", result.stdout)
 
+    def test_pre_commit_accepts_the_newly_registered_check_script(self):
+        """The real commit gate, not --no-verify, must accept the script `register` just wrote.
+
+        Every other test in this file commits a freshly registered check with
+        --no-verify, which bypasses the gate under test and let a real block
+        through: `_script_allowed` only ever allowed `.cgspec-scratch/` and a
+        handful of code/prototype locations, never `docs/_cgspec/04-checks/**`
+        itself, so the commit gate refused the very file `register` approves.
+        """
+        self.register()
+        git(self.root, "add", "-A")
+        result = hook(self.root, "pre-commit", None, "--tool", "git")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_ci_runs_registered_checks_on_the_range(self):
         self.register()
         git(self.root, "add", "-A")
