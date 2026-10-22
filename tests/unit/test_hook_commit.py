@@ -148,6 +148,10 @@ class PreCommitTests(unittest.TestCase):
         self.stage("docs/spines/01-INTENT.md", "# Intent\n\nLaunch \U0001F680 soon for everyone who wants to read markets.\n")
         self.assertBlocked("emoji")
 
+    def test_secret_in_added_lines_blocked(self):
+        self.stage("docs/spines/01-INTENT.md", "# Intent\n\napi_key: sk-proj-abcdefghijklmnopqrstuvwxyz0123\n")
+        self.assertBlocked("secret")
+
     def test_engine_change_blocked_unless_consistent_with_manifest(self):
         engine = self.root / "docs/_cgspec/01-engine/memlog.py"
         os.chmod(engine, 0o644)

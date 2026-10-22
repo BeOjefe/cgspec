@@ -163,6 +163,18 @@ class PreToolTests(unittest.TestCase):
         self.assertEqual(result.returncode, BLOCK)
         self.assertIn("emoji", result.stderr)
 
+    def test_secret_in_written_content_is_blocked(self):
+        tier(self.root, "set", "--tier", "T0", "--reason", "test change", "--files", "src/a.ts")
+        result = hook(self.root, "pre-tool", claude_payload(self.root, "Edit", file_path="src/a.ts",
+                                                            old_string="1", new_string="2 AKIAABCDEFGHIJKLMN12"), "--tool", "claude")
+        self.assertEqual(result.returncode, BLOCK)
+        self.assertIn("secret", result.stderr)
+
+    def test_reading_bash_history_is_blocked(self):
+        result = self.bash("cat ~/.bash_history | grep token")
+        self.assertEqual(result.returncode, BLOCK)
+        self.assertIn("credential store", result.stderr)
+
     def test_paths_outside_project_are_not_our_business(self):
         self.assertEqual(self.edit("/tmp/elsewhere.txt").returncode, 0)
 

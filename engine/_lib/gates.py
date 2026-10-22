@@ -12,6 +12,7 @@ from . import layout as L
 from . import tiers
 from .common import ENGINE_DIR, MEMLOG_FILE, PROJECT_FILE, STATE_DIR
 from .globs import match_any
+from .inbox import contains_secret
 from .path_policy import needs_tier
 
 EMOJI = re.compile(
@@ -33,6 +34,16 @@ ALWAYS_PROTECTED = [
 ]
 GUARD_FILES = [".claude/settings.json", ".agents/hooks.json"]  # lab finding: an agent disabled its own hooks
 GUARD_DIRS = [".git/hooks/", ".agents/skills/"]
+# lab finding: a sub-agent ran `cat ~/.bash_history | grep ...` looking for a credential it had seen earlier.
+CREDENTIAL_STORE_HINTS = (".bash_history", ".zsh_history", ".fish_history", "fish/fish_history",
+                           ".ssh/id_", ".ssh/authorized_keys", ".aws/credentials", ".netrc", ".git-credentials",
+                           ".docker/config.json")
+
+
+def credential_read_reasons(command: str) -> list[str]:
+    lowered = command.lower()
+    return [f"command references {hint}, a credential store; use the environment variables already provided "
+            "instead of reading secrets from disk" for hint in CREDENTIAL_STORE_HINTS if hint in lowered]
 
 
 @dataclass
@@ -157,6 +168,9 @@ def check_write(ctx: Context, rel: str, content: str | None, is_new: bool | None
                        ".cgspec-scratch/ or a registered check (spec 8)")
     if content and EMOJI.search(content):
         reasons.append(f"decorative emoji in content for {rel} (spec 1: no emojis)")
+    if content and (kind := contains_secret(content)):
+        reasons.append(f"content for {rel} looks like a {kind} (spec 1: no secrets in files; "
+                       "use environment variables, and reference them by name only)")
     tier_why = None if why else _tier_reason(ctx, rel, is_new)
     if tier_why:
         reasons.append(tier_why)
