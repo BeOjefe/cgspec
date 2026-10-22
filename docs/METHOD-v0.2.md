@@ -1,7 +1,7 @@
 # CGSpec Method v0.2 — Specification
 Created: unknown · Last edited: 2026-10-23T13:42:19Z
 
-Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Source for the rebuild in `cgspec-next`.
+Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Built in this repository; there is no second development checkout (see `AGENTS.md`).
 
 **CGSpec is one package installed into a project: the AI carries the method, you set goals and judge results, and every rule that can be checked by a machine is enforced by one, not left to the AI's goodwill.** It works for a one-page site up to many independent repos, and for new or half-finished projects. Each rule below is stated once; other sections link to it.
 
@@ -48,7 +48,7 @@ How the agent talks to you:
 - Clear feedback is applied, not interviewed. Only ambiguous or intent-changing feedback gets one focused question, and a consequential or hard-to-undo approval gets one short understanding check (contract, "Push back when the work is at risk").
 - Diagrams (Mermaid) over walls of text; details live in files.
 - No decorative emojis in chat, docs or code (enforced by the commit hook).
-- No secrets (keys, tokens, passwords, private keys) in files, and no reading credential stores (shell history, `.ssh/`, `.aws/credentials`, `.netrc`, `.git-credentials`, Docker config) from a shell command — use environment variables, reference them by name only (enforced by the write hook, the commit hook, and the shell-command gate; the lab finding that triggered this is in `cgspec-audit-2026-10-18/`).
+- No secrets (keys, tokens, passwords, private keys) in files, and no reading credential stores (shell history, `.ssh/`, `.aws/credentials`, `.netrc`, `.git-credentials`, Docker config) from a shell command — use environment variables, reference them by name only (enforced by the write hook, the commit hook, and the shell-command gate; the lab finding that triggered this is in `cgspec-workspace/dossier/`).
 
 **No hidden decisions.** You can hand any choice to the agent. Then it is recorded with status `Delegated` (section 2): what was chosen, the other options, why, and whether it can be undone. Every report ends with "Decisions I made for you" with links; you can reverse any of them. Choices made by helper agents reach you through the same list. A decision counts as significant when it would surprise you later, cost time to undo, or limit future options.
 
@@ -597,7 +597,7 @@ Smoke test, required to pass in the plugin's CI before step 5 of the plan:
 
 ## 14. Evidence base and plan
 
-**The design choices below rest on published evidence where it exists; where it doesn't, the CortexGate pilot measures it.** Full research with all links: `cgspec-audit-2026-10-18/13-RESEARCH-PASS.md`.
+**The design choices below rest on published evidence where it exists; where it doesn't, the CortexGate pilot measures it.** Full research with all links: `cgspec-workspace/dossier/13-RESEARCH-PASS.md`.
 
 | Choice | Evidence |
 | --- | --- |
@@ -614,18 +614,22 @@ Smoke test, required to pass in the plugin's CI before step 5 of the plan:
 
 No published evidence yet for: wireframe-first and style tiles (practitioner consensus only), your quota thresholds, and CGSpec's benefit over one careful agent. The pilot measures the last one.
 
-**Plan:**
+**Plan (historical, Oct 2026 — not current instructions):**
+
+The original build sequence below is kept for provenance. It is **not** a live plan: it names a
+`cgspec-next` checkout that no longer exists, and its step 7 schedules timed check-ins, which
+`engine/CONTRACT.md` forbids an agent from inventing. For what is actually built, see
+`docs/STATUS.md`; for the current repair programme, see the dossier reports named there.
 
 ```mermaid
 flowchart LR
-  A[1 Review round 3<br/>on this spec] --> B[2 Build in cgspec-next<br/>engine + tests + smoke test]
+  A[1 Review round 3<br/>on this spec] --> B[2 Build engine<br/>+ tests + smoke test]
   B --> C[3 Skills + contract]
   C --> D[4 Rehearse on a copy<br/>of CortexGate]
   D --> E[5 Upgrade CortexGate]
   E --> F[6 Fresh CortexGate session]
-  F --> G[7 Check-ins every 20 min,<br/>stop after 3 idle]
-  G --> H[8 Pilot: compare against<br/>one careful agent]
-  G -->|improvement| B
+  F --> H[7 Pilot: compare against<br/>one careful agent]
+  H -->|improvement| B
 ```
 
-Step 2 starts with the file formats (tier.json, run.json, frozen.json, evidence records) and the command-line and exit-code contract of cgspec\_hook.py, then install, doctor and memlog; the section 8 gates come after. Step 7 uses chained one-off reminders (recurring tasks here are normally at most hourly). Step 8 measures escaped defects, rework, your interruptions, tokens and time, not the method's own PASS count.
+Step 2 started with the file formats (tier.json, run.json, frozen.json, evidence records) and the command-line and exit-code contract of cgspec\_hook.py, then install, doctor and memlog; the section 8 gates came after. Step 7 measures escaped defects, rework, your interruptions, tokens and time, not the method's own PASS count.
