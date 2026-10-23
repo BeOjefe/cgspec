@@ -96,6 +96,19 @@ def missing_ids(screen: Path, ids: set[str]) -> list[str]:
     return sorted(i for i in ids if not re.search(rf"""["'`=]{re.escape(i)}["'`\s>]""", text))
 
 
+def step_failures(item: dict | None) -> list[str]:
+    viewports = item.get("viewports") if isinstance(item, dict) else None
+    problems = []
+    for vp in viewports if isinstance(viewports, list) else []:
+        if isinstance(vp, dict) and vp.get("ok") is not True:
+            where = f"step {vp['step'] + 1} (state {vp.get('state')})" if isinstance(vp.get("step"), int) \
+                else f"state {vp.get('state')}"
+            errors = vp.get("errors") if isinstance(vp.get("errors"), list) else []
+            reason = vp.get("error") or "; ".join(map(str, errors[:3])) or "not ok"
+            problems.append(f"{vp.get('viewport')}: {where}: {reason}")
+    return problems
+
+
 def run(root: Path, targets: list[str], write: bool = True, video: bool = False) -> tuple[int, list[str]]:
     lines, runs, meta, failed = [], [], {}, False
     for path in discover(root, targets):
@@ -117,7 +130,8 @@ def run(root: Path, targets: list[str], write: bool = True, video: bool = False)
                      "viewports": data["viewports"], "video": video})
     if not runs:
         return (EXIT_FAIL if failed else EXIT_OK), lines
-    result = browser.run(root, runs, root / ".cgspec-scratch/journeys", video=video)
+    shots = root / ".cgspec-scratch/journeys"
+    result = browser.run(root, runs, shots, video=video)
     if "blocked" in result:
         for item in runs:
             data, covers, _ = meta[item["label"]]
@@ -126,13 +140,12 @@ def run(root: Path, targets: list[str], write: bool = True, video: bool = False)
                 evidence.write(root, "journeys", item["label"], f"journey:{data['name']}", "BLOCKED", covers,
                                result["blocked"], "journey.py")
         return (EXIT_FAIL if failed else EXIT_BLOCKED), lines
-    for item in result["results"]:
-        data, covers, _ = meta[item["label"]]
-        problems = []
-        for vp in item["viewports"]:
-            if not vp["ok"]:
-                where = f"step {vp['step'] + 1} (state {vp['state']})" if "step" in vp else f"state {vp['state']}"
-                problems.append(f"{vp['viewport']}: {where}: {vp.get('error') or '; '.join(vp['errors'][:3])}")
+    reported = browser.results_by_label(result)
+    for run_item in runs:
+        data, covers, _ = meta[run_item["label"]]
+        item = reported.get(run_item["label"])
+        # A PASS needs a driver result for every expected viewport and every expected artifact on disk.
+        problems = browser.proof_problems(run_item, item, shots) + step_failures(item)
         verdict = "FAIL" if problems else "PASS"
         failed = failed or bool(problems)
         detail = "\n".join(problems) or f"all steps passed on {', '.join(data['viewports'])}"

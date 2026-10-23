@@ -75,6 +75,19 @@ class AntigravityPayloadTests(unittest.TestCase):
         self.assertEqual(json.loads(result.stdout)["decision"], "continue")
 
 
+def step_script(workflow: str, name: str) -> str:
+    """The `run: |` body of the workflow step called `name`, dedented, as the runner would execute it."""
+    lines = workflow.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.strip() == f"- name: {name}")
+    run = next(i for i in range(start, len(lines)) if lines[i].strip() == "run: |")
+    body = []
+    for line in lines[run + 1:]:
+        if line.strip() and not line.startswith(" " * 10):
+            break
+        body.append(line[10:])
+    return "\n".join(body) + "\n"
+
+
 class WiringTests(unittest.TestCase):
     TOOLS = "claude,antigravity,git,ci,cursor"
 
@@ -113,6 +126,25 @@ class WiringTests(unittest.TestCase):
         self.assertIn(".github/workflows/cgspec.yml", [e["path"] for e in frozen["entries"]])
         self.assertIn("CONTRACT.md", (self.root / ".cursor/rules/cgspec.mdc").read_text())
         self.assertEqual(run_script("doctor.py", "--root", str(self.root)).returncode, 0)
+
+    def test_visual_job_points_the_engine_at_a_pinned_playwright_outside_the_checkout(self):
+        from _lib.adapters import PLAYWRIGHT_VERSION
+        self.assertEqual(self.do_install().returncode, 0)
+        workflow = (self.root / ".github/workflows/cgspec.yml").read_text()
+        self.assertRegex(PLAYWRIGHT_VERSION, r"^\d+\.\d+\.\d+$")
+        self.assertIn(f'"playwright@{PLAYWRIGHT_VERSION}"', workflow)
+        script = step_script(workflow, "Install pinned Playwright outside the checkout")
+        with TempDir() as tmp:
+            # npm is broken on this runner: the engine must still be told to use only the trusted directory.
+            (tmp / "bin").mkdir()
+            (tmp / "bin/npm").write_text("#!/bin/sh\nexit 1\n")
+            os.chmod(tmp / "bin/npm", 0o755)
+            env = dict(os.environ, RUNNER_TEMP=str(tmp), GITHUB_ENV=str(tmp / "env"),
+                       PATH=f"{tmp / 'bin'}{os.pathsep}{os.environ['PATH']}")
+            result = subprocess.run(["bash", "-c", script], cwd=self.root, env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual((tmp / "env").read_text().strip(), f"CGSPEC_PLAYWRIGHT_DIR={tmp / 'cgspec-playwright'}")
+            self.assertFalse((self.root / "package.json").exists())
 
     def test_headless_profile_has_no_visual_job(self):
         root = self.root

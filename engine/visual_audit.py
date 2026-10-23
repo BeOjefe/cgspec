@@ -252,12 +252,20 @@ def audit(root: Path, raw: list[str], write: bool = True, video: bool = False) -
             warnings.append(tokens["issue"])
     runs = [{"kind": "audit", "label": label, "url": path.resolve().as_uri(), "video": video}
             for label, path, _ in items]
-    shown = browser.run(root, runs, root / ".cgspec-scratch/visual", video=video)
+    shots = root / ".cgspec-scratch/visual"
+    shown = browser.run(root, runs, shots, video=video)
     blocked = shown.get("blocked")
-    for item in shown.get("results", []):
+    reported = browser.results_by_label(shown)
+    for run_item in runs if not blocked else []:
+        item = reported.get(run_item["label"])
+        # A rendered PASS needs both viewports reported and their screenshots (and videos) on disk.
+        problems = browser.proof_problems(run_item, item, shots)
+        results[run_item["label"]][0].extend(f"E-PROOF: {problem}" for problem in problems)
+        if problems:
+            continue
         errs, warns = rendered(item, tokens)
-        results[item["label"]][0].extend(errs)
-        results[item["label"]][1].extend(warns)
+        results[run_item["label"]][0].extend(errs)
+        results[run_item["label"]][1].extend(warns)
     rank, lines = {"PASS": EXIT_OK, "PARTIAL": EXIT_PARTIAL, "FAIL": EXIT_FAIL}, []
     seen = set()
     for label, path, covers in items:

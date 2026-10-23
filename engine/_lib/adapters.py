@@ -89,19 +89,39 @@ jobs:
         run: python3 "$CGSPEC_RELEASE/engine/cgspec_hook.py" ci --root "$GITHUB_WORKSPACE" --base "$CGSPEC_BASE" --release-dir "$CGSPEC_RELEASE" --tool git
       # CGSPEC_VISUAL_JOB
 """
-VISUAL_WORKFLOW = """      - name: CI visual proof (PR head)
+# Exact Playwright release the CI visual proof installs outside the checkout (spec 7). The trusted engine
+# loads it only from CGSPEC_PLAYWRIGHT_DIR, never from the pull request's node_modules.
+PLAYWRIGHT_VERSION = "1.64.1"
+VISUAL_WORKFLOW = """      - name: Install pinned Playwright outside the checkout
+        if: github.event_name == 'pull_request'
+        run: |
+          set +e
+          D="$RUNNER_TEMP/cgspec-playwright"
+          # Point the engine at this directory first: if anything below fails, browser checks report BLOCKED
+          # instead of falling back to modules from the pull request.
+          echo "CGSPEC_PLAYWRIGHT_DIR=$D" >> "$GITHUB_ENV"
+          rm -rf "$D" && mkdir -p "$D" && cd "$D" || exit 0
+          printf '{"private": true}\\n' > package.json
+          npm install --ignore-scripts --no-audit --no-fund --save-exact "playwright@@PLAYWRIGHT_VERSION@" &&
+            ./node_modules/.bin/playwright install --with-deps chromium ||
+            echo "CGSpec: pinned Playwright could not be installed; browser checks will be BLOCKED"
+          exit 0
+      - name: CI visual proof (PR head)
         if: github.event_name == 'pull_request'
         env:
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
           set +e
-          mkdir -p artifacts/cgspec-visual
           if ! git checkout --detach "$PR_HEAD"; then
             echo "BLOCKED checkout: could not select exact PR head" > "$RUNNER_TEMP/journeys.log"
             cp "$RUNNER_TEMP/journeys.log" "$RUNNER_TEMP/visual.log"
             JOURNEY_CODE=2
             AUDIT_CODE=2
-          else
+          fi
+          # Only files the trusted engine writes in this step may be published, never committed ones.
+          rm -rf artifacts/cgspec-visual .cgspec-scratch/journeys .cgspec-scratch/visual
+          mkdir -p artifacts/cgspec-visual
+          if [ -z "${JOURNEY_CODE:-}" ]; then
             python3 "$CGSPEC_RELEASE/engine/journey.py" --root "$GITHUB_WORKSPACE" --video > "$RUNNER_TEMP/journeys.log" 2>&1
             JOURNEY_CODE=$?
             python3 "$CGSPEC_RELEASE/engine/visual_audit.py" --root "$GITHUB_WORKSPACE" --video > "$RUNNER_TEMP/visual.log" 2>&1
@@ -137,7 +157,7 @@ VISUAL_WORKFLOW = """      - name: CI visual proof (PR head)
           path: artifacts/cgspec-visual/
           retention-days: 14
           if-no-files-found: warn
-"""
+""".replace("@PLAYWRIGHT_VERSION@", PLAYWRIGHT_VERSION)
 SELECT = """#!/bin/sh
 # Installed by CGSpec. Chooses the range base and downloads the plugin release used to judge it.
 # Version = the newer of trusted selector commit and HEAD; source = that trusted commit.
