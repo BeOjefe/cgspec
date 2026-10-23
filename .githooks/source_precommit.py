@@ -31,7 +31,7 @@ from _lib.inbox import contains_secret  # noqa: E402
 
 FIXTURE_MARKER = "cgspec:test-fixture"
 PATTERN_MODULE = "engine/_lib/inbox.py"  # defines the patterns, so it matches itself
-BINARY_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".svg", ".pdf",
+BINARY_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf",
                    ".zip", ".gz", ".tgz", ".bundle", ".woff", ".woff2", ".ttf")
 
 

@@ -18,7 +18,7 @@ if [ -f "$root/.githooks/source_precommit.py" ]; then
 fi
 
 if [ -f "$root/docs/_cgspec/01-engine/cgspec_hook.py" ]; then
-    exec python3 "$root/docs/_cgspec/01-engine/cgspec_hook.py" git-pre-commit
+    exec python3 "$root/docs/_cgspec/01-engine/cgspec_hook.py" pre-commit --tool git
 fi
 
 echo "cgspec: no checker found at .githooks/source_precommit.py or" >&2

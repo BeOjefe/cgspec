@@ -106,6 +106,11 @@ class SourceGate(unittest.TestCase):
         self.stage("docs/shot.png", "✅ not really a png\n")  # cgspec:test-fixture
         self.assertEqual(self.reasons(), [])
 
+    def test_svg_is_scanned_as_text(self):
+        """SVG is XML text; skipping it as binary let a key hide in <metadata>."""
+        self.stage("docs/logo.svg", '<svg><metadata>AKIAABCDEFGHIJKLMN12</metadata></svg>\n')  # cgspec:test-fixture
+        self.assertTrue(any("aws-key" in r for r in self.reasons()), self.reasons())
+
     def test_quoted_path_secret_is_blocked(self):
         """Regression: files with special chars in names have quoted diff paths (+++ "b/...").
 
@@ -142,6 +147,12 @@ class HookScript(unittest.TestCase):
         done = subprocess.run([sys.executable, str(HOOK_DIR / "source_precommit.py")],
                               cwd=REPO, capture_output=True, text=True)
         self.assertIn(done.returncode, (0, 1))  # must run without crashing in the real tree
+
+    def test_consumer_fallback_uses_the_real_event_name(self):
+        """The consumer hook accepts `pre-commit --tool git`; `git-pre-commit` is not an event."""
+        text = (HOOK_DIR / "pre-commit").read_text(encoding="utf-8")
+        self.assertIn("cgspec_hook.py\" pre-commit --tool git", text)
+        self.assertNotIn("git-pre-commit", text)
 
     def test_hook_targets_exist(self):
         """Every path the hook can exec must exist, or it is a guard that cannot run."""
