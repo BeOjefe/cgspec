@@ -1,5 +1,5 @@
 # CGSpec Method v0.2 — Specification
-Created: unknown · Last edited: 2026-10-23T07:28:13Z
+Created: unknown · Last edited: 2026-10-23T13:42:19Z
 
 Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Source for the rebuild in `cgspec-next`.
 
@@ -38,7 +38,7 @@ What changed from v0.1: every round-1 and round-2 review finding is resolved in 
 | Delivery | What ships first | Slices, tests, code, evidence | Irreversible actions (data deletion, production, publishing) |
 | Method | Nothing | Follows it, repairs drift, keeps records, manages budget | Never |
 
-**Your part is the definition, and the agent will push back if you skip it.** With a clear goal, an understood specification, architecture decisions, documentation and a working environment, even complex code takes hours to days. Without them, it produces rework. So you are asked to do the human job well: say concretely what you want and how success is recognised, read what you approve, and decide when a real choice is in front of you. The agent tells you once, in plain words, when you are rushing to code, approving unread, or skipping definition or setup. It names the cost and the smallest fix. It stops only when continuing would build on an expensive or unsafe guess. You can overrule it; your decision is then recorded as an accepted risk. The agent never argues against a taste choice you made knowingly. The rule is in the contract, under "Push back when the work is at risk".
+**The agent carries the definition; you only have to say what you want, in your own words.** Rework comes from building on an unclear goal, a missing decision or a broken environment, so the agent writes the minimum definition from what you say (a definition it wrote is not your approval: anything beyond small work waits for you to approve it), proposes the architecture, keeps the records and the environment, and absorbs new ideas and changes of mind as they come: it applies what fits, parks what does not with a reason, and explains the effect when a new thought contradicts something already approved. You are never asked to reconcile earlier decisions or to phrase things in method terms. The agent pushes back on actions, not on you: building on a costly guess, a consequential approval whose effect you have not seen, or a skipped setup the next step needs. It says so once, in plain words, with the cost and the smallest fix, which is usually something it does itself. Before a consequential approval it shows the exact change and checks that its effect was understood, so read what you approve when it matters. It stops only when continuing would build on an expensive or unsafe guess, and then asks one question. You can overrule it; your decision is then recorded as an accepted risk. The agent never argues against a taste choice you made knowingly. The rule is in the contract, under "Push back when the work is at risk".
 
 How the agent talks to you:
 
@@ -420,7 +420,7 @@ What remains possible, and how to close it: the implementation now requires an e
 | Before compaction | Agent saves semantic progress before context pressure. The hook captures bounded mechanical source context and prints the pack; it does not invent a fresh semantic summary. Unavailable hooks cannot guarantee a save. |
 | Before a tool | Gates above |
 | After a tool | Mark evidence whose covered files changed as stale, count helper agents against the budget (index and document dates are refreshed at the end of the turn) |
-| Stop | Refuse to end until doctor passes, ledger updated, checkpoint fresh, decisions list written; allowed to end with a recorded BLOCKED or PARTIAL; respects the tool's loop flag (`stop_hook_active`) and a retry counter on disk (max 2) |
+| Stop | Refuse to end while doctor reports errors, work is in flight, or the checkpoint is older than the latest ledger entry; allowed to end once the batch is done or recorded BLOCKED, or on a recorded question to the user (`checkpoint --awaiting`, which keeps the batch in flight and excuses one stop). Bounded by a retry counter on disk: after two refusals it ends and keeps the unresolved reasons. The tool's loop flag (`stop_hook_active`) is not read |
 
 | AI tool | What it supports | Fallback |
 | --- | --- | --- |
@@ -459,7 +459,7 @@ Checkpoint (`07-state/checkpoint.json`, committed): goal, stage per part, accept
 
 The agent always says which wake-up it set.
 
-**Memory and late changes.** Every message is triaged: current step (apply now), other screens or later UX (experience spine), backend or future scope (OOUX, architecture or inbox), research (`RES-NNN`); each lands with a ledger line. A late idea or change of mind goes through the change flow: capture → ask whether more is coming → impact script (`impact.py <paths|IDs> [--term noun] [--screen name]` follows links and record-ID mentions backwards from nouns, screens, layers and baselines, then lists records to update, code in affected slice scopes, evidence that goes stale and frozen baselines that need a new version; plain code, no AI context, read-only) → impact map shown to you → approve → all records updated together → affected evidence marked stale and re-run. On big projects, one scout per repo reads only the affected files.
+**Memory and late changes.** Where the host has a user-message hook (Claude Code), each message is captured to the inbox with secrets scrubbed and cut to its first 2,000 characters; a capture failure never blocks the message. Capture is not triage: the engine does not record where a message was routed, and on hosts without that hook there is no automatic capture at all. The agent does the routing, and records only what affects the work rather than every message: current step (apply now), other screens or later UX (experience spine), backend or future scope (OOUX, architecture, or the checkpoint's `pending`), research (`RES-NNN`). A late idea or change of mind goes through the change flow: the agent compares it with the work in progress → applies it if it fits, or parks it with a reason if it does not → if it contradicts approved work, impact script (`impact.py <paths|IDs> [--term noun] [--screen name]` follows links and record-ID mentions backwards from nouns, screens, layers and baselines, then lists records to update, code in affected slice scopes, evidence that goes stale and frozen baselines that need a new version; plain code, no AI context, read-only) → impact map shown to you with a recommendation → approve → all records updated together → affected evidence marked stale and re-run. On big projects, one scout per repo reads only the affected files.
 
 ## 10. Scale, migration and operations
 

@@ -40,6 +40,14 @@ def pack(root: Path, doctor_summary: str) -> str:
              f"next action: {cp.get('next_action') or '(none)'}",
              f"in flight: {cp.get('in_flight') or 'nothing'}",
              f"active tier: {tier['tier'] + ' ' + tier['id'] + ' - ' + tier['reason'] if tier else 'none'}"]
+    if isinstance(cp.get("awaiting_user"), dict):
+        asked = cp["awaiting_user"]
+        # `used` means a stop accepted the question, not that it was answered; hosts without a stop check
+        # never set it. So the pack never claims the user still owes an answer.
+        label = "last question asked" if asked.get("used") else "question asked, check the conversation for the answer"
+        count = asked.get("count", 1)
+        extra = f"; {count} questions asked during this batch" if isinstance(count, int) and count > 1 else ""
+        lines.append(f"{label} ({asked.get('at', '?')}{extra}): {asked.get('question', '')}")
     if cp.get("open_issues"):
         lines.append("open issues: " + "; ".join(cp["open_issues"]))
     lines += recovery
@@ -61,9 +69,10 @@ def stop_problems(root: Path, doctor_errors: int) -> list[str]:
         cp = load(root)
     except CgspecError:
         cp = {}  # doctor reports corruption; preserve it, keep the bounded stop protocol usable
-    if cp.get("in_flight"):
+    if cp.get("in_flight") and not _unused_question(cp):
         problems.append(f"work still in flight: {cp['in_flight']}; finish it and run {CMD} --done, "
-                        f"or run {CMD} --blocked '<why>'")
+                        f"or run {CMD} --blocked '<why>', or if you are stopping to ask the user, "
+                        f"run {CMD} --awaiting '<your question>'")
     path = root / MEMLOG_FILE
     if path.is_file():
         times = LEDGER_TIME.findall(path.read_text(encoding="utf-8", errors="replace"))
@@ -71,6 +80,27 @@ def stop_problems(root: Path, doctor_errors: int) -> list[str]:
             problems.append(f"checkpoint is older than the latest ledger entry; run {CMD} --next '<what comes next>'")
     return problems
 
+
+def _unused_question(cp: dict) -> bool:
+    asked = cp.get("awaiting_user")
+    return isinstance(asked, dict) and asked.get("used") is False and bool(str(asked.get("question", "")).strip())
+
+
+def mark_question_used(root: Path) -> None:
+    """A recorded question excuses exactly one stop; afterwards in-flight work is checked again.
+
+    The question itself stays, so whoever resumes sees what the user was asked. The semantic
+    `updated` time is left alone, as for the other mechanical stop records.
+    """
+    from .checkpoint_cmd import load, save
+    from .common import CgspecError
+    try:
+        cp = load(root)
+        if _unused_question(cp):
+            cp["awaiting_user"]["used"] = True
+            save(root, cp)
+    except CgspecError:
+        pass  # doctor reports a damaged checkpoint; never turn that into a stop failure here
 
 
 def capture_before_compact(root: Path) -> None:

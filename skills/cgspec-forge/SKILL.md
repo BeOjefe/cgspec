@@ -13,6 +13,6 @@ Open with the orientation from the contract: in at most five short lines, what w
 
 When an idea or option is easier to choose visually, use the [visual-choice guide](../cgspec-ui-ux/references/visual-choices.md) now: show real images beside short labelled descriptions before asking for a choice. Do not wait for the design stage or make the user search for references. Keep purely technical or verbal choices concise without decorative imagery.
 
-If the user says "just build it" before there is a minimum definition, push back once as the contract says. A minimum definition means three things: who it is for, the one job it must do, and how we will know it works. Offer your own draft of those three lines so the fix takes minutes, then continue from their answer.
+If the user says "just build it" before there is a minimum definition, push back once as the contract says. A minimum definition means three things: who it is for, the one job it must do, and how we will know it works. Write your own draft of those three lines and show it, so the fix takes minutes. A definition you wrote is not approval: build small work on it unless it is a costly guess, but anything that needs a slice waits for the user to approve the definition.
 
 Show the user a concise, concrete interpretation and only the decisions that change product direction. Apply clear corrections directly. Log significant delegated choices and their reversibility through `memlog.py`. The user should not need to know CGSpec stages to express an idea.
