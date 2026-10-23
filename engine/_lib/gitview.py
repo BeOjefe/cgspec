@@ -59,7 +59,10 @@ class View:
         current = None
         for line in text.splitlines():
             if line.startswith("+++ "):
-                current = line[6:] if line.startswith("+++ b/") else None
+                raw = line[4:]
+                if raw.startswith('"') and raw.endswith('"'):
+                    raw = raw[1:-1].encode("utf-8").decode("unicode_escape")
+                current = raw[2:] if raw.startswith("b/") else None
             elif line.startswith("+") and current:
                 result.setdefault(current, []).append(line[1:])
         return result

@@ -106,6 +106,20 @@ class SourceGate(unittest.TestCase):
         self.stage("docs/shot.png", "✅ not really a png\n")  # cgspec:test-fixture
         self.assertEqual(self.reasons(), [])
 
+    def test_quoted_path_secret_is_blocked(self):
+        """Regression: files with special chars in names have quoted diff paths (+++ "b/...").
+
+        Git quotes paths containing newlines, tabs, or backslashes. The old parser only
+        matched +++ b/ and silently skipped the quoted form, so secrets in such files
+        passed through undetected.
+        """
+        # A filename with a tab character - git will quote this as "b/secret\tfile.py"
+        name = "secret\tfile.py"
+        path = self.root / name
+        path.write_text('KEY = "AKIAABCDEFGHIJKLMN12"\n', encoding="utf-8")  # cgspec:test-fixture
+        self.git("add", "--", name)
+        self.assertTrue(any("aws-key" in r for r in self.reasons()), self.reasons())
+
 
 class HookScript(unittest.TestCase):
     """The shipped hook script itself, which is what git actually runs."""
