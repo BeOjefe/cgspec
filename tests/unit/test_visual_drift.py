@@ -27,32 +27,49 @@ class BaselineApprovalTests(unittest.TestCase):
         self._tmp.__exit__(None, None, None)
 
     def test_approve_baseline_freezes_pngs_and_prevents_silent_overwrite(self):
+        import base64
         import visual_audit
-        shots = self.root / ".cgspec-scratch/visual"
-        shots.mkdir(parents=True, exist_ok=True)
-        (shots / "invoice-desktop.png").write_bytes(b"\x89PNG\r\n\x1a\ndesktop-image")
-        (shots / "invoice-mobile.png").write_bytes(b"\x89PNG\r\n\x1a\nmobile-image")
+        from tests.helpers import approve
+        valid_png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
 
-        code = visual_audit.main(["--approve-baseline", "invoice", "--root", str(self.root)])
-        self.assertEqual(code, 0)
+        def fake_run(root, runs, shots_dir, video=False):
+            shots_dir.mkdir(parents=True, exist_ok=True)
+            for r in runs:
+                (shots_dir / f"{r['label']}-desktop.png").write_bytes(valid_png)
+                (shots_dir / f"{r['label']}-mobile.png").write_bytes(valid_png)
+                (shots_dir / f"{r['label']}-desktop-dark.png").write_bytes(valid_png)
+                (shots_dir / f"{r['label']}-mobile-dark.png").write_bytes(valid_png)
+            return {"results": [{"label": "invoice", "viewports": [
+                {"viewport": "desktop", "ok": True, "errors": [], "quality": {}},
+                {"viewport": "mobile", "ok": True, "errors": [], "quality": {}},
+            ]}]}
 
-        base_dir = self.root / "docs/prototypes/_baselines"
-        desktop_base = base_dir / "invoice-desktop.png"
-        mobile_base = base_dir / "invoice-mobile.png"
-        self.assertTrue(desktop_base.is_file())
-        self.assertTrue(mobile_base.is_file())
-        self.assertFalse(desktop_base.stat().st_mode & stat.S_IWUSR)
+        with mock.patch("_lib.visual_baseline.browser.run", side_effect=fake_run):
+            # Baseline approval requires user approval
+            approve(self.root, "approve baseline for invoice")
+            code = visual_audit.main(["--approve-baseline", "invoice", "--root", str(self.root)])
+            self.assertEqual(code, 0)
 
-        frozen_path = self.root / "docs/_cgspec/07-state/frozen.json"
-        self.assertTrue(frozen_path.is_file())
-        frozen_data = json.loads(frozen_path.read_text(encoding="utf-8"))
-        paths = [e["path"] for e in frozen_data.get("entries", [])]
-        self.assertIn("docs/prototypes/_baselines/invoice-desktop.png", paths)
-        self.assertIn("docs/prototypes/_baselines/invoice-mobile.png", paths)
+            base_dir = self.root / "docs/prototypes/_baselines"
+            desktop_base = base_dir / "invoice-v1-desktop.png"
+            mobile_base = base_dir / "invoice-v1-mobile.png"
+            self.assertTrue(desktop_base.is_file())
+            self.assertTrue(mobile_base.is_file())
+            self.assertFalse(desktop_base.stat().st_mode & stat.S_IWUSR)
 
-        # Overwrite attempt must be rejected
-        code2 = visual_audit.main(["--approve-baseline", "invoice", "--root", str(self.root)])
-        self.assertNotEqual(code2, 0)
+            frozen_path = self.root / "docs/_cgspec/07-state/frozen.json"
+            self.assertTrue(frozen_path.is_file())
+            frozen_data = json.loads(frozen_path.read_text(encoding="utf-8"))
+            paths = [e["path"] for e in frozen_data.get("entries", [])]
+            self.assertIn("docs/prototypes/_baselines/invoice-v1-desktop.png", paths)
+            self.assertIn("docs/prototypes/_baselines/invoice-v1-mobile.png", paths)
+
+            # Re-approval creates v2 without modifying v1
+            approve(self.root, "approve baseline v2 for invoice")
+            code2 = visual_audit.main(["--approve-baseline", "invoice", "--root", str(self.root)])
+            self.assertEqual(code2, 0)
+            self.assertTrue((base_dir / "invoice-v2-desktop.png").is_file())
+            self.assertTrue((base_dir / "invoice-v1-desktop.png").is_file())
 
 
 class VisualDriftAuditTests(unittest.TestCase):

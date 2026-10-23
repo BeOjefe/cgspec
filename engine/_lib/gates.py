@@ -30,6 +30,7 @@ ALWAYS_PROTECTED = [
     (STATE_DIR / "tier.json").as_posix(),
     (STATE_DIR / "approvals.json").as_posix(),
     "docs/_cgspec/04-checks/manifest.json",
+    "docs/prototypes/_baselines/active.json",
     MEMLOG_FILE.as_posix(),
 ]
 GUARD_FILES = [".claude/settings.json", ".agents/hooks.json"]  # lab finding: an agent disabled its own hooks

@@ -15,13 +15,20 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _lib.common import EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, CgspecError, resolve_root  # noqa: E402
+from _lib.common import EXIT_BLOCKED, EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, EXIT_PARTIAL, CgspecError, resolve_root  # noqa: E402
+from _lib.layout import GUI_PROFILES  # noqa: E402
 import doctor  # noqa: E402
 import journey  # noqa: E402
 import visual_audit  # noqa: E402
 
-EXIT_BLOCKED = 2
-EXIT_PARTIAL = 2
+
+def _is_gui(root: Path) -> bool:
+    try:
+        project = json.loads((root / "docs/_cgspec/project.json").read_text(encoding="utf-8"))
+        profile = project.get("profile", "")
+        return not profile or profile in GUI_PROFILES
+    except (OSError, ValueError):
+        return True
 
 
 def run_doctor(root: Path) -> tuple[str, int, int]:
@@ -35,6 +42,8 @@ def run_doctor(root: Path) -> tuple[str, int, int]:
 
 def run_journeys(root: Path) -> tuple[str, int, int, list[str]]:
     """(verdict, errors_count, warnings_count, artifacts)."""
+    if not _is_gui(root):
+        return "PASS", 0, 0, []
     records: list[dict] = []
     try:
         code, lines = journey.run(root, targets=[], write=True, video=False, records=records)
@@ -47,6 +56,10 @@ def run_journeys(root: Path) -> tuple[str, int, int, list[str]]:
         artifacts = sorted(p.relative_to(root).as_posix() for p in shots_dir.glob("*.png") if p.is_file())
 
     if not records:
+        protos = root / "docs/prototypes"
+        screens = [p for p in protos.iterdir() if p.is_dir() and not p.name.startswith("_")] if protos.is_dir() else []
+        if screens:
+            return "PARTIAL", 0, 0, artifacts
         return "PASS", 0, 0, artifacts
 
     verdicts = {r.get("verdict", "FAIL") for r in records}
@@ -66,6 +79,8 @@ def run_journeys(root: Path) -> tuple[str, int, int, list[str]]:
 
 def run_visual_audit(root: Path) -> tuple[str, int, int, list[str]]:
     """(verdict, errors_count, warnings_count, artifacts)."""
+    if not _is_gui(root):
+        return "PASS", 0, 0, []
     records: list[dict] = []
     try:
         code, lines = visual_audit.audit(root, raw=[], write=True, video=False, records=records)
