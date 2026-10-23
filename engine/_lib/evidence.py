@@ -14,6 +14,16 @@ def revision(root: Path) -> str:
     return out.stdout.strip() if out.returncode == 0 else "working-tree"
 
 
+# C0/C1 controls (newline included) and Unicode line/paragraph separators. Names reported by journeys and
+# audits are printed and rendered into summaries, so a name containing one could forge extra records.
+CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029]")
+
+
+def unsafe_name(text: object) -> bool:
+    """True when `text` cannot be used as a reported identifier (not a string, empty or has controls)."""
+    return not isinstance(text, str) or not text.strip() or bool(CONTROL.search(text))
+
+
 def slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60] or "unnamed"
 

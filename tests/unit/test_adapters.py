@@ -120,7 +120,7 @@ class WiringTests(unittest.TestCase):
         self.assertIn("CI visual proof (PR head)", workflow)
         self.assertTrue(all(re.fullmatch(r"[0-9a-f]{40}", sha) for sha in
                             re.findall(r"uses: [^@\s]+@([0-9a-f]+)", workflow)))
-        self.assertIn('revision": revision', workflow)
+        self.assertIn('visual_summary.py" --revision "$PR_HEAD"', workflow)
         frozen = json.loads((self.root / "docs/_cgspec/07-state/frozen.json").read_text())
         self.assertIn(".github/workflows/cgspec.yml", [e["path"] for e in frozen["entries"]])
         self.assertIn("CONTRACT.md", (self.root / ".cursor/rules/cgspec.mdc").read_text())

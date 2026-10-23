@@ -115,43 +115,33 @@ VISUAL_WORKFLOW = """      - name: Install pinned Playwright outside the checkou
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
           set +e
-          if ! git checkout --detach "$PR_HEAD"; then
-            echo "BLOCKED checkout: could not select exact PR head" > "$RUNNER_TEMP/journeys.log"
-            cp "$RUNNER_TEMP/journeys.log" "$RUNNER_TEMP/visual.log"
-            JOURNEY_CODE=2
-            AUDIT_CODE=2
-          fi
+          CHECKED_OUT=0
+          git checkout --detach "$PR_HEAD" && CHECKED_OUT=1
           # Only files the trusted engine writes in this step may be published, never committed ones.
           rm -rf artifacts/cgspec-visual .cgspec-scratch/journeys .cgspec-scratch/visual
           mkdir -p artifacts/cgspec-visual
-          if [ -z "${JOURNEY_CODE:-}" ]; then
-            python3 "$CGSPEC_RELEASE/engine/journey.py" --root "$GITHUB_WORKSPACE" --video > "$RUNNER_TEMP/journeys.log" 2>&1
+          J="$RUNNER_TEMP/cgspec-journeys.json"
+          A="$RUNNER_TEMP/cgspec-visual-audit.json"
+          rm -f "$J" "$A"
+          # Exit 2 with no structured result is recorded as BLOCKED for each command that could not run.
+          JOURNEY_CODE=2
+          AUDIT_CODE=2
+          if [ "$CHECKED_OUT" = 1 ]; then
+            python3 "$CGSPEC_RELEASE/engine/journey.py" --root "$GITHUB_WORKSPACE" --video --json-out "$J" > "$RUNNER_TEMP/journeys.log" 2>&1
             JOURNEY_CODE=$?
-            python3 "$CGSPEC_RELEASE/engine/visual_audit.py" --root "$GITHUB_WORKSPACE" --video > "$RUNNER_TEMP/visual.log" 2>&1
+            python3 "$CGSPEC_RELEASE/engine/visual_audit.py" --root "$GITHUB_WORKSPACE" --video --json-out "$A" > "$RUNNER_TEMP/visual.log" 2>&1
             AUDIT_CODE=$?
           fi
           cp -R .cgspec-scratch/journeys/. artifacts/cgspec-visual/ 2>/dev/null || true
           cp -R .cgspec-scratch/visual/. artifacts/cgspec-visual/ 2>/dev/null || true
-          PR_HEAD="$PR_HEAD" JOURNEY_CODE="$JOURNEY_CODE" AUDIT_CODE="$AUDIT_CODE" python3 - <<'PY'
-          import json, os, pathlib, re
-          root = pathlib.Path("artifacts/cgspec-visual")
-          lines = []
-          for log in (pathlib.Path(os.environ["RUNNER_TEMP"]) / "journeys.log", pathlib.Path(os.environ["RUNNER_TEMP"]) / "visual.log"):
-              if log.exists(): lines += log.read_text(errors="replace").splitlines()
-          records = []
-          for line in lines:
-              m = re.match(r"(PASS|FAIL|PARTIAL|BLOCKED) (.*)", line)
-              if m: records.append({"item": m.group(2).rstrip(":"), "verdict": m.group(1)})
-          if not records:
-              blocked = "BLOCKED" in "\\n".join(lines) or int(os.environ["JOURNEY_CODE"]) == 2 or int(os.environ["AUDIT_CODE"]) == 2
-              records = [{"item": "Browser checks" if blocked else "Journey setup", "verdict": "BLOCKED" if blocked else "FAIL"}]
-          revision = os.environ["PR_HEAD"]
-          (root / "evidence.json").write_text(json.dumps({"schema": 1, "revision": revision, "journeys": records}, indent=2) + "\\n")
-          summary = ["## CGSpec visual proof", "", f"PR head: `{revision}`", "", "| Journey or audit | Verdict | Artifact |", "|---|---|---|"]
-          for row in records: summary.append(f"| {row['item']} | {row['verdict']} | `cgspec-visual-{revision[:12]}` |")
-          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f: f.write("\\n".join(summary) + "\\n")
-          PY
-          echo "Journey exit: $JOURNEY_CODE; visual audit exit: $AUDIT_CODE" >> "$GITHUB_STEP_SUMMARY"
+          cp "$RUNNER_TEMP/journeys.log" "$RUNNER_TEMP/visual.log" artifacts/cgspec-visual/ 2>/dev/null || true
+          # The summary reads only the structured results above; each command is judged on its own exit code.
+          python3 "$CGSPEC_RELEASE/engine/visual_summary.py" --revision "$PR_HEAD" \\
+            --artifact "cgspec-visual-$PR_HEAD" --evidence artifacts/cgspec-visual/evidence.json \\
+            --summary "$GITHUB_STEP_SUMMARY" \\
+            --result journeys "$JOURNEY_CODE" "$J" \\
+            --result "visual audit" "$AUDIT_CODE" "$A" ||
+            echo "CGSpec visual proof: BLOCKED, the summary could not be built" >> "$GITHUB_STEP_SUMMARY"
           exit 0
       - uses: actions/upload-artifact@@UPLOAD_ARTIFACT_SHA@  # v@UPLOAD_ARTIFACT_VERSION@
         if: always() && github.event_name == 'pull_request'

@@ -58,6 +58,8 @@ def load(path: Path, root: Path) -> dict:
     if not isinstance(data, dict) or not isinstance(data.get("name"), str) or not isinstance(data.get("url"), str) \
             or not isinstance(data.get("steps"), list) or not data["steps"]:
         raise CgspecError(f"{rel}: a journey needs name, url and a non-empty steps list")
+    if evidence.unsafe_name(data["name"]):
+        raise CgspecError(f"{rel}: a journey name must be non-empty and contain no newlines or control characters")
     for i, step in enumerate(data["steps"]):
         keys = [k for k in step if k in ACTIONS and k != "state"] if isinstance(step, dict) else []
         keys = keys or (["state"] if isinstance(step, dict) and "state" in step else [])
@@ -109,8 +111,11 @@ def step_failures(item: dict | None) -> list[str]:
     return problems
 
 
-def run(root: Path, targets: list[str], write: bool = True, video: bool = False) -> tuple[int, list[str]]:
+def run(root: Path, targets: list[str], write: bool = True, video: bool = False,
+        records: list[dict] | None = None) -> tuple[int, list[str]]:
+    """(exit code, printed lines). `records` collects one structured {item, verdict, detail} per journey."""
     lines, runs, meta, failed = [], [], {}, False
+    records = records if records is not None else []
     for path in discover(root, targets):
         data = load(path, root)
         url, screen = resolve(root, path, data)
@@ -123,6 +128,7 @@ def run(root: Path, targets: list[str], write: bool = True, video: bool = False)
             failed = True
             detail = f"test IDs not found in {screen.relative_to(root).as_posix()}: {', '.join(gone)}"
             lines.append(f"FAIL {data['name']}: {detail}")
+            records.append({"item": data["name"], "verdict": "FAIL", "detail": detail})
             if write:
                 evidence.write(root, "journeys", label, f"journey:{data['name']}", "FAIL", covers, detail, "journey.py")
             continue
@@ -136,6 +142,7 @@ def run(root: Path, targets: list[str], write: bool = True, video: bool = False)
         for item in runs:
             data, covers, _ = meta[item["label"]]
             lines.append(f"BLOCKED {data['name']}: {result['blocked']}")
+            records.append({"item": data["name"], "verdict": "BLOCKED", "detail": result["blocked"]})
             if write:
                 evidence.write(root, "journeys", item["label"], f"journey:{data['name']}", "BLOCKED", covers,
                                result["blocked"], "journey.py")
@@ -150,10 +157,15 @@ def run(root: Path, targets: list[str], write: bool = True, video: bool = False)
         failed = failed or bool(problems)
         detail = "\n".join(problems) or f"all steps passed on {', '.join(data['viewports'])}"
         lines.append(f"{verdict} {data['name']}" + (f":\n  " + "\n  ".join(problems) if problems else ""))
+        records.append({"item": data["name"], "verdict": verdict, "detail": detail})
         if write:
             evidence.write(root, "journeys", item["label"], f"journey:{data['name']}", verdict, covers, detail,
                            "journey.py")
     return (EXIT_FAIL if failed else EXIT_OK), lines
+
+
+def write_results(path: Path, tool: str, records: list[dict]) -> None:
+    path.write_text(json.dumps({"schema": 1, "tool": tool, "records": records}, indent=2) + "\n", encoding="utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -161,10 +173,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("targets", nargs="*", help="journey files, folders or screen names (default: all screens)")
     parser.add_argument("--no-evidence", action="store_true", help="do not write evidence records")
     parser.add_argument("--video", action="store_true", help="record a WebM for each journey viewport")
+    parser.add_argument("--json-out", help="write structured results (one record per journey) to this file")
     parser.add_argument("--root")
     args = parser.parse_args(argv)
+    records: list[dict] = []
     try:
-        code, lines = run(resolve_root(args.root), args.targets, not args.no_evidence, args.video)
+        code, lines = run(resolve_root(args.root), args.targets, not args.no_evidence, args.video, records)
+        if args.json_out:
+            write_results(Path(args.json_out), "journey", records)
     except CgspecError as exc:
         print(f"journey: {exc}", file=sys.stderr)
         return EXIT_FAIL
