@@ -92,6 +92,9 @@ jobs:
 # Exact Playwright release the CI visual proof installs outside the checkout (spec 7). The trusted engine
 # loads it only from CGSPEC_PLAYWRIGHT_DIR, never from the pull request's node_modules.
 PLAYWRIGHT_VERSION = "1.64.1"
+# actions/upload-artifact v4.6.2: tag v4.6.2 resolves to this commit, whose package.json says 4.6.2.
+UPLOAD_ARTIFACT_VERSION = "4.6.2"
+UPLOAD_ARTIFACT_SHA = "ea165f8d65b6e75b540449e92b4886f43607fa02"
 VISUAL_WORKFLOW = """      - name: Install pinned Playwright outside the checkout
         if: github.event_name == 'pull_request'
         run: |
@@ -150,14 +153,15 @@ VISUAL_WORKFLOW = """      - name: Install pinned Playwright outside the checkou
           PY
           echo "Journey exit: $JOURNEY_CODE; visual audit exit: $AUDIT_CODE" >> "$GITHUB_STEP_SUMMARY"
           exit 0
-      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+      - uses: actions/upload-artifact@@UPLOAD_ARTIFACT_SHA@  # v@UPLOAD_ARTIFACT_VERSION@
         if: always() && github.event_name == 'pull_request'
         with:
           name: cgspec-visual-${{ github.event.pull_request.head.sha }}
           path: artifacts/cgspec-visual/
           retention-days: 14
           if-no-files-found: warn
-""".replace("@PLAYWRIGHT_VERSION@", PLAYWRIGHT_VERSION)
+""".replace("@PLAYWRIGHT_VERSION@", PLAYWRIGHT_VERSION).replace(
+    "@UPLOAD_ARTIFACT_SHA@", UPLOAD_ARTIFACT_SHA).replace("@UPLOAD_ARTIFACT_VERSION@", UPLOAD_ARTIFACT_VERSION)
 SELECT = """#!/bin/sh
 # Installed by CGSpec. Chooses the range base and downloads the plugin release used to judge it.
 # Version = the newer of trusted selector commit and HEAD; source = that trusted commit.

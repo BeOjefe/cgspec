@@ -118,7 +118,6 @@ class WiringTests(unittest.TestCase):
         workflow = (self.root / ".github/workflows/cgspec.yml").read_text()
         self.assertIn("engine/cgspec_hook.py\" ci", workflow)
         self.assertIn("CI visual proof (PR head)", workflow)
-        self.assertIn("actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce", workflow)
         self.assertTrue(all(re.fullmatch(r"[0-9a-f]{40}", sha) for sha in
                             re.findall(r"uses: [^@\s]+@([0-9a-f]+)", workflow)))
         self.assertIn('revision": revision', workflow)
@@ -145,6 +144,16 @@ class WiringTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual((tmp / "env").read_text().strip(), f"CGSPEC_PLAYWRIGHT_DIR={tmp / 'cgspec-playwright'}")
             self.assertFalse((self.root / "package.json").exists())
+
+    def test_upload_artifact_is_pinned_to_a_supported_major_by_full_sha(self):
+        from _lib.adapters import UPLOAD_ARTIFACT_SHA, UPLOAD_ARTIFACT_VERSION
+        self.assertRegex(UPLOAD_ARTIFACT_SHA, r"^[0-9a-f]{40}$")
+        self.assertGreaterEqual(int(UPLOAD_ARTIFACT_VERSION.split(".")[0]), 4)
+        self.assertEqual(self.do_install().returncode, 0)
+        workflow = (self.root / ".github/workflows/cgspec.yml").read_text()
+        pins = re.findall(r"uses: actions/upload-artifact@(\S+)", workflow)
+        self.assertEqual(pins, [UPLOAD_ARTIFACT_SHA])
+        self.assertIn(f"actions/upload-artifact@{UPLOAD_ARTIFACT_SHA}  # v{UPLOAD_ARTIFACT_VERSION}", workflow)
 
     def test_headless_profile_has_no_visual_job(self):
         root = self.root
