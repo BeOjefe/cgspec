@@ -187,13 +187,48 @@ class AwaitingUser(unittest.TestCase):
         self.assertIn("last question asked", pack)
         self.assertNotIn("waiting on the user", pack)
 
-    def test_an_unanswered_question_is_parked_not_lost(self):
-        """Minor 4: a question recorded but never put to the user survives a change of batch."""
+    # --- delta review round 2 (Opus 5.5, 2026-10-23) --------------------------------------------
+    def test_no_question_is_ever_parked_as_unanswered(self):
+        """N1: on hosts without a stop hook nothing marks a question used, so a parked "UNANSWERED"
+        entry would be false for every answered question. A false record is worse than none."""
+        self.start_work()
+        before = self.read().get("pending", [])
+        self.checkpoint("--awaiting", "Dark or light first?")
+        self.checkpoint("--done")  # answered in conversation, on a host with no stop check
+        self.assertEqual(self.read().get("pending", []), before)
         self.start_work()
         self.checkpoint("--awaiting", "Which palette?")
-        self.checkpoint("--in-flight", "something else")
-        self.assertTrue(any(p.startswith("UNANSWERED") and "Which palette?" in p
-                            for p in self.read().get("pending", [])))
+        self.stop()
+        self.checkpoint("--done")
+        self.assertEqual(self.read().get("pending", []), before)
+
+    def test_re_recording_an_unused_question_replaces_it_without_counting(self):
+        """N2: rewording a question before any stop is one question, not two."""
+        self.start_work()
+        self.checkpoint("--awaiting", "Dark or light?")
+        self.checkpoint("--awaiting", "Dark or light first?")
+        asked = self.read()["awaiting_user"]
+        self.assertEqual(asked["question"], "Dark or light first?")
+        self.assertEqual(asked["count"], 1)
+        self.assertEqual(self.read().get("pending", []), [])
+
+    def test_repeating_the_same_in_flight_keeps_the_question(self):
+        """N3: a patch or flag that restates the current batch is not a new batch."""
+        self.start_work()
+        self.checkpoint("--awaiting", "Dark or light first?")
+        done = self.patch({"in_flight": "restyling the Files screen", "next_action": "apply the answer"})
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.checkpoint("--in-flight", "restyling the Files screen")
+        self.assertEqual(self.read()["awaiting_user"]["question"], "Dark or light first?")
+        self.assertEqual(self.stop().returncode, 0, "the question must still excuse its stop")
+
+    def test_questions_without_work_in_flight_are_not_counted(self):
+        """N4: ordinary discovery questions are not a pattern worth flagging."""
+        for n in range(3):
+            self.checkpoint("--awaiting", f"Question {n}?")
+            self.stop()
+        pack = hook(self.root, "session-start", {"hook_event_name": "SessionStart"}, "--tool", "claude").stdout
+        self.assertNotIn("questions asked during this batch", pack)
 
     def test_repeated_questions_in_one_batch_are_counted_and_visible(self):
         """Minor 2: asking before every stop cannot be prevented, but it must not be invisible."""
