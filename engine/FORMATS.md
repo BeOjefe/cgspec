@@ -1,5 +1,5 @@
 # CGSpec engine: file formats and hook contract
-Created: unknown · Last edited: 2026-10-21T17:56:34Z
+Created: unknown · Last edited: 2026-10-23T07:28:13Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
@@ -18,13 +18,13 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | `docs/_cgspec/07-state/tier.json` | `tier` | main agent via `cgspec_hook.py tier set` | Declared before editing. `files` required for T0; `slice` required for T1+. |
 | `docs/_cgspec/05-runs/<run-id>/run.json` | `run` | inspector | `criteria` and `tests` hold sha256 of each file; once `frozen_at` is set they may not change. `approval` is written only by the message hook or read from a commit trailer, never by the agent. |
 | `docs/_cgspec/07-state/frozen.json` | `frozen` | `bundle_prototype.py`, `cgspec_hook.py freeze` | Append-only. CI rejects any change to an existing entry (spec 8, trust root). |
-| `docs/_cgspec/04-checks/manifest.json` | `checks-manifest` | registration flow | Append-only for the same reason. A check runs as a gate only when listed here with a matching hash. Written only by `cgspec_hook.py check register` (source must be under `.cgspec-scratch/checks/`). |
+| `docs/_cgspec/04-checks/manifest.json` | `checks-manifest` | registration flow | Append-only for the same reason. A check runs as a gate only when listed here with a matching hash. Written only by `cgspec_hook.py check register` (script and optional Markdown guide must be regular files under `.cgspec-scratch/checks/`). Optional `guide` and `guide_sha256` pin the approved fix guidance beside the script; a missing or changed guide blocks execution. |
 | `docs/_cgspec/07-state/checkpoint.json` | `checkpoint` | main agent via checkpoint command | `in_flight` is written before each batch and cleared after; clearing it is not project completion. Optional source observations and unresolved-stop diagnostics support recovery. |
 | `docs/_cgspec/07-state/budget.json` | `budget` | hooks | Counts helpers, review rounds and research passes against limits. |
 | `docs/_cgspec/07-state/quota.json` | `quota` | Host quota adapter; no collector/writer is included in this checkout | `quota.py --root <project> [--json]` and session packs validate freshness (five minutes), windows and thresholds. Missing or invalid readings give bounded advice; the command does not collect usage or enforce a task gate (spec 9). |
 | `docs/_cgspec/06-evidence/tests/<test-id>.json` | `test-pair` | slice workflow | `failed_at` is the commit where the test failed; CI checks it out and re-runs `command` to confirm. |
 | `docs/_cgspec/06-evidence/<scope>/<check>.json` | `evidence` | whoever ran the check | `state` becomes `Stale` when a covered file changes. |
-| `docs/prototypes/<screen>/journeys/<name>.json` | journey (checked by `journey.py`) | main agent at layer 4 | `name`, `url` (file next to the screen, or `http://` for the real frontend), optional `viewports` (`desktop`, `mobile`) and `covers`, and `steps`. Each step has one action on a `data-testid` (`click`, `fill`+`value`, `press`+`key`, `select`+`value`, `check`, `hover`, `goto`, `screenshot`) or `expect` with `visible`, `hidden`, `text`+`equals`/`contains`, `value`+`equals`, `count`+`equals`, `enabled`, `disabled`, `url`; a `state` label may go with any step. Evidence goes to `06-evidence/journeys/`, visual audits to `06-evidence/visual/`, registered checks to `06-evidence/checks/`. |
+| `docs/prototypes/<screen>/journeys/<name>.json` | journey (checked by `journey.py`) | main agent at layer 4 | `name`, `url` (file next to the screen, or `http://` for the real frontend), optional `viewports` (`desktop`, `mobile`) and `covers`, and `steps`. Each step has one action on a `data-testid` (`click`, `fill`+`value`, `press`+`key`, `select`+`value`, `check`, `hover`, `goto`, `screenshot`) or `expect` with `visible`, `hidden`, `text`+`equals`/`contains`, `value`+`equals`, `count`+`equals`, `enabled`, `disabled`, `url`; a `state` label may go with any step. Evidence goes to `06-evidence/journeys/`, visual audits to `06-evidence/visual/`, registered checks to `06-evidence/checks/`. Journey names (and screen names) must be non-empty with no newlines or control characters. `journey.py` and `visual_audit.py` take `--json-out FILE` (`{"schema": 1, "tool", "records": [{"item", "verdict", "detail"}]}`); `visual_summary.py` turns those into the CI `evidence.json` and step summary. |
 | `docs/_cgspec/07-state/legacy-baseline.json` | `legacy-baseline` | `cgspec-adopt` | Files listed here are exempt from size and test rules until their hash changes. |
 | `docs/_cgspec/07-state/approvals.json` | `approvals` | `user-message` hook only | One entry per user message that reads as an approval. A ledger entry with status Approved must cite one of these IDs (`--approval-ref A-...`). |
 | `docs/_cgspec/07-state/stop-retries.json` | none | `stop` hook | Counts consecutive stop refusals; reset when the agent ends cleanly. |
@@ -83,6 +83,26 @@ and `--tool` tells the hook how to read it. Events:
 | `pre-commit` | git pre-commit | yes |
 | `commit-msg` | git commit-msg | yes |
 | `ci` | CI governance stage | yes |
+
+Registered checks: `pre-commit`, `ci`, `check run` and doctor verify every registered script and guide
+against its manifest hash on every run, whether or not the check applies to the changed files; a missing
+or changed one fails the gate and its check does not run. `ci` verifies this separately for every commit
+in the range against that commit's own manifest and tree (through its `View`), not only the final
+checked-out tree: a commit that tampers with an approved script or guide and a later commit in the same
+range that restores the exact approved bytes still fails the range. Each check runs with two environment
+variables set by the engine:
+
+| Variable | `pre-commit` | `ci` | `check run` |
+| --- | --- | --- | --- |
+| `CGSPEC_BASE_REV` | `HEAD` | the trusted range base the workflow passes as `--base` (after the install-commit floor) | `HEAD` |
+| `CGSPEC_REPO_ROOT` | the real repository | the checkout | the project |
+| working directory (candidate content) | exported staged snapshot (no `.git`) | the checked-out HEAD | the working tree |
+
+A check that compares against history reads the base with `git -C "$CGSPEC_REPO_ROOT" show
+"$CGSPEC_BASE_REV:<path>"` and the candidate from its working directory. `templates/checks/no_new_suppressions.py`
+does this and refuses to guess (exit 2) when the variables are missing.
+
+Browser runs: `CGSPEC_BROWSER=none` forces BLOCKED; `CGSPEC_CHROMIUM` names a Chromium executable. When `CGSPEC_PLAYWRIGHT_DIR` is set (an absolute directory outside the project; the CI workflow sets it), Playwright is loaded only from `$CGSPEC_PLAYWRIGHT_DIR/node_modules`, never from the project's `node_modules` or `NODE_PATH`; otherwise the project's Playwright is used. A journey or audit passes only when the driver reported every expected viewport and these files exist with non-zero size and a PNG/WebM signature: for each viewport, `<label>-<viewport>.png` (final journey state, or the audited page), `<label>-<viewport>-<name>.png` for each journey `screenshot` step, and `<label>-<viewport>.webm` with `--video`.
 
 Document dates: `cgspec_hook.py doc sync` dates new documents, advances `Last edited` on edited ones, reverts date-only edits and labels edited legacy documents `Created: unknown`; the `stop` hook runs it at the end of each turn.
 

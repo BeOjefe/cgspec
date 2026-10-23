@@ -161,7 +161,8 @@ def staged_doctor(root: Path, doctor, staged: list[str] | None = None) -> tuple[
     try:
         subprocess.run(["git", "checkout-index", "-a", "-f", f"--prefix={tmp}/"], cwd=root, check=True,
                        capture_output=True)
-        failures, _ = checks.run(tmp, staged or [], write_evidence=False)
+        # Candidate = the staged snapshot in tmp; base = HEAD of the real repository.
+        failures, _ = checks.run(tmp, staged or [], write_evidence=False, base_rev="HEAD", repo_root=root)
         return doctor.run_checks(tmp), failures
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -355,6 +356,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--description", help="check register: what the check verifies")
     parser.add_argument("--approval", help="check register: approval id from your message, or 'trailer'")
     parser.add_argument("--command", help="check register: JSON list with {path} and {files}")
+    parser.add_argument("--guide", help="check register: proposed Markdown guide under .cgspec-scratch/checks/")
     parser.add_argument("--no-rerun", action="store_true", help="ci: skip re-running failing-test records")
     parser.add_argument("--release-dir", help="ci: checkout of the CGSpec plugin release to verify engine changes")
     return parser
