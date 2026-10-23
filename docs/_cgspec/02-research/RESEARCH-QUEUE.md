@@ -1,5 +1,5 @@
 # Research queue
-Created: 2026-10-22T20:50:49Z · Last edited: 2026-10-22T21:29:44Z
+Created: 2026-10-22T20:50:49Z · Last edited: 2026-10-23T23:15:12Z
 
 Spikes that are queued but not yet run. A queued item is a question, not a finding: nothing
 here may be cited as evidence. When a spike concludes it becomes a `RES-NNN-<slug>.md` file
@@ -73,7 +73,8 @@ Record the commit SHA that was read.
 
 ## QUEUE-002 — scroll-craft, deep pass
 
-- **Source:** `scrollcraft/` in this directory, revision `0b816225945e45380397d6a0487efa3c98916858`.
+- **Source:** <https://github.com/nateherkai/scroll-craft> (MIT, © 2026 Nate Herk), imported as
+  `scrollcraft/` in this directory at revision `0b816225945e45380397d6a0487efa3c98916858`.
 - **Status:** queued. [`RES-006`](RES-006-scroll-craft-skill-standard-and-verification.md) is a
   first reading only; nothing here adds a finding to it.
 - **Added:** 2026-10-22, at the user's request, to go deeper later.
