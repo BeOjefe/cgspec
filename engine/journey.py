@@ -12,6 +12,7 @@ Exit 0 all passed, 1 a journey failed or names a missing test ID, 2 blocked (no 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -75,6 +76,17 @@ def load(path: Path, root: Path) -> dict:
     return data
 
 
+def label_for(path: Path, root: Path, screen: Path | None, name: str) -> str:
+    """A run identity unique to this journey file: two journeys named 'pay now' and 'pay-now' slug the
+    same way, so the identity is anchored to the journey file's own repo-relative path (unique by
+    construction), with a human-readable slug kept only as a prefix. This is also the evidence record's
+    file name and the browser artifacts' file-name prefix, so a collision there is now impossible too."""
+    rel = path.relative_to(root).as_posix()
+    digest = hashlib.sha256(rel.encode("utf-8")).hexdigest()[:10]
+    prefix = evidence.slug(f"{screen.name if screen else 'app'}-{name}")
+    return f"{prefix}-{digest}"
+
+
 def test_ids(data: dict) -> set[str]:
     ids = {str(s[k]) for s in data["steps"] for k in TARGETS if k in s}
     ids |= {str(a[k]) for s in data["steps"] for a in s.get("expect", []) for k in ASSERTIONS - {"url"} if k in a}
@@ -120,7 +132,9 @@ def run(root: Path, targets: list[str], write: bool = True, video: bool = False,
         data = load(path, root)
         url, screen = resolve(root, path, data)
         rel = path.relative_to(root).as_posix()
-        label = evidence.slug(f"{screen.name if screen else 'app'}-{data['name']}")
+        label = label_for(path, root, screen, data["name"])
+        if label in meta:  # fail closed: a label collision must stop the run rather than overwrite it
+            raise CgspecError(f"{rel}: journey run label {label!r} collides with {meta[label][2]!r}")
         covers = data.get("covers") or ([f"{screen.relative_to(root).as_posix()}/**"] if screen else [rel])
         meta[label] = (data, covers, rel)
         gone = missing_ids(screen, test_ids(data)) if screen else []

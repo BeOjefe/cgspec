@@ -48,17 +48,28 @@ def _proved(path: Path) -> bool:
         return False
 
 
+DUPLICATE = object()  # sentinel: distinct from "no result at all" (a missing key / None)
+
+
 def results_by_label(result: dict) -> dict[str, dict]:
-    out = {}
+    """Maps each label the driver returned to its result, or to DUPLICATE when the driver returned
+    that label more than once. A duplicate can never be trusted to belong to one run rather than
+    another (it may silently stand in for a different run's failure), so it fails closed instead of
+    the last one overwriting the others; it is distinguished from a label the driver never returned
+    at all, which a plain dict lookup also reports as missing."""
+    out: dict[str, dict] = {}
     for item in result.get("results", []) if isinstance(result.get("results"), list) else []:
         if isinstance(item, dict) and isinstance(item.get("label"), str):
-            out[item["label"]] = item
+            label = item["label"]
+            out[label] = DUPLICATE if label in out else item
     return out
 
 
 def proof_problems(item: dict, got: dict | None, shots: Path) -> list[str]:
     """Why the driver's answer for `item` does not prove a PASS; empty when it does.
     A journey viewport that reported a failed step is judged by that failure, not by its artifacts."""
+    if got is DUPLICATE:
+        return ["browser driver returned this run's label more than once; a duplicate result proves nothing"]
     if not isinstance(got, dict) or not isinstance(got.get("viewports"), list):
         return ["browser driver returned no result for this run"]
     reported = {vp.get("viewport"): vp for vp in got["viewports"] if isinstance(vp, dict)}

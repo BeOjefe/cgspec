@@ -109,7 +109,10 @@ class ForgedResultTests(unittest.TestCase):
         (screen / "journeys").mkdir(parents=True)
         (screen / "index.html").write_text(CLEAN)
         (screen / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n")
-        (screen / "journeys/create.json").write_text(json.dumps(JOURNEY))
+        journey_file = screen / "journeys/create.json"
+        journey_file.write_text(json.dumps(JOURNEY))
+        import journey as _journey
+        self.label = _journey.label_for(journey_file, self.root, screen, JOURNEY["name"])
 
     def tearDown(self):
         self._tmp.__exit__(None, None, None)
@@ -125,7 +128,7 @@ class ForgedResultTests(unittest.TestCase):
             return visual_audit.audit(self.root, [], write=False, video=video)
 
     def test_empty_viewport_list_fails_the_journey(self):
-        code, lines = self.journey({"results": [{"label": "invoice-create-invoice", "viewports": []}]})
+        code, lines = self.journey({"results": [{"label": self.label, "viewports": []}]})
         self.assertNotEqual(code, 0)
         self.assertFalse(any(line.startswith("PASS") for line in lines), lines)
 
@@ -142,18 +145,18 @@ class ForgedResultTests(unittest.TestCase):
 
     def test_ok_viewports_without_screenshot_files_fail(self):
         ok = [{"viewport": v, "ok": True, "state": "start", "errors": []} for v in ("desktop", "mobile")]
-        code, lines = self.journey({"results": [{"label": "invoice-create-invoice", "viewports": ok}]})
+        code, lines = self.journey({"results": [{"label": self.label, "viewports": ok}]})
         self.assertNotEqual(code, 0)
         self.assertIn("screenshot", "\n".join(lines))
 
     def test_ok_viewports_with_real_screenshots_pass_and_video_is_required_when_asked(self):
         shots = self.root / ".cgspec-scratch/journeys"
         ok = [{"viewport": v, "ok": True, "state": "start", "errors": []} for v in ("desktop", "mobile")]
-        result = {"results": [{"label": "invoice-create-invoice", "viewports": ok}]}
+        result = {"results": [{"label": self.label, "viewports": ok}]}
 
         def driver(root, runs, folder, video=False):
             for vp in ("desktop", "mobile"):
-                for name in (f"invoice-create-invoice-{vp}-after.png", f"invoice-create-invoice-{vp}.png"):
+                for name in (f"{self.label}-{vp}-after.png", f"{self.label}-{vp}.png"):
                     (folder / name).write_bytes(b"\x89PNG\r\n\x1a\nimage")
             return result
         import journey
@@ -178,6 +181,68 @@ class ForgedResultTests(unittest.TestCase):
             dict(vp, viewport="desktop"), dict(vp, viewport="mobile")]}]})
         self.assertFalse(any(line.startswith("PASS") for line in lines), lines)
         self.assertNotEqual(code, 0)
+
+
+class CollidingJourneyLabelTests(unittest.TestCase):
+    """'pay now' and 'pay-now' share a slug. A failed first journey and a passing second one must not
+    produce exit 0 with two PASS records for the same name: run identity must come from each journey
+    file's own unique path, and a duplicate label returned by the driver must fail closed, not overwrite."""
+
+    def setUp(self):
+        self._tmp = TempDir()
+        self.root = self._tmp.__enter__()
+        git_project(self.root)
+        self.screen = self.root / "docs/prototypes/pay"
+        (self.screen / "journeys").mkdir(parents=True)
+        (self.screen / "index.html").write_text(CLEAN)
+        step = [{"click": "new-invoice"}]
+        (self.screen / "journeys/a.json").write_text(json.dumps({"name": "pay now", "url": "index.html", "steps": step}))
+        (self.screen / "journeys/b.json").write_text(json.dumps({"name": "pay-now", "url": "index.html", "steps": step}))
+
+    def tearDown(self):
+        self._tmp.__exit__(None, None, None)
+
+    def test_colliding_names_do_not_erase_the_failure(self):
+        import journey
+        captured = {}
+
+        def driver(root, runs, shots, video=False):
+            captured["runs"] = runs
+            results = []
+            shots.mkdir(parents=True, exist_ok=True)
+            for i, run in enumerate(runs):
+                ok = i != 0  # the first discovered journey fails, the second passes
+                vp = {"viewport": "desktop", "ok": ok, "state": "s", "errors": [] if ok else ["boom"]}
+                (shots / f"{run['label']}-desktop.png").write_bytes(b"\x89PNG\r\n\x1a\nimage")
+                results.append({"label": run["label"], "viewports": [vp]})
+            return {"results": results}
+
+        with mock.patch.object(journey.browser, "run", side_effect=driver):
+            code, lines = journey.run(self.root, [], write=False)
+        self.assertNotEqual(code, 0, lines)
+        labels = [r["label"] for r in captured["runs"]]
+        self.assertEqual(len(labels), 2)
+        self.assertEqual(len(set(labels)), 2, f"journey run labels must be unique, got {labels}")
+        joined = "\n".join(lines)
+        self.assertEqual(joined.count("PASS"), 1, joined)
+        self.assertIn("FAIL", joined)
+
+    def test_driver_returning_a_duplicate_label_fails_closed(self):
+        """Even if two runs' labels happened to collide, a driver answer that returns the same label
+        twice must not let the later (or earlier) entry silently stand in for the other."""
+        from _lib import browser
+        shots = self.root / ".cgspec-scratch/journeys"
+        shots.mkdir(parents=True, exist_ok=True)
+        duplicate_result = {"results": [
+            {"label": "dup", "viewports": [{"viewport": "desktop", "ok": False, "state": "s", "errors": ["boom"]}]},
+            {"label": "dup", "viewports": [{"viewport": "desktop", "ok": True, "state": "s", "errors": []}]},
+        ]}
+        reported = browser.results_by_label(duplicate_result)
+        self.assertIs(reported["dup"], browser.DUPLICATE)
+        item = {"kind": "journey", "label": "dup", "steps": [], "viewports": ["desktop"]}
+        problems = browser.proof_problems(item, reported["dup"], shots)
+        self.assertTrue(problems)
+        self.assertIn("duplicate", problems[0])
 
 
 if __name__ == "__main__":
