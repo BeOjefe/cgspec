@@ -306,7 +306,12 @@ def _registered_checks(root: Path) -> dict[str, str]:
     if not manifest.is_file():
         return {}
     data, findings = load_json(manifest, root, "checks-manifest")
-    return {c["path"]: c["sha256"] for c in data["checks"]} if not findings and isinstance(data, dict) else {}
+    if findings or not isinstance(data, dict):
+        return {}
+    pinned = {c["path"]: c["sha256"] for c in data["checks"]}
+    # An approved fix guide is pinned exactly like its script (spec 8).
+    pinned.update({c["guide"]: c.get("guide_sha256", "") for c in data["checks"] if c.get("guide")})
+    return pinned
 
 
 def scripts(root: Path, path_classes: dict, legacy: set[str]) -> Iterator[Finding]:
@@ -314,9 +319,9 @@ def scripts(root: Path, path_classes: dict, legacy: set[str]) -> Iterator[Findin
     for rel, digest in registered.items():
         target = inside(root, rel)
         if target is None or not target.is_file():
-            yield Finding("E-CHECK-MISSING", rel, "registered check is missing")
+            yield Finding("E-CHECK-MISSING", rel, "registered check or guide is missing")
         elif sha256_file(target) != digest:
-            yield Finding("E-CHECK-HASH", rel, "registered check changed since approval")
+            yield Finding("E-CHECK-HASH", rel, "registered check or guide changed since approval")
     engine, prototypes = root / ENGINE_DIR, root / "docs/prototypes"
     allowed_outside = path_classes.get("code", []) + path_classes.get("tests", []) + L.CONFIG_GLOBS
     for dirpath, dirnames, filenames in os.walk(root):

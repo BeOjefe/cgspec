@@ -103,24 +103,37 @@ def _command(entry: dict, root: Path, files: list[str]) -> list[str]:
     return out
 
 
+def integrity(root: Path, entry: dict) -> str | None:
+    """Why a registered check's script or guide no longer matches its approved hash, or None."""
+    cid = entry.get("id")
+    pinned = [(entry.get("path"), entry.get("sha256"))]
+    if entry.get("guide") or entry.get("guide_sha256"):
+        pinned.append((entry.get("guide"), entry.get("guide_sha256")))
+    for rel, digest in pinned:
+        path = root / str(rel or "")
+        if not rel or not path.is_file():
+            return f"{cid}: {rel} is missing; registered checks and guides never change"
+        if sha256_file(path) != digest:
+            return f"{cid}: {rel} changed since approval; registered checks and guides never change"
+    return None
+
+
 def run(root: Path, files: list[str], run_all: bool = False, write_evidence: bool = True) -> tuple[list[str], list[str]]:
-    """(failures, notes). A check whose file no longer matches its approved hash fails without running."""
+    """(failures, notes). Every registered script and guide is verified against its approved hash on every
+    run, whether or not the check applies to `files`; a tampered check fails without running."""
     failures, notes = [], []
     for entry in _manifest(root).get("checks", []):
         cid, path = entry.get("id"), root / str(entry.get("path", ""))
+        problem = integrity(root, entry)
+        if problem:
+            failures.append(f"{problem}; it was not run")
+            continue
         matched = [f for f in files if match_any(f, entry.get("applies_to", []))]
         if not matched and not run_all:
             continue
-        if not path.is_file() or sha256_file(path) != entry.get("sha256"):
-            failures.append(f"{cid}: {entry.get('path')} changed since approval; it was not run")
-            continue
         guide_text = None
         if entry.get("guide"):
-            guide_path = root / entry["guide"]
-            if not guide_path.is_file() or sha256_file(guide_path) != entry.get("guide_sha256"):
-                failures.append(f"{cid}: {entry.get('guide')} changed since approval; check was not run")
-                continue
-            guide_text = guide_path.read_text(encoding="utf-8", errors="replace").strip()
+            guide_text = (root / entry["guide"]).read_text(encoding="utf-8", errors="replace").strip()
         try:
             result = subprocess.run(_command(entry, root, matched), cwd=root, capture_output=True, text=True,
                                     timeout=TIMEOUT)

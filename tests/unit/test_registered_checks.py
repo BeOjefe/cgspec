@@ -169,5 +169,80 @@ class RegisteredCheckTests(unittest.TestCase):
         self.assertIn("CHK-001", result.stdout)
 
 
+
+def real_commit(root, message):
+    """git commit with the installed hooks active (no --no-verify, no hooksPath override)."""
+    return subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=t@example.com",
+                           "-c", "commit.gpgsign=false", "commit", "-m", message], cwd=root,
+                          capture_output=True, text=True)
+
+
+class GuideIntegrityTests(unittest.TestCase):
+    """A registered guide is verified on every gate path, whether or not its check applies."""
+
+    register = RegisteredCheckTests.register
+    tearDown = RegisteredCheckTests.tearDown
+
+    def setUp(self):
+        RegisteredCheckTests.setUp(self)
+        self.assertEqual(self.register(guide=True).returncode, 0)
+        subprocess.run(["git", "add", "-A"], cwd=self.root, check=True)
+        committed = real_commit(self.root, "register check guide")
+        self.assertEqual(committed.returncode, 0, committed.stdout + committed.stderr)
+        self.base = git(self.root, "rev-parse", "HEAD").stdout.strip()
+        self.guide_path = self.root / "docs/_cgspec/04-checks/no_hex.md"
+
+    def edit_guide(self):
+        import time
+        from _lib.common import utc_now
+        from _lib.document_dates import touch
+        time.sleep(1.1)  # Last edited must advance, so only the guide hash rule can object
+        text = self.guide_path.read_text().replace("Do not hide it with an exception.",
+                                                   "Adding an exception to the baseline is fine.")
+        self.guide_path.write_text(touch(text, utc_now()))
+
+    def test_pre_commit_refuses_a_guide_only_edit(self):
+        self.edit_guide()
+        git(self.root, "add", "docs/_cgspec/04-checks/no_hex.md")
+        result = real_commit(self.root, "soften the guide")
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("no_hex.md", result.stdout + result.stderr)
+        self.assertEqual(git(self.root, "rev-parse", "HEAD").stdout.strip(), self.base)
+
+    def test_pre_commit_refuses_a_guide_deletion(self):
+        git(self.root, "rm", "-q", "docs/_cgspec/04-checks/no_hex.md")
+        result = real_commit(self.root, "drop the guide")
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("no_hex.md", result.stdout + result.stderr)
+        self.assertEqual(git(self.root, "rev-parse", "HEAD").stdout.strip(), self.base)
+
+    def test_ci_refuses_a_guide_only_edit(self):
+        self.edit_guide()
+        git(self.root, "add", "docs/_cgspec/04-checks/no_hex.md")
+        git(self.root, "commit", "-q", "-m", "soften the guide")  # pushed past the local hook
+        result = hook(self.root, "ci", None, "--tool", "git", "--base", self.base)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("no_hex.md", result.stdout)
+
+    def test_ci_refuses_a_guide_deletion(self):
+        git(self.root, "rm", "-q", "docs/_cgspec/04-checks/no_hex.md")
+        git(self.root, "commit", "-q", "-m", "drop the guide")
+        result = hook(self.root, "ci", None, "--tool", "git", "--base", self.base)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("no_hex.md", result.stdout)
+
+    def test_doctor_reports_a_changed_guide(self):
+        self.guide_path.write_text("# Fix it\n\ntampered\n")
+        result = run_script("doctor.py", "--root", str(self.root))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("no_hex.md", result.stdout + result.stderr)
+
+    def test_check_run_on_unrelated_files_still_verifies_the_guide(self):
+        self.guide_path.unlink()
+        result = check(self.root, "run", "--files", "docs/spines/01-INTENT.md")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("no_hex.md", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
