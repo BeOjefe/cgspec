@@ -114,7 +114,7 @@
       ]
     },
     "awaiting_user": {
-      "description": "A question the agent stopped to ask. Keeps the batch in flight; excuses exactly one stop, then is marked used. count is the number of questions asked during the current batch.",
+      "description": "A question the agent stopped to ask. Keeps the batch in flight; excuses exactly one stop, then is marked used. count is the number of questions put to the user during the current in-flight batch; only hosts with a stop check increase it.",
       "type": "object",
       "required": [
         "at",

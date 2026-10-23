@@ -222,6 +222,25 @@ class AwaitingUser(unittest.TestCase):
         self.assertEqual(self.read()["awaiting_user"]["question"], "Dark or light first?")
         self.assertEqual(self.stop().returncode, 0, "the question must still excuse its stop")
 
+    # --- delta review round 3 (Opus 5.5, 2026-10-23) --------------------------------------------
+    def test_the_pack_never_claims_the_user_has_not_answered(self):
+        """Round 3 minor 1: on hosts without a stop check a question is never marked used, so the pack
+        cannot know whether it was answered. It must not say the user still owes an answer."""
+        self.start_work()
+        self.checkpoint("--awaiting", "Dark or light first?")
+        self.checkpoint("--next", "apply the answer")  # answered in conversation; no stop hook ran
+        pack = hook(self.root, "session-start", {"hook_event_name": "SessionStart"}, "--tool", "claude").stdout
+        self.assertNotIn("waiting on the user", pack)
+        self.assertIn("check the conversation for the answer", pack)
+        self.assertIn("Dark or light first?", pack)
+
+    def test_whitespace_in_a_patched_in_flight_is_not_a_new_batch(self):
+        """Round 3 nit 3: --in-flight strips its value; a patch must compare the same way."""
+        self.start_work()
+        self.checkpoint("--awaiting", "Dark or light first?")
+        self.patch({"in_flight": "restyling the Files screen  "})
+        self.assertEqual(self.read()["awaiting_user"]["question"], "Dark or light first?")
+
     def test_questions_without_work_in_flight_are_not_counted(self):
         """N4: ordinary discovery questions are not a pattern worth flagging."""
         for n in range(3):

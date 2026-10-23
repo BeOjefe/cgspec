@@ -93,7 +93,7 @@ def update(root: Path, args) -> dict:
         if previous is not None and cp.get("in_flight"):
             count = previous.get("count", 1) + (1 if previous.get("used") else 0)
         cp["awaiting_user"] = {"at": utc_now(), "question": args.awaiting.strip(), "used": False, "count": count}
-    elif args.done or args.blocked is not None or cp.get("in_flight") != flight_before:
+    elif args.done or args.blocked is not None or _flight(cp.get("in_flight")) != _flight(flight_before):
         cp.pop("awaiting_user", None)  # the work moved on, so the question is no longer what we wait for
     if patch or any(value is not None for value in fields.values()) or transition:
         cp["updated"] = utc_now()
@@ -102,6 +102,11 @@ def update(root: Path, args) -> dict:
         cp["source"] = observe(root)
     save(root, cp)
     return cp
+
+
+def _flight(value) -> str | None:
+    """Compare in_flight the way --in-flight stores it, so a patch with stray spaces is not a new batch."""
+    return value.strip() if isinstance(value, str) else value
 
 
 def capture_only(root: Path) -> None:

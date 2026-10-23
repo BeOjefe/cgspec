@@ -42,7 +42,9 @@ def pack(root: Path, doctor_summary: str) -> str:
              f"active tier: {tier['tier'] + ' ' + tier['id'] + ' - ' + tier['reason'] if tier else 'none'}"]
     if isinstance(cp.get("awaiting_user"), dict):
         asked = cp["awaiting_user"]
-        label = "last question asked" if asked.get("used") else "waiting on the user"
+        # `used` means a stop accepted the question, not that it was answered; hosts without a stop check
+        # never set it. So the pack never claims the user still owes an answer.
+        label = "last question asked" if asked.get("used") else "question asked, check the conversation for the answer"
         count = asked.get("count", 1)
         extra = f"; {count} questions asked during this batch" if isinstance(count, int) and count > 1 else ""
         lines.append(f"{label} ({asked.get('at', '?')}{extra}): {asked.get('question', '')}")
