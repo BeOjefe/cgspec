@@ -205,6 +205,15 @@ async function compareImagesInBrowser(browser, fileA, fileB, diffOutputPath, tol
       const [imgA, imgB] = await Promise.all([loadImg(dataA), loadImg(dataB)]);
       const w1 = imgA.naturalWidth, h1 = imgA.naturalHeight;
       const w2 = imgB.naturalWidth, h2 = imgB.naturalHeight;
+      const MAX_PIXELS = 20000000;
+      const MAX_DIM = 16384;
+      if (w1 > MAX_DIM || h1 > MAX_DIM || (w1 * h1) > MAX_PIXELS ||
+          w2 > MAX_DIM || h2 > MAX_DIM || (w2 * h2) > MAX_PIXELS) {
+        return {
+          error: `resource limit exceeded: image dimensions exceed maximum bound (${w1}x${h1} vs ${w2}x${h2})`,
+          limitExceeded: true,
+        };
+      }
       if (w1 !== w2 || h1 !== h2) {
         return {
           differentDimensions: true,
@@ -307,7 +316,7 @@ async function compareImagesInBrowser(browser, fileA, fileB, diffOutputPath, tol
       }
       return {
         differentDimensions: false,
-        changedPercent: Math.round(changedPercent * 1000) / 1000,
+        changedPercent: totalPixels > 0 ? (changedCount / totalPixels) * 100 : 0,
         changedPixels: changedCount,
         totalPixels,
         regions: regions.slice(0, 10),
@@ -338,6 +347,7 @@ async function audit(browser, run, shots) {
     // 1. Light render
     const lightResult = await withPage(browser, viewport, async (page, errors) => {
       await page.goto(run.url, { waitUntil: "load" });
+      await page.screenshot({ path: lightShotPath, fullPage: true });
       const facts = await page.evaluate((mobile) => {
         const doc = document.documentElement;
         const small = [];
@@ -354,26 +364,24 @@ async function audit(browser, run, shots) {
       }, viewport === "mobile");
       const quality = await page.evaluate(measureQuality);
       quality.focus = await focusCheck(page);
-      await page.screenshot({ path: lightShotPath, fullPage: true });
       return { viewport, errors, ...facts, quality };
     }, shots, label, Boolean(run.video), { colorScheme: "light" });
 
     // 2. Dark render
     let darkQuality = null;
+    let darkErrors = [];
     await withPage(browser, viewport, async (page, errors) => {
       await page.goto(run.url, { waitUntil: "load" });
       await page.screenshot({ path: darkShotPath, fullPage: true });
+      darkQuality = await page.evaluate(measureQuality);
+      darkQuality.focus = await focusCheck(page);
+      darkErrors = errors || [];
     }, shots, `${label}-dark`, false, { colorScheme: "dark" });
 
     const darkDiff = await compareImagesInBrowser(browser, lightShotPath, darkShotPath, null, 16);
     let darkTheme = false;
-    if (darkDiff && (darkDiff.differentDimensions || darkDiff.changedPercent > 0)) {
+    if (darkDiff && (darkDiff.differentDimensions || darkDiff.changedPixels > 0)) {
       darkTheme = true;
-      await withPage(browser, viewport, async (page, errors) => {
-        await page.goto(run.url, { waitUntil: "load" });
-        darkQuality = await page.evaluate(measureQuality);
-        darkQuality.focus = await focusCheck(page);
-      }, shots, `${label}-dark-eval`, false, { colorScheme: "dark" });
     }
 
     // 3. Drift against baseline if baseline exists
@@ -386,6 +394,7 @@ async function audit(browser, run, shots) {
       ...lightResult,
       darkTheme,
       darkQuality,
+      darkErrors,
       drift,
     });
   }
@@ -409,7 +418,13 @@ async function main() {
   }
   const results = [];
   try {
-    for (const run of job.runs) results.push(await (run.kind === "audit" ? audit : journey)(browser, run, job.shots));
+    for (const run of job.runs) {
+      try {
+        results.push(await (run.kind === "audit" ? audit : journey)(browser, run, job.shots));
+      } catch (err) {
+        results.push({ label: run.label, error: String(err && err.stack || err) });
+      }
+    }
   } finally {
     await browser.close();
   }

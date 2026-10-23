@@ -21,9 +21,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import browser, evidence  # noqa: E402
-from _lib.common import EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, CgspecError, resolve_root  # noqa: E402
-
-EXIT_BLOCKED = 2
+from _lib.common import EXIT_BLOCKED, EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, CgspecError, resolve_root  # noqa: E402
 ACTIONS = {"click": (), "fill": ("value",), "press": ("key",), "select": ("value",), "check": (), "hover": (),
            "goto": (), "state": (), "screenshot": (), "expect": ()}
 ASSERTIONS = {"visible", "hidden", "text", "value", "count", "enabled", "disabled", "url"}
@@ -123,6 +121,17 @@ def step_failures(item: dict | None) -> list[str]:
     return problems
 
 
+def _handle_blocked_runs(root: Path, runs: list[dict], meta: dict, reason: str,
+                         lines: list[str], records: list[dict], write: bool) -> None:
+    for item in runs:
+        data, covers, _ = meta[item["label"]]
+        lines.append(f"BLOCKED {data['name']}: {reason}")
+        records.append({"item": data["name"], "verdict": "BLOCKED", "detail": reason})
+        if write:
+            evidence.write(root, "journeys", item["label"], f"journey:{data['name']}", "BLOCKED", covers,
+                           reason, "journey.py")
+
+
 def run(root: Path, targets: list[str], write: bool = True, video: bool = False,
         records: list[dict] | None = None) -> tuple[int, list[str]]:
     """(exit code, printed lines). `records` collects one structured {item, verdict, detail} per journey."""
@@ -153,18 +162,22 @@ def run(root: Path, targets: list[str], write: bool = True, video: bool = False,
     shots = root / ".cgspec-scratch/journeys"
     result = browser.run(root, runs, shots, video=video)
     if "blocked" in result:
-        for item in runs:
-            data, covers, _ = meta[item["label"]]
-            lines.append(f"BLOCKED {data['name']}: {result['blocked']}")
-            records.append({"item": data["name"], "verdict": "BLOCKED", "detail": result["blocked"]})
-            if write:
-                evidence.write(root, "journeys", item["label"], f"journey:{data['name']}", "BLOCKED", covers,
-                               result["blocked"], "journey.py")
+        _handle_blocked_runs(root, runs, meta, result["blocked"], lines, records, write)
         return (EXIT_FAIL if failed else EXIT_BLOCKED), lines
     reported = browser.results_by_label(result)
+    blocked_any = False
     for run_item in runs:
         data, covers, _ = meta[run_item["label"]]
         item = reported.get(run_item["label"])
+        if isinstance(item, dict) and "error" in item:
+            blocked_any = True
+            err_msg = str(item["error"]).splitlines()[0]
+            lines.append(f"BLOCKED {data['name']}: {err_msg}")
+            records.append({"item": data["name"], "verdict": "BLOCKED", "detail": item["error"]})
+            if write:
+                evidence.write(root, "journeys", run_item["label"], f"journey:{data['name']}", "BLOCKED", covers,
+                               item["error"], "journey.py")
+            continue
         # A PASS needs a driver result for every expected viewport and every expected artifact on disk.
         problems = browser.proof_problems(run_item, item, shots) + step_failures(item)
         verdict = "FAIL" if problems else "PASS"
@@ -173,9 +186,9 @@ def run(root: Path, targets: list[str], write: bool = True, video: bool = False,
         lines.append(f"{verdict} {data['name']}" + (f":\n  " + "\n  ".join(problems) if problems else ""))
         records.append({"item": data["name"], "verdict": verdict, "detail": detail})
         if write:
-            evidence.write(root, "journeys", item["label"], f"journey:{data['name']}", verdict, covers, detail,
+            evidence.write(root, "journeys", run_item["label"], f"journey:{data['name']}", verdict, covers, detail,
                            "journey.py")
-    return (EXIT_FAIL if failed else EXIT_OK), lines
+    return (EXIT_FAIL if failed else (EXIT_BLOCKED if blocked_any else EXIT_OK)), lines
 
 
 def write_results(path: Path, tool: str, records: list[dict]) -> None:
