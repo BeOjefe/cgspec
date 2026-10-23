@@ -5,7 +5,7 @@ This is the current status reference. The method describes required behavior; th
 
 ## One development stream
 
-The merged source lives in the `BeOjefe/cgspec` repository. In the current workspace, develop in `/home/ojefe/Documents/Project/cgspec` on feature branches and use PRs for main. `cgspec-next` is a duplicate checkout retained for old references; do not start a separate implementation there. Before removing or repointing it, inspect local refs, archive tags and host/plugin/lab references. A single Git history does not automatically update installed plugins or consumer engines.
+The merged source lives in the `BeOjefe/cgspec` repository. In the current workspace, develop in `/home/ojefe/Documents/Project/cgspec` on feature branches and use PRs for main. The `cgspec-next` duplicate checkout was removed on 2026-10-22 after confirming it held no uncommitted work and no commit absent from a remote; its three branches that were never on `main` are kept here as `refs/archive/cgspec-next-*`, and a full bundle sits in `../cgspec-workspace/archive/`. Investigation history and trial evidence are in `../cgspec-workspace/` (`START-HERE.md`). A single Git history does not automatically update installed plugins or consumer engines.
 
 The source tree is a plugin package, not an installed consumer layout. Run the package tests and plugin validation here. Run doctor, hooks and upgrade rehearsals in disposable consumer projects; do not force-install over the source tree. Consumer changes, including CortexGate upgrades, need their own authorized scope.
 

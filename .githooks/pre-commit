@@ -1,10 +1,27 @@
 #!/bin/sh
-# CGSpec Universal Pre-Commit Hook (Version Controlled)
-# Intercepts commits from all AI agents (Claude Code, Cursor, Aider, Antigravity) and humans.
+# CGSpec pre-commit hook.
+#
+# This repository is the plugin source, not an installed consumer project, so the
+# consumer commit gate cannot run here (it needs docs/_cgspec/project.json). The
+# source gate below enforces the spec-1 content rules that need no project state.
+#
+# A hook that cannot find its checker refuses the commit. It must never exit 0
+# silently: a guard that looks active and does nothing is worse than no guard.
 
-if [ -f docs/_cgspec/01-script/cgspec_hook.py ]; then
-    exec python3 docs/_cgspec/01-script/cgspec_hook.py git-pre-commit
-elif [ -f scripts/cgspec_hook.py ]; then
-    exec python3 scripts/cgspec_hook.py git-pre-commit
+root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+    echo "cgspec: not inside a git work tree; refusing the commit." >&2
+    exit 1
+}
+
+if [ -f "$root/.githooks/source_precommit.py" ]; then
+    exec python3 "$root/.githooks/source_precommit.py"
 fi
-exit 0
+
+if [ -f "$root/docs/_cgspec/01-engine/cgspec_hook.py" ]; then
+    exec python3 "$root/docs/_cgspec/01-engine/cgspec_hook.py" pre-commit --tool git
+fi
+
+echo "cgspec: no checker found at .githooks/source_precommit.py or" >&2
+echo "cgspec: docs/_cgspec/01-engine/cgspec_hook.py; refusing the commit." >&2
+echo "cgspec: restore the checker, or pass --no-verify with a stated reason." >&2
+exit 1

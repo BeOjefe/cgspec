@@ -1,0 +1,35 @@
+#!/bin/sh
+# Activate CGSpec's own pre-commit gate in this checkout.
+#
+# Git finds hooks through `core.hooksPath`, which is local repository configuration and
+# therefore cannot be committed. A fresh clone of this repository has no hooks active at
+# all: the gate in this directory is present but unreachable until someone runs this.
+#
+# That is the whole reason this script exists. A guard whose activation depends on one
+# machine's hand-set configuration is a guard that silently is not there on every other
+# machine, which is the exact failure this directory was written to fix.
+#
+# Run from the repository root:  ./.githooks/enable
+
+set -e
+
+root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+    echo "cgspec: not inside a git work tree." >&2
+    exit 1
+}
+
+if [ ! -f "$root/.githooks/source_precommit.py" ]; then
+    echo "cgspec: $root/.githooks/source_precommit.py is missing; wrong repository?" >&2
+    exit 1
+fi
+
+current=$(git -C "$root" config --local --get core.hooksPath || true)
+if [ -n "$current" ] && [ "$current" != ".githooks" ]; then
+    echo "cgspec: core.hooksPath is already set to '$current'." >&2
+    echo "cgspec: refusing to overwrite another tool's hook path. Resolve it by hand." >&2
+    exit 1
+fi
+
+git -C "$root" config --local core.hooksPath .githooks
+echo "cgspec: core.hooksPath = $(git -C "$root" config --local --get core.hooksPath)"
+echo "cgspec: the pre-commit gate is active in this checkout."
