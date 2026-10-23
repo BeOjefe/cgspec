@@ -118,10 +118,24 @@ def integrity(root: Path, entry: dict) -> str | None:
     return None
 
 
-def run(root: Path, files: list[str], run_all: bool = False, write_evidence: bool = True) -> tuple[list[str], list[str]]:
+def check_env(base_rev: str, repo_root: Path) -> dict:
+    """Environment every registered check receives: the trusted base revision to compare against and the
+    Git repository holding it. The candidate content is the check's working directory (the staged snapshot
+    at commit time, the checked-out HEAD in CI)."""
+    import os
+    env = dict(os.environ)
+    env["CGSPEC_BASE_REV"] = base_rev
+    env["CGSPEC_REPO_ROOT"] = str(repo_root)
+    return env
+
+
+def run(root: Path, files: list[str], run_all: bool = False, write_evidence: bool = True,
+        base_rev: str = "HEAD", repo_root: Path | None = None) -> tuple[list[str], list[str]]:
     """(failures, notes). Every registered script and guide is verified against its approved hash on every
-    run, whether or not the check applies to `files`; a tampered check fails without running."""
+    run, whether or not the check applies to `files`; a tampered check fails without running.
+    Checks run in `root` with CGSPEC_BASE_REV=`base_rev` and CGSPEC_REPO_ROOT=`repo_root` (default `root`)."""
     failures, notes = [], []
+    env = check_env(base_rev, repo_root or root)
     for entry in _manifest(root).get("checks", []):
         cid, path = entry.get("id"), root / str(entry.get("path", ""))
         problem = integrity(root, entry)
@@ -136,7 +150,7 @@ def run(root: Path, files: list[str], run_all: bool = False, write_evidence: boo
             guide_text = (root / entry["guide"]).read_text(encoding="utf-8", errors="replace").strip()
         try:
             result = subprocess.run(_command(entry, root, matched), cwd=root, capture_output=True, text=True,
-                                    timeout=TIMEOUT)
+                                    timeout=TIMEOUT, env=env)
             verdict, output = ("PASS" if result.returncode == 0 else "FAIL"), (result.stdout + result.stderr)[-2000:]
         except (OSError, subprocess.TimeoutExpired) as exc:
             verdict, output = "FAIL", f"could not run: {exc}"

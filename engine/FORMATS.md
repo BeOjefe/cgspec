@@ -84,6 +84,21 @@ and `--tool` tells the hook how to read it. Events:
 | `commit-msg` | git commit-msg | yes |
 | `ci` | CI governance stage | yes |
 
+Registered checks: `pre-commit`, `ci`, `check run` and doctor verify every registered script and guide
+against its manifest hash on every run, whether or not the check applies to the changed files; a missing
+or changed one fails the gate and its check does not run. Each check runs with two environment
+variables set by the engine:
+
+| Variable | `pre-commit` | `ci` | `check run` |
+| --- | --- | --- | --- |
+| `CGSPEC_BASE_REV` | `HEAD` | the trusted range base the workflow passes as `--base` (after the install-commit floor) | `HEAD` |
+| `CGSPEC_REPO_ROOT` | the real repository | the checkout | the project |
+| working directory (candidate content) | exported staged snapshot (no `.git`) | the checked-out HEAD | the working tree |
+
+A check that compares against history reads the base with `git -C "$CGSPEC_REPO_ROOT" show
+"$CGSPEC_BASE_REV:<path>"` and the candidate from its working directory. `templates/checks/no_new_suppressions.py`
+does this and refuses to guess (exit 2) when the variables are missing.
+
 Document dates: `cgspec_hook.py doc sync` dates new documents, advances `Last edited` on edited ones, reverts date-only edits and labels edited legacy documents `Created: unknown`; the `stop` hook runs it at the end of each turn.
 
 Tier declarations: `cgspec_hook.py tier set --tier T0 --reason "..." --files a,b` (T0) or

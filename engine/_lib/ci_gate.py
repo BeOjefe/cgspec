@@ -105,7 +105,8 @@ def run(root: Path, base: str | None, rerun_tests: bool = True,
     from . import checks
     changed = [line for line in git(root, "diff", "--name-only", "--diff-filter=d", f"{base}..HEAD").stdout.splitlines()
                if line]
-    failures, check_notes = checks.run(root, changed, write_evidence=False)
+    # The same trusted range base the commits above were judged against (the workflow's CGSPEC_BASE).
+    failures, check_notes = checks.run(root, changed, write_evidence=False, base_rev=base, repo_root=root)
     problems += [f"check {failure}" for failure in failures]
     notes += [note for note in check_notes if not note.startswith("no registered")]
     if rerun_tests:

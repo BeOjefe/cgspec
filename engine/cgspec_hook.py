@@ -161,7 +161,8 @@ def staged_doctor(root: Path, doctor, staged: list[str] | None = None) -> tuple[
     try:
         subprocess.run(["git", "checkout-index", "-a", "-f", f"--prefix={tmp}/"], cwd=root, check=True,
                        capture_output=True)
-        failures, _ = checks.run(tmp, staged or [], write_evidence=False)
+        # Candidate = the staged snapshot in tmp; base = HEAD of the real repository.
+        failures, _ = checks.run(tmp, staged or [], write_evidence=False, base_rev="HEAD", repo_root=root)
         return doctor.run_checks(tmp), failures
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
