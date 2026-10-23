@@ -3,6 +3,7 @@ approval, with its hash recorded; it then runs at commit and in CI on the files 
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -116,6 +117,40 @@ def integrity(root: Path, entry: dict) -> str | None:
         if sha256_file(path) != digest:
             return f"{cid}: {rel} changed since approval; registered checks and guides never change"
     return None
+
+
+def _integrity_at(view, entry: dict) -> str | None:
+    """Like `integrity`, but against the content a git View sees (one commit), not the filesystem.
+
+    A commit range where a commit deletes or edits an approved script or guide and a later commit
+    restores the exact approved bytes must still fail: the final tree alone is not proof that the
+    approved content held at every commit in between."""
+    cid = entry.get("id")
+    pinned = [(entry.get("path"), entry.get("sha256"))]
+    if entry.get("guide") or entry.get("guide_sha256"):
+        pinned.append((entry.get("guide"), entry.get("guide_sha256")))
+    for rel, digest in pinned:
+        content = view.read_new(str(rel)) if rel else None
+        if not rel or content is None:
+            return f"{cid}: {rel} is missing; registered checks and guides never change"
+        if hashlib.sha256(content).hexdigest() != digest:
+            return f"{cid}: {rel} changed since approval; registered checks and guides never change"
+    return None
+
+
+def verify_manifest_at(view) -> list[str]:
+    """Every check registered as of this commit's own manifest must match its approved hash in this
+    commit's own tree (spec 8): checked per commit in the CI range, not only at the final tree."""
+    raw = view.read_new(MANIFEST.as_posix())
+    try:
+        data = json.loads(raw.decode("utf-8")) if raw is not None else None
+    except ValueError:
+        data = None
+    checks_list = data.get("checks") if isinstance(data, dict) else None
+    if not isinstance(checks_list, list):
+        return []
+    return [problem for entry in checks_list if isinstance(entry, dict)
+            for problem in [_integrity_at(view, entry)] if problem]
 
 
 def check_env(base_rev: str, repo_root: Path) -> dict:

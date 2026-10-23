@@ -244,5 +244,49 @@ class GuideIntegrityTests(unittest.TestCase):
         self.assertIn("no_hex.md", result.stdout)
 
 
+class CheckIntegrityAcrossCommitsTests(unittest.TestCase):
+    """CI must verify every registered script against each commit's OWN manifest (its own tree),
+    not only the final tree: a commit that tampers with an approved check and a later commit that
+    undoes the tamper byte-for-byte must still fail CI for the range."""
+
+    register = RegisteredCheckTests.register
+    tearDown = RegisteredCheckTests.tearDown
+
+    def setUp(self):
+        RegisteredCheckTests.setUp(self)
+        self.assertEqual(self.register().returncode, 0)
+        subprocess.run(["git", "add", "-A"], cwd=self.root, check=True)
+        committed = real_commit(self.root, "register check")
+        self.assertEqual(committed.returncode, 0, committed.stdout + committed.stderr)
+        self.base = git(self.root, "rev-parse", "HEAD").stdout.strip()
+        self.script_path = self.root / "docs/_cgspec/04-checks/no_hex.py"
+
+    def ci(self):
+        return hook(self.root, "ci", None, "--tool", "git", "--base", self.base)
+
+    def test_ci_catches_a_script_deleted_then_restored_across_commits(self):
+        original = self.script_path.read_bytes()
+        git(self.root, "rm", "-q", "docs/_cgspec/04-checks/no_hex.py")
+        git(self.root, "commit", "-q", "-m", "drop the check")  # pushed past the local hook
+        self.script_path.write_bytes(original)
+        git(self.root, "add", "docs/_cgspec/04-checks/no_hex.py")
+        git(self.root, "commit", "-q", "-m", "restore the check")
+        result = self.ci()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("no_hex.py", result.stdout)
+
+    def test_ci_catches_a_script_modified_then_restored_across_commits(self):
+        original = self.script_path.read_bytes()
+        self.script_path.write_bytes(original + b"\n# tampered\n")
+        git(self.root, "add", "docs/_cgspec/04-checks/no_hex.py")
+        git(self.root, "commit", "-q", "-m", "neuter the check")  # pushed past the local hook
+        self.script_path.write_bytes(original)
+        git(self.root, "add", "docs/_cgspec/04-checks/no_hex.py")
+        git(self.root, "commit", "-q", "-m", "restore the check")
+        result = self.ci()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("no_hex.py", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
