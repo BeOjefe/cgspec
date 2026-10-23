@@ -1,5 +1,5 @@
 # Research queue
-Created: 2026-10-22T20:50:49Z · Last edited: 2026-10-22T20:50:49Z
+Created: 2026-10-22T20:50:49Z · Last edited: 2026-10-23T23:15:12Z
 
 Spikes that are queued but not yet run. A queued item is a question, not a finding: nothing
 here may be cited as evidence. When a spike concludes it becomes a `RES-NNN-<slug>.md` file
@@ -13,7 +13,8 @@ An item nobody can state a use for is deleted rather than carried.
 ## QUEUE-001 — AIS-OS: a prose-governed AI operating system
 
 - **Source:** <https://github.com/nateherkai/AIS-OS> (MIT, © 2026 Nate Herk). Same author as
-  `scroll-craft`, which is already imported under this directory as `scrollcraft/`.
+  `scroll-craft`, which is already imported under this directory as `scrollcraft/` and
+  analysed in [`RES-006`](RES-006-scroll-craft-skill-standard-and-verification.md).
 - **Status:** queued, not read. Nothing below is a finding.
 - **Added:** 2026-10-22, at the user's request, to deeply explore.
 
@@ -51,7 +52,7 @@ Its parts also map onto CGSpec's with suspicious neatness, and each mapping is a
 
 ### What finishes this spike
 
-A `RES-005` that answers, with file-and-line evidence from the tree rather than from the README:
+The next free `RES-NNN` (`RES-005` and `RES-006` are taken) that answers, with file-and-line evidence from the tree rather than from the README:
 
 1. Which of its rules are mechanically enforced (a script, a hook, a check that can fail) and
    which are prose the agent may ignore. Count both.
@@ -67,3 +68,28 @@ A `RES-005` that answers, with file-and-line evidence from the tree rather than 
 Import the tree under this directory as a local-only reference (see `README.md`) before
 reading it, so the spike's citations point at a pinned revision rather than a moving branch.
 Record the commit SHA that was read.
+
+---
+
+## QUEUE-002 — scroll-craft, deep pass
+
+- **Source:** <https://github.com/nateherkai/scroll-craft> (MIT, © 2026 Nate Herk), imported as
+  `scrollcraft/` in this directory at revision `0b816225945e45380397d6a0487efa3c98916858`.
+- **Status:** queued. [`RES-006`](RES-006-scroll-craft-skill-standard-and-verification.md) is a
+  first reading only; nothing here adds a finding to it.
+- **Added:** 2026-10-22, at the user's request, to go deeper later.
+
+### Why CGSpec needs it
+
+`RES-006` read the scripts as text. Its proposals (scroll-motion checks in `visual_audit.py`, a
+cross-project uniqueness register) rest on what those scripts claim to check, not on running
+them.
+
+### What finishes this spike
+
+1. Run `doctor.mjs`, `shoot.mjs` and `worldflight-assert.mjs` in a disposable copy on a sample
+   build, and record what each one actually catches and misses.
+2. Read `CHANGELOG.md` in full and list each failure the author hit that CGSpec's checks would
+   or would not have caught.
+3. Decide each `RES-006` proposal: adopt with a named CGSpec home and a test, or reject with a
+   reason. Use no paid `kie.ai` call without the user's yes.

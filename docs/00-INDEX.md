@@ -1,5 +1,5 @@
 # CGSpec v0.2 documentation index
-Created: unknown · Last edited: 2026-10-20T17:54:17Z
+Created: unknown · Last edited: 2026-10-22T21:26:35Z
 
 [METHOD-v0.2.md](METHOD-v0.2.md) is the current specification. [STATUS.md](STATUS.md) is the single implementation-status reference. The `0.2.0` marker does not mean a release has been published.
 
@@ -16,6 +16,7 @@ Created: unknown · Last edited: 2026-10-20T17:54:17Z
 | Workflow skills | [skills/](../skills/) | Nine v0.2 skills plus pivot alias; runtime rehearsal pending |
 | Team roles | [agents/](../agents/) | Eight definitions; runtime rehearsal pending |
 | Project templates | [templates/](../templates/) | Candidate; CortexGate upgrade rehearsal pending |
+| Current research | [02-research/](_cgspec/02-research/README.md) | [RES-005](_cgspec/02-research/RES-005-anthropic-design-plugin-structure-and-skills.md) design plugin and [RES-006](_cgspec/02-research/RES-006-scroll-craft-skill-standard-and-verification.md) scroll-craft concluded 2026-10-22; queued spikes in [RESEARCH-QUEUE.md](_cgspec/02-research/RESEARCH-QUEUE.md) |
 
 ## Historical v0.1 records
 
