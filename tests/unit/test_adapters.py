@@ -127,7 +127,7 @@ class WiringTests(unittest.TestCase):
         self.assertEqual(run_script("doctor.py", "--root", str(self.root)).returncode, 0)
 
     def test_visual_job_points_the_engine_at_a_pinned_playwright_outside_the_checkout(self):
-        from _lib.adapters import PLAYWRIGHT_VERSION
+        from _lib.ci_visual import PLAYWRIGHT_VERSION
         self.assertEqual(self.do_install().returncode, 0)
         workflow = (self.root / ".github/workflows/cgspec.yml").read_text()
         self.assertRegex(PLAYWRIGHT_VERSION, r"^\d+\.\d+\.\d+$")
@@ -146,7 +146,7 @@ class WiringTests(unittest.TestCase):
             self.assertFalse((self.root / "package.json").exists())
 
     def test_upload_artifact_is_pinned_to_a_supported_major_by_full_sha(self):
-        from _lib.adapters import UPLOAD_ARTIFACT_SHA, UPLOAD_ARTIFACT_VERSION
+        from _lib.ci_visual import UPLOAD_ARTIFACT_SHA, UPLOAD_ARTIFACT_VERSION
         self.assertRegex(UPLOAD_ARTIFACT_SHA, r"^[0-9a-f]{40}$")
         self.assertGreaterEqual(int(UPLOAD_ARTIFACT_VERSION.split(".")[0]), 4)
         self.assertEqual(self.do_install().returncode, 0)
