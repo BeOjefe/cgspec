@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 
+from .ci_visual import VISUAL_WORKFLOW
 from .common import CgspecError, STATE_DIR, utc_now, write_json
 
 HOOK = "docs/_cgspec/01-engine/cgspec_hook.py"
@@ -38,14 +39,16 @@ WORKFLOW = """name: cgspec-governance
 on:
   push:
   pull_request:
+permissions:
+  contents: read
 jobs:
   governance:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.12"
       - name: Pick the base and a trusted engine (never the engine inside this commit)
@@ -85,6 +88,7 @@ jobs:
           CGSPEC_TRUST_BASE="$TRUSTED" sh "$RUNNER_TEMP/cgspec-select.sh"
       - name: CGSpec governance (cannot be skipped)
         run: python3 "$CGSPEC_RELEASE/engine/cgspec_hook.py" ci --root "$GITHUB_WORKSPACE" --base "$CGSPEC_BASE" --release-dir "$CGSPEC_RELEASE" --tool git
+      # CGSPEC_VISUAL_JOB
 """
 SELECT = """#!/bin/sh
 # Installed by CGSpec. Chooses the range base and downloads the plugin release used to judge it.
@@ -233,7 +237,7 @@ def _wire_git(root: Path, record: dict) -> list[str]:
     return notes
 
 
-def wire(root: Path, tools: list[str], owned: dict) -> list[str]:
+def wire(root: Path, tools: list[str], owned: dict, profile: str = "") -> list[str]:
     notes, record = [], owned.setdefault("adapters", {})
     if "claude" in tools:
         record["claude"] = {"path": ".claude/settings.json", "created": _merge_json(root / ".claude/settings.json", _claude)}
@@ -250,7 +254,9 @@ def wire(root: Path, tools: list[str], owned: dict) -> list[str]:
         notes += _wire_git(root, record)
     if "ci" in tools:
         rel, select = ".github/workflows/cgspec.yml", ".github/cgspec-select.sh"
-        ok, note = _write_new(root, rel, WORKFLOW.format())
+        visual_job = VISUAL_WORKFLOW.rstrip() if profile in {"website", "web-workspace", "mobile", "small"} else ""
+        workflow = WORKFLOW.format().replace("      # CGSPEC_VISUAL_JOB", visual_job)
+        ok, note = _write_new(root, rel, workflow)
         ok2, note2 = _write_new(root, select, SELECT, 0o755)
         notes += [note, note2]
         if ok and ok2:

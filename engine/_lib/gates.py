@@ -62,7 +62,8 @@ class Context:
             except (OSError, ValueError):
                 return {}
         frozen = {e.get("path", "") for e in read((STATE_DIR / "frozen.json").as_posix()).get("entries", [])}
-        checks = {c.get("path", "") for c in read("docs/_cgspec/04-checks/manifest.json").get("checks", [])}
+        checks = {p for c in read("docs/_cgspec/04-checks/manifest.json").get("checks", [])
+                  for p in (c.get("path", ""), c.get("guide", "")) if p}
         return cls(root, read(PROJECT_FILE.as_posix()), frozen, checks)
 
     @property
@@ -130,6 +131,9 @@ def _script_allowed(ctx: Context, rel: str, content: str | None) -> bool:
         return True
     if rel in ctx.checks:
         return True  # already approved and registered (spec 8); its hash is pinned in the manifest
+    # Registration creates an approved Markdown guide beside the registered script.
+    if rel.startswith("docs/_cgspec/04-checks/") and Path(rel).suffix.lower() == ".md":
+        return rel in ctx.checks
     if not rel.startswith("docs/"):
         return match_any(rel, ctx.classes.get("code", []) + ctx.classes.get("tests", []) + L.CONFIG_GLOBS)
     from .doctor_checks import _browser_code_only  # local import keeps gates light

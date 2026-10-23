@@ -5,6 +5,8 @@ description: Design or revise a product experience from real references through 
 
 # Design the experience
 
+Pull request visual proof comes from CI artifacts tied to the PR commit; never use hand-attached images as proof. CI uses its own pinned Playwright, not the project's, and a journey or audit counts as PASS only with screenshots for every viewport; BLOCKED or PARTIAL means nothing was proven. That CI job is evidence, not a gate: read its summary and artifacts before calling a screen done. Keep journey names on one line with no control characters.
+
 Read only what the current step needs, once per session: the [agent contract](../../engine/CONTRACT.md) and [method section 6](../../docs/METHOD-v0.2.md) (that section only). Start from the user's goal and the locked layers in `docs/spines/03-EXPERIENCE.md`. Advance only the layer affected; layers 0-4 are disposable grey work, 5b-7 are the real frontend. A tweak inside locked zones and tokens is applied directly; a changed flow, zone, token or register reopens only the dependent layers, and you run `impact.py` and show the map first.
 
 ## Start from the problem, not the look

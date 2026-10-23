@@ -12,6 +12,7 @@ Exit 0 all passed, 1 a journey failed or names a missing test ID, 2 blocked (no 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -58,6 +59,8 @@ def load(path: Path, root: Path) -> dict:
     if not isinstance(data, dict) or not isinstance(data.get("name"), str) or not isinstance(data.get("url"), str) \
             or not isinstance(data.get("steps"), list) or not data["steps"]:
         raise CgspecError(f"{rel}: a journey needs name, url and a non-empty steps list")
+    if evidence.unsafe_name(data["name"]):
+        raise CgspecError(f"{rel}: a journey name must be non-empty and contain no newlines or control characters")
     for i, step in enumerate(data["steps"]):
         keys = [k for k in step if k in ACTIONS and k != "state"] if isinstance(step, dict) else []
         keys = keys or (["state"] if isinstance(step, dict) and "state" in step else [])
@@ -71,6 +74,17 @@ def load(path: Path, root: Path) -> dict:
         raise CgspecError(f"{rel}: viewports are desktop and mobile")
     data["viewports"] = viewports
     return data
+
+
+def label_for(path: Path, root: Path, screen: Path | None, name: str) -> str:
+    """A run identity unique to this journey file: two journeys named 'pay now' and 'pay-now' slug the
+    same way, so the identity is anchored to the journey file's own repo-relative path (unique by
+    construction), with a human-readable slug kept only as a prefix. This is also the evidence record's
+    file name and the browser artifacts' file-name prefix, so a collision there is now impossible too."""
+    rel = path.relative_to(root).as_posix()
+    digest = hashlib.sha256(rel.encode("utf-8")).hexdigest()[:10]
+    prefix = evidence.slug(f"{screen.name if screen else 'app'}-{name}")
+    return f"{prefix}-{digest}"
 
 
 def test_ids(data: dict) -> set[str]:
@@ -96,13 +110,31 @@ def missing_ids(screen: Path, ids: set[str]) -> list[str]:
     return sorted(i for i in ids if not re.search(rf"""["'`=]{re.escape(i)}["'`\s>]""", text))
 
 
-def run(root: Path, targets: list[str], write: bool = True) -> tuple[int, list[str]]:
+def step_failures(item: dict | None) -> list[str]:
+    viewports = item.get("viewports") if isinstance(item, dict) else None
+    problems = []
+    for vp in viewports if isinstance(viewports, list) else []:
+        if isinstance(vp, dict) and vp.get("ok") is not True:
+            where = f"step {vp['step'] + 1} (state {vp.get('state')})" if isinstance(vp.get("step"), int) \
+                else f"state {vp.get('state')}"
+            errors = vp.get("errors") if isinstance(vp.get("errors"), list) else []
+            reason = vp.get("error") or "; ".join(map(str, errors[:3])) or "not ok"
+            problems.append(f"{vp.get('viewport')}: {where}: {reason}")
+    return problems
+
+
+def run(root: Path, targets: list[str], write: bool = True, video: bool = False,
+        records: list[dict] | None = None) -> tuple[int, list[str]]:
+    """(exit code, printed lines). `records` collects one structured {item, verdict, detail} per journey."""
     lines, runs, meta, failed = [], [], {}, False
+    records = records if records is not None else []
     for path in discover(root, targets):
         data = load(path, root)
         url, screen = resolve(root, path, data)
         rel = path.relative_to(root).as_posix()
-        label = evidence.slug(f"{screen.name if screen else 'app'}-{data['name']}")
+        label = label_for(path, root, screen, data["name"])
+        if label in meta:  # fail closed: a label collision must stop the run rather than overwrite it
+            raise CgspecError(f"{rel}: journey run label {label!r} collides with {meta[label][2]!r}")
         covers = data.get("covers") or ([f"{screen.relative_to(root).as_posix()}/**"] if screen else [rel])
         meta[label] = (data, covers, rel)
         gone = missing_ids(screen, test_ids(data)) if screen else []
@@ -110,47 +142,59 @@ def run(root: Path, targets: list[str], write: bool = True) -> tuple[int, list[s
             failed = True
             detail = f"test IDs not found in {screen.relative_to(root).as_posix()}: {', '.join(gone)}"
             lines.append(f"FAIL {data['name']}: {detail}")
+            records.append({"item": data["name"], "verdict": "FAIL", "detail": detail})
             if write:
                 evidence.write(root, "journeys", label, f"journey:{data['name']}", "FAIL", covers, detail, "journey.py")
             continue
         runs.append({"kind": "journey", "label": label, "url": url, "steps": data["steps"],
-                     "viewports": data["viewports"]})
+                     "viewports": data["viewports"], "video": video})
     if not runs:
         return (EXIT_FAIL if failed else EXIT_OK), lines
-    result = browser.run(root, runs, root / ".cgspec-scratch/journeys")
+    shots = root / ".cgspec-scratch/journeys"
+    result = browser.run(root, runs, shots, video=video)
     if "blocked" in result:
         for item in runs:
             data, covers, _ = meta[item["label"]]
             lines.append(f"BLOCKED {data['name']}: {result['blocked']}")
+            records.append({"item": data["name"], "verdict": "BLOCKED", "detail": result["blocked"]})
             if write:
                 evidence.write(root, "journeys", item["label"], f"journey:{data['name']}", "BLOCKED", covers,
                                result["blocked"], "journey.py")
         return (EXIT_FAIL if failed else EXIT_BLOCKED), lines
-    for item in result["results"]:
-        data, covers, _ = meta[item["label"]]
-        problems = []
-        for vp in item["viewports"]:
-            if not vp["ok"]:
-                where = f"step {vp['step'] + 1} (state {vp['state']})" if "step" in vp else f"state {vp['state']}"
-                problems.append(f"{vp['viewport']}: {where}: {vp.get('error') or '; '.join(vp['errors'][:3])}")
+    reported = browser.results_by_label(result)
+    for run_item in runs:
+        data, covers, _ = meta[run_item["label"]]
+        item = reported.get(run_item["label"])
+        # A PASS needs a driver result for every expected viewport and every expected artifact on disk.
+        problems = browser.proof_problems(run_item, item, shots) + step_failures(item)
         verdict = "FAIL" if problems else "PASS"
         failed = failed or bool(problems)
         detail = "\n".join(problems) or f"all steps passed on {', '.join(data['viewports'])}"
         lines.append(f"{verdict} {data['name']}" + (f":\n  " + "\n  ".join(problems) if problems else ""))
+        records.append({"item": data["name"], "verdict": verdict, "detail": detail})
         if write:
             evidence.write(root, "journeys", item["label"], f"journey:{data['name']}", verdict, covers, detail,
                            "journey.py")
     return (EXIT_FAIL if failed else EXIT_OK), lines
 
 
+def write_results(path: Path, tool: str, records: list[dict]) -> None:
+    path.write_text(json.dumps({"schema": 1, "tool": tool, "records": records}, indent=2) + "\n", encoding="utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("targets", nargs="*", help="journey files, folders or screen names (default: all screens)")
     parser.add_argument("--no-evidence", action="store_true", help="do not write evidence records")
+    parser.add_argument("--video", action="store_true", help="record a WebM for each journey viewport")
+    parser.add_argument("--json-out", help="write structured results (one record per journey) to this file")
     parser.add_argument("--root")
     args = parser.parse_args(argv)
+    records: list[dict] = []
     try:
-        code, lines = run(resolve_root(args.root), args.targets, not args.no_evidence)
+        code, lines = run(resolve_root(args.root), args.targets, not args.no_evidence, args.video, records)
+        if args.json_out:
+            write_results(Path(args.json_out), "journey", records)
     except CgspecError as exc:
         print(f"journey: {exc}", file=sys.stderr)
         return EXIT_FAIL

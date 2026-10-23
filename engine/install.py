@@ -195,7 +195,7 @@ def cmd_install(root: Path, args: argparse.Namespace) -> int:
     copy_engine(root)
     update_gitignore(root, owned)
     tools = sorted(set(args.tools.split(",")) - {""})
-    for note in wire(root, tools, owned):
+    for note in wire(root, tools, owned, args.profile):
         print(note)
     write_json(root / OWNED, owned)
     project = {"schema": 1, "cgspec_version": version(), "profile": args.profile, "topology": args.topology,

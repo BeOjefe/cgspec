@@ -56,7 +56,10 @@ class Base(unittest.TestCase):
         (self.screen / "journeys").mkdir(parents=True)
         (self.screen / "index.html").write_text(CLEAN)
         (self.screen / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n")
-        (self.screen / "journeys/create.json").write_text(json.dumps(JOURNEY))
+        journey_file = self.screen / "journeys/create.json"
+        journey_file.write_text(json.dumps(JOURNEY))
+        import journey as _journey
+        self.journey_label = _journey.label_for(journey_file, self.root, self.screen, JOURNEY["name"])
 
     def tearDown(self):
         if self._env is None:
@@ -147,7 +150,7 @@ class StaticJourneyTests(Base):
     def test_valid_journey_is_blocked_without_browser(self):
         result = self.journey("invoice")
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-        self.assertEqual(self.evidence("journeys", "invoice-create-invoice")["verdict"], "BLOCKED")
+        self.assertEqual(self.evidence("journeys", self.journey_label)["verdict"], "BLOCKED")
 
     def test_missing_test_id_fails_without_browser(self):
         bad = dict(JOURNEY, steps=JOURNEY["steps"] + [{"click": "archive"}])
@@ -155,7 +158,7 @@ class StaticJourneyTests(Base):
         result = self.journey()
         self.assertEqual(result.returncode, 1)
         self.assertIn("archive", result.stdout)
-        self.assertEqual(self.evidence("journeys", "invoice-create-invoice")["verdict"], "FAIL")
+        self.assertEqual(self.evidence("journeys", self.journey_label)["verdict"], "FAIL")
 
     def test_malformed_journey_refused(self):
         (self.screen / "journeys/create.json").write_text(json.dumps({"name": "x", "url": "index.html",
@@ -169,11 +172,20 @@ class StaticJourneyTests(Base):
 class BrowserTests(Base):
     browser = True
 
+    def test_video_flag_writes_webm_when_browser_is_available(self):
+        if not has_browser():
+            self.skipTest("Playwright is not installed")
+        result = self.journey("invoice", "--video")
+        if result.returncode == 2:
+            self.skipTest("Playwright Chromium is unavailable")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(any((self.root / ".cgspec-scratch/journeys").glob("*.webm")))
+
     def test_journey_passes_on_desktop_and_mobile_with_screenshots(self):
         result = self.journey("invoice")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(self.evidence("journeys", "invoice-create-invoice")["verdict"], "PASS")
-        self.assertTrue((self.root / ".cgspec-scratch/journeys/invoice-create-invoice-mobile-after.png").is_file())
+        self.assertEqual(self.evidence("journeys", self.journey_label)["verdict"], "PASS")
+        self.assertTrue((self.root / f".cgspec-scratch/journeys/{self.journey_label}-mobile-after.png").is_file())
 
     def test_wrong_assertion_fails_naming_step_and_state(self):
         bad = json.loads(json.dumps(JOURNEY))

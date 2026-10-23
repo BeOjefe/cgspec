@@ -222,6 +222,8 @@ def targets_of(root: Path, raw: list[str]) -> list[tuple[str, Path, list[str]]]:
         raw = [p.name for p in sorted(base.iterdir()) if p.is_dir() and not p.name.startswith("_")] if base.is_dir() else []
     out = []
     for item in raw:
+        if evidence.unsafe_name(item):
+            raise CgspecError(f"screen or page name {item!r} contains newlines or control characters")
         path = root / item
         if path.is_file():
             out.append((evidence.slug(item), path, [item]))
@@ -234,7 +236,10 @@ def targets_of(root: Path, raw: list[str]) -> list[tuple[str, Path, list[str]]]:
     return out
 
 
-def audit(root: Path, raw: list[str], write: bool = True) -> tuple[int, list[str]]:
+def audit(root: Path, raw: list[str], write: bool = True, video: bool = False,
+          records: list[dict] | None = None) -> tuple[int, list[str]]:
+    """(exit code, printed lines). `records` collects one structured {item, verdict, detail} per screen."""
+    records = records if records is not None else []
     try:
         project = json.loads((root / PROJECT_FILE).read_text(encoding="utf-8"))
         profile = project.get("profile", "")
@@ -250,13 +255,22 @@ def audit(root: Path, raw: list[str], write: bool = True) -> tuple[int, list[str
     if tokens.get("issue"):
         for errors, warnings in results.values():
             warnings.append(tokens["issue"])
-    runs = [{"kind": "audit", "label": label, "url": path.resolve().as_uri()} for label, path, _ in items]
-    shown = browser.run(root, runs, root / ".cgspec-scratch/visual")
+    runs = [{"kind": "audit", "label": label, "url": path.resolve().as_uri(), "video": video}
+            for label, path, _ in items]
+    shots = root / ".cgspec-scratch/visual"
+    shown = browser.run(root, runs, shots, video=video)
     blocked = shown.get("blocked")
-    for item in shown.get("results", []):
+    reported = browser.results_by_label(shown)
+    for run_item in runs if not blocked else []:
+        item = reported.get(run_item["label"])
+        # A rendered PASS needs both viewports reported and their screenshots (and videos) on disk.
+        problems = browser.proof_problems(run_item, item, shots)
+        results[run_item["label"]][0].extend(f"E-PROOF: {problem}" for problem in problems)
+        if problems:
+            continue
         errs, warns = rendered(item, tokens)
-        results[item["label"]][0].extend(errs)
-        results[item["label"]][1].extend(warns)
+        results[run_item["label"]][0].extend(errs)
+        results[run_item["label"]][1].extend(warns)
     rank, lines = {"PASS": EXIT_OK, "PARTIAL": EXIT_PARTIAL, "FAIL": EXIT_FAIL}, []
     seen = set()
     for label, path, covers in items:
@@ -266,6 +280,7 @@ def audit(root: Path, raw: list[str], write: bool = True) -> tuple[int, list[str
         detail = errors + warnings + ([f"rendered checks not run: {blocked}"] if blocked else
                                       [f"screenshots in .cgspec-scratch/visual/{label}-desktop.png and -mobile.png"])
         lines.append(f"{verdict} {path.relative_to(root).as_posix()}" + "".join(f"\n  {d}" for d in detail))
+        records.append({"item": path.relative_to(root).as_posix(), "verdict": verdict, "detail": "\n".join(detail)})
         if write:
             evidence.write(root, "visual", label, f"visual-audit:{label}", verdict, covers, "\n".join(detail),
                            "visual_audit.py")
@@ -277,10 +292,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("targets", nargs="*", help="screen names or HTML files (default: every prototype screen)")
     parser.add_argument("--no-evidence", action="store_true")
+    parser.add_argument("--video", action="store_true", help="record WebM browser video where rendered audit runs")
+    parser.add_argument("--json-out", help="write structured results (one record per screen) to this file")
     parser.add_argument("--root")
     args = parser.parse_args(argv)
+    records: list[dict] = []
     try:
-        code, lines = audit(resolve_root(args.root), args.targets, not args.no_evidence)
+        code, lines = audit(resolve_root(args.root), args.targets, not args.no_evidence, args.video, records)
+        if args.json_out:
+            Path(args.json_out).write_text(json.dumps({"schema": 1, "tool": "visual_audit", "records": records},
+                                                      indent=2) + "\n", encoding="utf-8")
     except CgspecError as exc:
         print(f"visual_audit: {exc}", file=sys.stderr)
         return EXIT_FAIL

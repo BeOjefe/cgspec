@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from . import checks
 from .commit_gate import evaluate
 from .gitview import View, git
 
@@ -100,12 +101,14 @@ def run(root: Path, base: str | None, rerun_tests: bool = True,
     notes.append(f"checking {base[:10]}..HEAD")
     for commit in commits_in_range(root, base):
         subject = git(root, "log", "-1", "--format=%h %s", commit).stdout.strip()
-        reasons = evaluate(root, View.commit(root, commit), release_dir, strict=True)
+        view = View.commit(root, commit)
+        reasons = evaluate(root, view, release_dir, strict=True)
+        reasons += [f"check integrity: {problem}" for problem in checks.verify_manifest_at(view)]
         problems += [f"commit {subject}: {reason}" for reason in reasons]
-    from . import checks
     changed = [line for line in git(root, "diff", "--name-only", "--diff-filter=d", f"{base}..HEAD").stdout.splitlines()
                if line]
-    failures, check_notes = checks.run(root, changed, write_evidence=False)
+    # The same trusted range base the commits above were judged against (the workflow's CGSPEC_BASE).
+    failures, check_notes = checks.run(root, changed, write_evidence=False, base_rev=base, repo_root=root)
     problems += [f"check {failure}" for failure in failures]
     notes += [note for note in check_notes if not note.startswith("no registered")]
     if rerun_tests:
