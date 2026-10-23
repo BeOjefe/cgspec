@@ -4,6 +4,7 @@ description: Design or revise a product experience from real references through 
 ---
 
 # Design the experience
+Created: unknown · Last edited: 2026-10-23T14:35:00Z
 
 Pull request visual proof comes from CI artifacts tied to the PR commit; never use hand-attached images as proof. CI uses its own pinned Playwright, not the project's, and a journey or audit counts as PASS only with screenshots for every viewport; BLOCKED or PARTIAL means nothing was proven. That CI job is evidence, not a gate: read its summary and artifacts before calling a screen done. Keep journey names on one line with no control characters.
 
@@ -82,7 +83,7 @@ Prototype files other than ordinary Markdown need the active change scope. Befor
 | 1 Tasks | Actors and tasks in the spine, each with frequency and device. | — |
 | 2 Screens and flows | One row per screen with its main need (the focal point). | [craft](references/craft.md) section 1 |
 | 3 Wireframes | Grey shell, zone IDs, real-looking data in realistic amounts, density from the register; the screen's data inventory. | [craft](references/craft.md) sections 1-5, 8 |
-| 4 Behavior | Clickable grey prototype with the [tweaks panel](references/tweaks-panel.js) included, so the user can try type, density, accent, radius and light/dark live and paste the values back, all states, `data-testid` on every control; journeys in `docs/prototypes/<screen>/journeys/`; run `visual_audit.py` and `journey.py`. Cut a snapshot with `bundle_prototype.py` when the user locks the layer. | [behavior coverage](references/behavior-coverage.md), [RES-002](../../docs/_cgspec/02-research/RES-002-anti-slop-constrained-ui-and-deterministic-gates.md) |
+| 4 Behavior | Clickable grey prototype with the [tweaks panel](references/tweaks-panel.js) included, so the user can try type, density, accent, radius and light/dark live and paste the values back, all states, `data-testid` on every control; journeys in `docs/prototypes/<screen>/journeys/`; run `visual_audit.py` and `journey.py`; before showing a screen or claiming it works, run `verify.py`. Cut a snapshot with `bundle_prototype.py` when the user locks the layer. | [behavior coverage](references/behavior-coverage.md), [RES-002](../../docs/_cgspec/02-research/RES-002-anti-slop-constrained-ui-and-deterministic-gates.md) |
 | 5b Token sheet | Derive every token from the register and measured references; each value says where it comes from. Set `design_tokens` in `docs/_cgspec/project.json` to the token sheet's project-relative path, so visual audit checks the intended sheet. | [tokens template](references/tokens.dtcg.json), [reference-extraction](references/reference-extraction.md), [craft](references/craft.md) sections 3-7 |
 | 6 High fidelity | Real frontend, one key screen first, the tweaks panel kept until the user locks the look (then removed), components from recipes; review screenshots against the rubric with a different reviewer before rolling out and before locking. | [craft](references/craft.md), [components](references/components.md), [critique rubric](references/critique-rubric.md) |
 | 7 Motion | Behaviors from layer 4 animated with motion tokens only. If media and text carry a shared story, lay out a timed storyboard against the clip before implementing it. | [IMAGE-WORD and motion](references/image-word-and-motion.md) when media matters |
