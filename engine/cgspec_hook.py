@@ -248,6 +248,8 @@ def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str) -> int
             print(f"cgspec_hook: document date sync failed: {exc!r}", file=sys.stderr)
         errors, summary = doctor_state(root)
         allow, message = session.stop_decision(root, session.stop_problems(root, errors))
+        if allow:
+            session.mark_question_used(root)
         if args.tool == "antigravity":
             if not allow:
                 print(json.dumps({"decision": "continue", "reason": message}))

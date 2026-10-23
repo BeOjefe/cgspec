@@ -1,5 +1,5 @@
 {
-  "title": "docs/_cgspec/07-state/checkpoint.json \u2014 enough to resume after any interruption",
+  "title": "docs/_cgspec/07-state/checkpoint.json — enough to resume after any interruption",
   "type": "object",
   "required": [
     "schema",
@@ -112,6 +112,29 @@
           }
         }
       ]
+    },
+    "awaiting_user": {
+      "description": "A question the agent stopped to ask. Keeps the batch in flight; excuses exactly one stop, then is marked used.",
+      "type": "object",
+      "required": [
+        "at",
+        "question",
+        "used"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "question": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "used": {
+          "type": "boolean"
+        }
+      }
     },
     "unresolved_stop": {
       "type": "object",

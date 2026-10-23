@@ -1,5 +1,5 @@
 # CGSpec engine: file formats and hook contract
-Created: unknown · Last edited: 2026-10-21T17:56:34Z
+Created: unknown · Last edited: 2026-10-23T11:21:40Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
@@ -113,7 +113,7 @@ every session, and the commit hook and CI still catch the change.
 
 ## Checkpoint updates and recovery
 
-`cgspec_hook.py checkpoint --next '...' --in-flight '...'` updates validated existing state. `--done`, `--blocked` and `--in-flight` are mutually exclusive. Damaged or missing state is preserved and requires explicit repair from known records; the command never replaces it with empty defaults.
+`cgspec_hook.py checkpoint --next '...' --in-flight '...'` updates validated existing state. `--done`, `--blocked`, `--awaiting` and `--in-flight` are mutually exclusive. `--awaiting '<question>'` records `awaiting_user` (`at`, `question`, `used`) and keeps `in_flight`: the stop check accepts one stop on an unused question, then marks it used and checks in-flight work normally again. Any other transition clears it, and the session pack shows it so a resumed session sees what the user was asked. Damaged or missing state is preserved and requires explicit repair from known records; the command never replaces it with empty defaults.
 
 `checkpoint --update-file <path>` (or `--update-file -` for stdin) accepts a JSON object containing semantic checkpoint fields. Use a unique file under `.cgspec-scratch/` or `/tmp`. Each named field replaces its entire value; omitted fields remain unchanged, arrays/maps replace rather than merge, and `null` is valid only for nullable schema fields. Derived `source`, `unresolved_stop`, `schema` and `updated` cannot be patched. Do not mix a patch key with a flag updating the same field. These commands assume one checkpoint writer; cross-process ownership remains pending.
 
