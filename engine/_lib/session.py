@@ -40,9 +40,12 @@ def pack(root: Path, doctor_summary: str) -> str:
              f"next action: {cp.get('next_action') or '(none)'}",
              f"in flight: {cp.get('in_flight') or 'nothing'}",
              f"active tier: {tier['tier'] + ' ' + tier['id'] + ' - ' + tier['reason'] if tier else 'none'}"]
-    if cp.get("awaiting_user"):
+    if isinstance(cp.get("awaiting_user"), dict):
         asked = cp["awaiting_user"]
-        lines.append(f"waiting on the user (asked {asked.get('at', '?')}): {asked.get('question', '')}")
+        label = "last question asked" if asked.get("used") else "waiting on the user"
+        count = asked.get("count", 1)
+        extra = f"; {count} questions asked during this batch" if isinstance(count, int) and count > 1 else ""
+        lines.append(f"{label} ({asked.get('at', '?')}{extra}): {asked.get('question', '')}")
     if cp.get("open_issues"):
         lines.append("open issues: " + "; ".join(cp["open_issues"]))
     lines += recovery

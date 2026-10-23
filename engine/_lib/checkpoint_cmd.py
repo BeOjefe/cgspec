@@ -81,10 +81,17 @@ def update(root: Path, args) -> dict:
         cp["in_flight"] = None
     if args.blocked is not None:
         cp["open_issues"] = cp.get("open_issues", []) + [f"BLOCKED {utc_now()[:10]}: {args.blocked.strip()}"]
+    previous = cp.get("awaiting_user") if isinstance(cp.get("awaiting_user"), dict) else None
+    if previous is not None and previous.get("used") is False and (
+            args.awaiting is not None or transition or args.in_flight is not None or "in_flight" in patch):
+        # Recorded but never put to the user (no stop happened): park it rather than lose it.
+        cp["pending"] = cp.get("pending", []) + [f"UNANSWERED {previous['at'][:10]}: {previous['question']}"]
     if args.awaiting is not None:
-        # Asking is a pause, not an end: in_flight is kept, and the question excuses one stop.
-        cp["awaiting_user"] = {"at": utc_now(), "question": args.awaiting.strip(), "used": False}
-    elif transition or args.in_flight is not None:
+        # Asking is a pause, not an end: in_flight is kept, and the question excuses one stop. The count
+        # makes a question-before-every-stop pattern visible; it cannot be prevented, only shown.
+        count = previous.get("count", 1) + 1 if previous is not None else 1
+        cp["awaiting_user"] = {"at": utc_now(), "question": args.awaiting.strip(), "used": False, "count": count}
+    elif transition or args.in_flight is not None or "in_flight" in patch:
         cp.pop("awaiting_user", None)  # the work moved on, so the question is no longer what we wait for
     if patch or any(value is not None for value in fields.values()) or transition:
         cp["updated"] = utc_now()

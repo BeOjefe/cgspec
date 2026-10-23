@@ -97,6 +97,20 @@ class StewardshipContractTests(unittest.TestCase):
         self.assertNotIn("Every message is triaged", self.method)
         self.assertIn("Capture is not triage", self.method)
 
+    def test_a_definition_the_agent_wrote_is_not_approval(self):
+        """Final-challenge M2: the agent's own minimum definition must not authorize its own build,
+        and the forge skill must say the same thing as the contract."""
+        self.assertIn("a definition you wrote is not approval", self.push.lower())
+        forge = read("skills/cgspec-forge/SKILL.md").lower()
+        self.assertIn("a definition you wrote is not approval", forge)
+
+    def test_impact_runs_on_the_same_condition_in_contract_and_method(self):
+        """Final-challenge minor 5: the contract ran impact.py on every late change, the method only
+        when approved work is contradicted."""
+        contract = read("engine/CONTRACT.md")
+        line = next(l for l in contract.splitlines() if "impact.py" in l and "late change" in l)
+        self.assertIn("approved", line)
+
     def test_stopping_to_ask_has_a_legal_path(self):
         self.assertIn("checkpoint --awaiting", self.push)
 

@@ -1,5 +1,5 @@
 # CGSpec Method v0.2 — Specification
-Created: unknown · Last edited: 2026-10-23T11:21:40Z
+Created: unknown · Last edited: 2026-10-23T13:30:51Z
 
 Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Source for the rebuild in `cgspec-next`.
 
@@ -418,7 +418,7 @@ What remains possible, and how to close it: the implementation now requires an e
 | Before compaction | Agent saves semantic progress before context pressure. The hook captures bounded mechanical source context and prints the pack; it does not invent a fresh semantic summary. Unavailable hooks cannot guarantee a save. |
 | Before a tool | Gates above |
 | After a tool | Mark evidence whose covered files changed as stale, count helper agents against the budget (index and document dates are refreshed at the end of the turn) |
-| Stop | Refuse to end until doctor passes, ledger updated, checkpoint fresh, decisions list written; allowed to end with a recorded BLOCKED or PARTIAL, or on a recorded question to the user (`checkpoint --awaiting`, which keeps the batch in flight and excuses one stop); respects the tool's loop flag (`stop_hook_active`) and a retry counter on disk (max 2) |
+| Stop | Refuse to end while doctor reports errors, work is in flight, or the checkpoint is older than the latest ledger entry; allowed to end once the batch is done or recorded BLOCKED, or on a recorded question to the user (`checkpoint --awaiting`, which keeps the batch in flight and excuses one stop). Bounded by a retry counter on disk: after two refusals it ends and keeps the unresolved reasons. The tool's loop flag (`stop_hook_active`) is not read |
 
 | AI tool | What it supports | Fallback |
 | --- | --- | --- |
@@ -457,7 +457,7 @@ Checkpoint (`07-state/checkpoint.json`, committed): goal, stage per part, accept
 
 The agent always says which wake-up it set.
 
-**Memory and late changes.** Where the host has a user-message hook (Claude Code), every message is captured to the inbox with secrets scrubbed. Capture is not triage: the engine does not record where a message was routed, and on hosts without that hook there is no automatic capture at all. The agent does the routing, and records only what affects the work rather than every message: current step (apply now), other screens or later UX (experience spine), backend or future scope (OOUX, architecture, or the checkpoint's `pending`), research (`RES-NNN`). A late idea or change of mind goes through the change flow: the agent compares it with the work in progress → applies it if it fits, or parks it with a reason if it does not → if it contradicts approved work, impact script (`impact.py <paths|IDs> [--term noun] [--screen name]` follows links and record-ID mentions backwards from nouns, screens, layers and baselines, then lists records to update, code in affected slice scopes, evidence that goes stale and frozen baselines that need a new version; plain code, no AI context, read-only) → impact map shown to you with a recommendation → approve → all records updated together → affected evidence marked stale and re-run. On big projects, one scout per repo reads only the affected files.
+**Memory and late changes.** Where the host has a user-message hook (Claude Code), each message is captured to the inbox with secrets scrubbed and cut to its first 2,000 characters; a capture failure never blocks the message. Capture is not triage: the engine does not record where a message was routed, and on hosts without that hook there is no automatic capture at all. The agent does the routing, and records only what affects the work rather than every message: current step (apply now), other screens or later UX (experience spine), backend or future scope (OOUX, architecture, or the checkpoint's `pending`), research (`RES-NNN`). A late idea or change of mind goes through the change flow: the agent compares it with the work in progress → applies it if it fits, or parks it with a reason if it does not → if it contradicts approved work, impact script (`impact.py <paths|IDs> [--term noun] [--screen name]` follows links and record-ID mentions backwards from nouns, screens, layers and baselines, then lists records to update, code in affected slice scopes, evidence that goes stale and frozen baselines that need a new version; plain code, no AI context, read-only) → impact map shown to you with a recommendation → approve → all records updated together → affected evidence marked stale and re-run. On big projects, one scout per repo reads only the affected files.
 
 ## 10. Scale, migration and operations
 

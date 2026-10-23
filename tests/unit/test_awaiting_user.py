@@ -119,11 +119,91 @@ class AwaitingUser(unittest.TestCase):
         result = self.checkpoint("--awaiting", "q?", "--done")
         self.assertNotEqual(result.returncode, 0)
 
-    def test_a_question_without_work_in_flight_is_harmless(self):
-        """Asking is always allowed, including when nothing is in flight."""
+    def test_a_question_without_work_in_flight_is_recorded(self):
+        """Asking is allowed with nothing in flight, and the question is still kept for a resume."""
         asked = self.checkpoint("--awaiting", "Which screen next?")
         self.assertEqual(asked.returncode, 0, asked.stdout + asked.stderr)
-        self.assertEqual(self.stop().returncode, 0)
+        self.assertEqual(self.read()["awaiting_user"]["question"], "Which screen next?")
+
+    # --- final-challenge review round 1 (Opus 5.5, 2026-10-23) ---------------------------------
+    def patch(self, data):
+        return run_script("cgspec_hook.py", "checkpoint", "--root", str(self.root), "--update-file", "-",
+                          stdin=json.dumps(data))
+
+    def test_a_patch_that_changes_in_flight_clears_the_question(self):
+        """M1: the contract recommends --update-file, so a patch is a transition too."""
+        self.start_work()
+        self.checkpoint("--awaiting", "Q1?")
+        done = self.patch({"in_flight": "batch 2"})
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertNotIn("awaiting_user", self.read())
+        self.assertEqual(self.stop().returncode, 2, "an old question must not excuse a stop on new work")
+
+    def test_awaiting_and_a_patch_setting_in_flight_conflict(self):
+        self.start_work()
+        result = run_script("cgspec_hook.py", "checkpoint", "--root", str(self.root), "--awaiting", "q?",
+                            "--update-file", "-", stdin=json.dumps({"in_flight": "x"}))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("awaiting_user", self.read())
+
+    def test_a_refused_stop_does_not_use_up_the_question(self):
+        """Mutation found by the reviewer: consuming on every stop passed all earlier tests."""
+        self.start_work()
+        self.checkpoint("--awaiting", "Dark or light first?")
+        (self.root / "docs/random.md").write_text("x\n")
+        self.assertEqual(self.stop().returncode, 2)
+        self.assertIs(self.read()["awaiting_user"]["used"], False)
+        (self.root / "docs/random.md").unlink()
+        self.assertEqual(self.stop().returncode, 0, "the question still excuses the stop once doctor is clean")
+
+    def test_blocked_clears_the_question(self):
+        self.start_work()
+        self.checkpoint("--awaiting", "Dark or light first?")
+        self.stop()
+        self.checkpoint("--blocked", "the API is down")
+        self.assertNotIn("awaiting_user", self.read())
+
+    def test_using_the_question_leaves_the_semantic_time_alone(self):
+        """Bumping `updated` here would hide the stale-checkpoint check."""
+        self.start_work()
+        self.checkpoint("--awaiting", "Dark or light first?")
+        before = self.read()["updated"]
+        self.stop()
+        self.assertEqual(self.read()["updated"], before)
+
+    def test_antigravity_stop_allows_on_a_question(self):
+        self.start_work()
+        self.checkpoint("--awaiting", "Dark or light first?")
+        result = hook(self.root, "stop", {"hook_event_name": "Stop"}, "--tool", "antigravity")
+        self.assertEqual(json.loads(result.stdout.strip().splitlines()[0])["decision"], "allow")
+        self.assertIs(self.read()["awaiting_user"]["used"], True)
+
+    def test_an_asked_question_is_not_shown_as_still_waiting(self):
+        """Minor 3: after the stop the user may already have answered."""
+        self.start_work()
+        self.checkpoint("--awaiting", "Dark or light first?")
+        self.stop()
+        pack = hook(self.root, "session-start", {"hook_event_name": "SessionStart"}, "--tool", "claude").stdout
+        self.assertIn("last question asked", pack)
+        self.assertNotIn("waiting on the user", pack)
+
+    def test_an_unanswered_question_is_parked_not_lost(self):
+        """Minor 4: a question recorded but never put to the user survives a change of batch."""
+        self.start_work()
+        self.checkpoint("--awaiting", "Which palette?")
+        self.checkpoint("--in-flight", "something else")
+        self.assertTrue(any(p.startswith("UNANSWERED") and "Which palette?" in p
+                            for p in self.read().get("pending", [])))
+
+    def test_repeated_questions_in_one_batch_are_counted_and_visible(self):
+        """Minor 2: asking before every stop cannot be prevented, but it must not be invisible."""
+        self.start_work()
+        for n in range(3):
+            self.checkpoint("--awaiting", f"Question {n}?")
+            self.stop()
+        self.assertEqual(self.read()["awaiting_user"]["count"], 3)
+        pack = hook(self.root, "session-start", {"hook_event_name": "SessionStart"}, "--tool", "claude").stdout
+        self.assertIn("3 questions asked during this batch", pack)
 
     def test_hand_edited_awaiting_must_match_the_schema(self):
         cp = self.read()
