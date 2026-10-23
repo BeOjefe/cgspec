@@ -17,7 +17,7 @@ MAX_HUES = 3
 def find_tokens(root: Path, project: dict | None = None) -> dict:
     """Read only the project's declared DTCG sheet; never infer a path by walking files."""
     project = project or {}
-    declared = project.get("design_tokens") or (project.get("design_system") or {}).get("tokens")
+    declared = project.get("design_tokens") or (project.get("design_system") or {}).get("tokens") or ("src/tokens.json" if (root / "src/tokens.json").is_file() else None)
     if not declared:
         return {"issue": "W-TOKENS-UNDECLARED: no project design token sheet declared"}
     rel = Path(str(declared))

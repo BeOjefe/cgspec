@@ -30,6 +30,8 @@ def expected_files(item: dict, shots: Path, viewport: str) -> list[Path]:
     """Artifacts the driver must leave for one viewport of one run (names match browser_driver.js)."""
     label = f"{item['label']}-{viewport}"
     files = [shots / f"{label}.png"]
+    if item.get("kind") == "audit":
+        files.append(shots / f"{label}-dark.png")
     if item.get("kind") != "audit":
         files += [shots / f"{label}-{s['screenshot']}.png" for s in item.get("steps", [])
                   if isinstance(s, dict) and "screenshot" in s]
