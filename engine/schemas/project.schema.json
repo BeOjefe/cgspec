@@ -139,6 +139,11 @@
         "type": "string",
         "minLength": 8
       }
+    },
+    "visual_drift_threshold": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
     }
   },
   "definitions": {

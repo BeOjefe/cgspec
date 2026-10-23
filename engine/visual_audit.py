@@ -25,7 +25,12 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import browser, evidence, visual_quality  # noqa: E402
-from _lib.common import EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, PROJECT_FILE, CgspecError, resolve_root  # noqa: E402
+from _lib.visual_baseline import approve_baseline, find_baselines  # noqa: E402
+from _lib.common import EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, PROJECT_FILE, STATE_DIR, CgspecError, resolve_root, utc_now, write_json
+import hashlib
+import shutil
+import os
+import stat  # noqa: E402
 from _lib.gates import EMOJI  # noqa: E402
 from _lib.layout import GUI_PROFILES  # noqa: E402
 
@@ -201,18 +206,52 @@ def static_audit(path: Path, profile: str, accepted: set[str] | None = None) -> 
     return errors, warnings + tells(css, page, accepted)
 
 
-def rendered(item: dict, tokens: dict | None = None) -> tuple[list[str], list[str]]:
-    errors, warnings = [], []
-    for vp in item["viewports"]:
+def rendered(item: dict, tokens: dict | None = None, drift_threshold: float = 0.5,
+             has_baselines: dict[str, bool] | None = None) -> tuple[list[str], list[str], list[str]]:
+    errors, warnings, infos = [], [], []
+    has_baselines = has_baselines if has_baselines is not None else {}
+    for vp in item.get("viewports", []):
+        vp_name = vp.get("viewport", "desktop")
         quality_errors, quality_warnings = visual_quality.analyse(vp, tokens or {})
         errors += quality_errors
         warnings += quality_warnings
-        errors += [f"E-RUNTIME ({vp['viewport']}): {e}" for e in vp["errors"][:5]]
-        if vp["viewport"] == "mobile" and vp["overflow"]:
+        errors += [f"E-RUNTIME ({vp_name}): {e}" for e in vp.get("errors", [])[:5]]
+        if vp_name == "mobile" and vp.get("overflow"):
             errors.append(f"E-OVERFLOW: page is {vp['scrollWidth']}px wide on a {vp['width']}px phone screen")
         if vp.get("smallCount"):
             warnings.append(f"W-TOUCH-TARGET: {vp['smallCount']} controls under 44px on mobile: {', '.join(vp['small'])}")
-    return errors, warnings
+
+        # Dark mode checks
+        if vp.get("darkTheme") is False:
+            infos.append("page has no dark theme")
+        elif vp.get("darkTheme") is True or vp.get("darkQuality"):
+            dark_q = vp.get("darkQuality") or {}
+            dark_errors, dark_warns = visual_quality.analyse({"viewport": vp_name, "quality": dark_q}, tokens or {})
+            errors += [e.replace(f"({vp_name})", f"({vp_name}) (dark)") for e in dark_errors]
+            warnings += [w.replace(f"({vp_name})", f"({vp_name}) (dark)") for w in dark_warns]
+
+        # Drift checks
+        baseline_exists = has_baselines.get(vp_name, vp.get("drift") is not None)
+        drift = vp.get("drift")
+        if baseline_exists and drift:
+            if drift.get("differentDimensions"):
+                errors.append(f"E-DRIFT ({vp_name}): 100% changed: layout height changed ({drift.get('w1')}x{drift.get('h1')} vs {drift.get('w2')}x{drift.get('h2')})")
+            else:
+                pct = drift.get("changedPercent", 0.0)
+                regions = drift.get("regions", [])
+                reg_str = f"in {len(regions)} region{'s' if len(regions) != 1 else ''}: {regions}" if regions else ""
+                if pct > drift_threshold:
+                    errors.append(f"E-DRIFT ({vp_name}): {pct:.2f}% pixels changed (threshold {drift_threshold}%) {reg_str}".strip())
+                elif pct > 0:
+                    warnings.append(f"W-DRIFT ({vp_name}): {pct:.2f}% pixels changed {reg_str}".strip())
+                else:
+                    infos.append(f"({vp_name}): 0% visual drift against baseline")
+            if drift.get("diffFile"):
+                infos.append(f"diff image in .cgspec-scratch/visual/{drift['diffFile']}")
+        elif not baseline_exists:
+            infos.append(f"({vp_name}): no approved baseline")
+
+    return errors, warnings, infos
 
 
 def targets_of(root: Path, raw: list[str]) -> list[tuple[str, Path, list[str]]]:
@@ -236,6 +275,17 @@ def targets_of(root: Path, raw: list[str]) -> list[tuple[str, Path, list[str]]]:
     return out
 
 
+def _prepare_runs(root: Path, items: list[tuple[str, Path, list[str]]], video: bool) -> tuple[list[dict], dict[str, dict[str, bool]]]:
+    has_baselines = {}
+    runs = []
+    for label, path, _ in items:
+        b_driver, has_map = find_baselines(root, label)
+        has_baselines[label] = has_map
+        runs.append({"kind": "audit", "label": label, "url": path.resolve().as_uri(),
+                     "video": video, "baselines": b_driver})
+    return runs, has_baselines
+
+
 def audit(root: Path, raw: list[str], write: bool = True, video: bool = False,
           records: list[dict] | None = None) -> tuple[int, list[str]]:
     """(exit code, printed lines). `records` collects one structured {item, verdict, detail} per screen."""
@@ -244,42 +294,39 @@ def audit(root: Path, raw: list[str], write: bool = True, video: bool = False,
         project = json.loads((root / PROJECT_FILE).read_text(encoding="utf-8"))
         profile = project.get("profile", "")
     except (OSError, ValueError):
-        project = {}
-        profile = ""
+        project, profile = {}, ""
     if profile and profile not in GUI_PROFILES:
         return EXIT_OK, [f"NOT_APPLICABLE: profile {profile} has no user interface"]
     items = targets_of(root, raw)
     accepted = visual_quality.deliberate(root)
     tokens = visual_quality.find_tokens(root, project)
-    results = {label: static_audit(path, profile, accepted) for label, path, _ in items}
+    drift_threshold = float(project.get("visual_drift_threshold", 0.5))
+    runs, has_baselines = _prepare_runs(root, items, video)
+    results = {label: (*static_audit(path, profile, accepted), []) for label, path, _ in items}
     if tokens.get("issue"):
-        for errors, warnings in results.values():
+        for errors, warnings, _ in results.values():
             warnings.append(tokens["issue"])
-    runs = [{"kind": "audit", "label": label, "url": path.resolve().as_uri(), "video": video}
-            for label, path, _ in items]
     shots = root / ".cgspec-scratch/visual"
     shown = browser.run(root, runs, shots, video=video)
-    blocked = shown.get("blocked")
-    reported = browser.results_by_label(shown)
+    blocked, reported = shown.get("blocked"), browser.results_by_label(shown)
     for run_item in runs if not blocked else []:
         item = reported.get(run_item["label"])
-        # A rendered PASS needs both viewports reported and their screenshots (and videos) on disk.
         problems = browser.proof_problems(run_item, item, shots)
-        results[run_item["label"]][0].extend(f"E-PROOF: {problem}" for problem in problems)
+        results[run_item["label"]][0].extend(f"E-PROOF: {p}" for p in problems)
         if problems:
             continue
-        errs, warns = rendered(item, tokens)
+        errs, warns, infos = rendered(item, tokens, drift_threshold, has_baselines.get(run_item["label"], {}))
         results[run_item["label"]][0].extend(errs)
         results[run_item["label"]][1].extend(warns)
-    rank, lines = {"PASS": EXIT_OK, "PARTIAL": EXIT_PARTIAL, "FAIL": EXIT_FAIL}, []
-    seen = set()
+        results[run_item["label"]][2].extend(infos)
+    rank, lines, seen = {"PASS": EXIT_OK, "PARTIAL": EXIT_PARTIAL, "FAIL": EXIT_FAIL}, [], set()
     for label, path, covers in items:
-        errors, warnings = results[label]
+        errors, warnings, infos = results[label]
         verdict = "FAIL" if errors else ("PARTIAL" if blocked else "PASS")
         seen.add(verdict)
-        detail = errors + warnings + ([f"rendered checks not run: {blocked}"] if blocked else
+        detail = errors + warnings + infos + ([f"rendered checks not run: {blocked}"] if blocked else
                                       [f"screenshots in .cgspec-scratch/visual/{label}-desktop.png and -mobile.png"])
-        lines.append(f"{verdict} {path.relative_to(root).as_posix()}" + "".join(f"\n  {d}" for d in detail))
+        lines.append(f"{verdict} {path.relative_to(root).as_posix()}" + "".join("\n  " + d for d in detail))
         records.append({"item": path.relative_to(root).as_posix(), "verdict": verdict, "detail": "\n".join(detail)})
         if write:
             evidence.write(root, "visual", label, f"visual-audit:{label}", verdict, covers, "\n".join(detail),
@@ -294,8 +341,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-evidence", action="store_true")
     parser.add_argument("--video", action="store_true", help="record WebM browser video where rendered audit runs")
     parser.add_argument("--json-out", help="write structured results (one record per screen) to this file")
+    parser.add_argument("--approve-baseline", metavar="SCREEN", help="approve current screenshots of SCREEN as baseline")
+    parser.add_argument("--reason", default="", help="reason for approved baseline")
     parser.add_argument("--root")
     args = parser.parse_args(argv)
+    if args.approve_baseline:
+        try:
+            approve_baseline(resolve_root(args.root), args.approve_baseline, args.reason)
+            return EXIT_OK
+        except CgspecError as exc:
+            print(f"visual_audit: {exc}", file=sys.stderr)
+            return EXIT_FAIL
     records: list[dict] = []
     try:
         code, lines = audit(resolve_root(args.root), args.targets, not args.no_evidence, args.video, records)

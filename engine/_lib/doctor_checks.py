@@ -264,6 +264,10 @@ def frozen(root: Path) -> Iterator[Finding]:
     for snap in sorted(snaps.glob("*.html")) if snaps.is_dir() else []:
         if snap.resolve() not in listed:
             yield Finding("E-FROZEN-UNLISTED", _rel(snap, root), "snapshot not recorded in frozen.json (only the bundler makes snapshots)")
+    baselines = root / "docs/prototypes/_baselines"
+    for base in sorted(baselines.glob("*.png")) if baselines.is_dir() else []:
+        if base.resolve() not in listed:
+            yield Finding("E-FROZEN-UNLISTED", _rel(base, root), "baseline not recorded in frozen.json (only visual_audit --approve-baseline makes baselines)")
 
 
 def _has_shebang(path: Path) -> bool:
