@@ -142,8 +142,30 @@ class WiringTests(unittest.TestCase):
                        PATH=f"{tmp / 'bin'}{os.pathsep}{os.environ['PATH']}")
             result = subprocess.run(["bash", "-c", script], cwd=self.root, env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual((tmp / "env").read_text().strip(), f"CGSPEC_PLAYWRIGHT_DIR={tmp / 'cgspec-playwright'}")
+            env_lines = (tmp / "env").read_text().strip().splitlines()
+            self.assertIn(f"CGSPEC_PLAYWRIGHT_DIR={tmp / 'cgspec-playwright'}", env_lines)
+            self.assertIn(f"PLAYWRIGHT_BROWSERS_PATH={tmp / 'cgspec-playwright-browsers'}", env_lines)
             self.assertFalse((self.root / "package.json").exists())
+
+    def test_playwright_browsers_path_is_exported_in_the_proof_step_too(self):
+        # docs/STATUS.md says Chromium installs under $RUNNER_TEMP: both the install step (checked above,
+        # via GITHUB_ENV) and the proof step (which actually runs Chromium) must set it, not just one.
+        self.assertEqual(self.do_install().returncode, 0)
+        workflow = (self.root / ".github/workflows/cgspec.yml").read_text()
+        script = step_script(workflow, "CI visual proof (PR head)")
+        self.assertRegex(script, r'export PLAYWRIGHT_BROWSERS_PATH="\$RUNNER_TEMP/cgspec-playwright-browsers"')
+
+    def test_upload_step_is_gated_on_the_proof_step_outcome_and_targets_runner_temp(self):
+        from _lib.ci_visual import PROOF_STEP_ID
+        self.assertEqual(self.do_install().returncode, 0)
+        workflow = (self.root / ".github/workflows/cgspec.yml").read_text()
+        proof_start = workflow.index('- name: CI visual proof (PR head)')
+        self.assertIn(f"id: {PROOF_STEP_ID}", workflow[proof_start:])
+        upload_block = workflow[workflow.index("uses: actions/upload-artifact@"):]
+        self.assertIn(f"steps.{PROOF_STEP_ID}.outcome == 'success'", upload_block)
+        path_line = next(line for line in upload_block.splitlines() if line.strip().startswith("path:"))
+        self.assertRegex(path_line, r"path:\s*\$\{\{\s*runner\.temp\s*\}\}/cgspec-visual-proof-")
+        self.assertNotIn("artifacts/cgspec-visual", path_line)
 
     def test_upload_artifact_is_pinned_to_a_supported_major_by_full_sha(self):
         from _lib.ci_visual import UPLOAD_ARTIFACT_SHA, UPLOAD_ARTIFACT_VERSION

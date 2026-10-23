@@ -1,5 +1,5 @@
 # CGSpec engine: file formats and hook contract
-Created: unknown · Last edited: 2026-10-23T02:47:39Z
+Created: unknown · Last edited: 2026-10-23T07:28:13Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
@@ -86,7 +86,10 @@ and `--tool` tells the hook how to read it. Events:
 
 Registered checks: `pre-commit`, `ci`, `check run` and doctor verify every registered script and guide
 against its manifest hash on every run, whether or not the check applies to the changed files; a missing
-or changed one fails the gate and its check does not run. Each check runs with two environment
+or changed one fails the gate and its check does not run. `ci` verifies this separately for every commit
+in the range against that commit's own manifest and tree (through its `View`), not only the final
+checked-out tree: a commit that tampers with an approved script or guide and a later commit in the same
+range that restores the exact approved bytes still fails the range. Each check runs with two environment
 variables set by the engine:
 
 | Variable | `pre-commit` | `ci` | `check run` |

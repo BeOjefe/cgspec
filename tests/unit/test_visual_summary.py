@@ -33,6 +33,34 @@ CRASHING_AUDIT = """import sys
 print("visual_audit: internal error: setup exploded", file=sys.stderr)
 sys.exit(3)
 """
+# Reads a marker file at the given --root and reports it verbatim, so a test can tell whether the
+# proof ran against the committed tree or a dirty working copy that was never committed.
+MARKER_READING_JOURNEY = """import json, sys
+from pathlib import Path
+args = sys.argv[1:]
+root = Path(args[args.index("--root") + 1])
+content = (root / "marker.txt").read_text().strip()
+out = args[args.index("--json-out") + 1]
+json.dump({"schema": 1, "tool": "journey",
+           "records": [{"item": "marker", "verdict": "PASS" if content == "fixed-but-uncommitted" else "FAIL",
+                        "detail": content}]}, open(out, "w"))
+"""
+# Reports the PLAYWRIGHT_BROWSERS_PATH seen by the trusted engine's own process.
+BROWSERS_PATH_JOURNEY = """import json, os, sys
+args = sys.argv[1:]
+out = args[args.index("--json-out") + 1]
+json.dump({"schema": 1, "tool": "journey",
+           "records": [{"item": "browsers-path", "verdict": "PASS",
+                        "detail": os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "")}]}, open(out, "w"))
+"""
+
+
+def make_release(base: Path, name: str, journey_py: str | None = None) -> Path:
+    release = base / name
+    shutil.copytree(REPO / "engine", release / "engine", ignore=shutil.ignore_patterns("__pycache__"))
+    if journey_py is not None:
+        (release / "engine/journey.py").write_text(journey_py)
+    return release
 
 
 class VisualSummaryStepTests(unittest.TestCase):
@@ -63,6 +91,9 @@ class VisualSummaryStepTests(unittest.TestCase):
         git(self.root, "add", "-A")
         git(self.root, "commit", "-q", "-m", "journey")
 
+    def out_dir(self, head: str) -> Path:
+        return self.runner / f"cgspec-visual-proof-{head}"
+
     def run_step(self, release: Path) -> tuple[dict, str]:
         head = git(self.root, "rev-parse", "HEAD").stdout.strip()
         summary = self.runner / "summary.md"
@@ -72,7 +103,7 @@ class VisualSummaryStepTests(unittest.TestCase):
         result = subprocess.run(["bash", "-c", step_script(self.workflow, STEP)], cwd=self.root, env=env,
                                 capture_output=True, text=True, timeout=300)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        evidence = json.loads((self.root / "artifacts/cgspec-visual/evidence.json").read_text())
+        evidence = json.loads((self.out_dir(head) / "evidence.json").read_text())
         self.assertEqual(evidence["revision"], head)
         return evidence, summary.read_text()
 
@@ -114,6 +145,50 @@ class VisualSummaryStepTests(unittest.TestCase):
         self.assertTrue(failed, records)
         self.assertTrue(any("visual audit" in r["item"] for r in failed), records)
         self.assertTrue(any("visual audit" in row and "FAIL" in row for row in self.table_rows(summary)), summary)
+
+    def test_dirty_tracked_file_in_the_checkout_is_never_tested_as_the_pr_head(self):
+        """A tracked file left dirty in the existing checkout must not leak into the proof: the proof
+        must run against a fresh worktree at the exact PR head, not `git checkout --detach` in place,
+        which can leave compatible uncommitted changes untouched."""
+        self.journey("marker journey")
+        (self.root / "marker.txt").write_text("broken-and-committed\n")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "marker")
+        head = git(self.root, "rev-parse", "HEAD").stdout.strip()
+        # An uncommitted edit to a tracked file sitting in the checkout when the proof step runs.
+        (self.root / "marker.txt").write_text("fixed-but-uncommitted\n")
+        release = make_release(self.base, "release-marker", MARKER_READING_JOURNEY)
+        evidence, summary = self.run_step(release)
+        self.assertEqual(head, git(self.root, "rev-parse", "HEAD").stdout.strip())
+        marker_records = [r for r in evidence["journeys"] if r.get("item") == "marker"]
+        self.assertTrue(marker_records, evidence)
+        self.assertNotIn("PASS", [r["verdict"] for r in marker_records], evidence)
+        self.assertEqual(marker_records[0]["detail"], "broken-and-committed", evidence)
+
+    def test_planted_in_repo_evidence_is_left_untouched_and_ignored(self):
+        """A PR-committed artifacts/cgspec-visual/ (a forged PASS, say) must never become, or influence,
+        the uploaded evidence: the proof step must not read or write anything under the checkout."""
+        planted_dir = self.root / "artifacts/cgspec-visual"
+        planted_dir.mkdir(parents=True)
+        forged = json.dumps({"schema": 1, "revision": "0" * 40, "artifact": "forged",
+                             "journeys": [{"item": "forged-pass", "verdict": "PASS"}]})
+        (planted_dir / "evidence.json").write_text(forged)
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "attacker-planted evidence")
+        self.journey("create invoice")
+        evidence, summary = self.run_step(REPO)
+        self.assertNotIn("forged-pass", json.dumps(evidence))
+        self.assertNotIn("forged", summary)
+        self.assertEqual((planted_dir / "evidence.json").read_text(), forged,
+                         "the proof step must never read from or write to the checkout's artifacts directory")
+
+    def test_playwright_browsers_path_is_set_under_runner_temp_during_the_proof(self):
+        release = make_release(self.base, "release-browsers-path", BROWSERS_PATH_JOURNEY)
+        self.journey("create invoice")
+        evidence, summary = self.run_step(release)
+        records = [r for r in evidence["journeys"] if r.get("item") == "browsers-path"]
+        self.assertTrue(records, evidence)
+        self.assertEqual(records[0]["detail"], str(self.runner / "cgspec-playwright-browsers"))
 
 
 class VisualSummaryLibraryTests(unittest.TestCase):
