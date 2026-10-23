@@ -211,7 +211,8 @@ def _freeze_workflow(root: Path, rel: str) -> None:
 def _wire_git(root: Path, record: dict) -> list[str]:
     hooks, reason = git_hooks.directory(root)
     if hooks is None:
-        return [reason]
+        msg = f"{reason}; add the CGSpec call yourself" if "add the CGSpec call" not in reason else reason
+        return [msg]
     notes = []
     for event in ("pre-commit", "commit-msg"):
         target = hooks / event

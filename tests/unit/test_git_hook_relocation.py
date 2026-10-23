@@ -92,7 +92,11 @@ class GitHookRelocationTests(unittest.TestCase):
                     result = install(root)
                 else:
                     result = run_script("install.py", operation, "--root", str(root))
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                if operation == "uninstall":
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("symlink", result.stdout + result.stderr)
+                else:
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertEqual(before, {p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in outside.iterdir()})
 
     def test_tampered_legacy_ownership_cannot_delete_external_hook(self):
@@ -266,8 +270,8 @@ class GitHookRelocationTests(unittest.TestCase):
             env["GIT_CONFIG_KEY_0"] = "core.hooksPath"
             env["GIT_CONFIG_VALUE_0"] = ""
             res_un = run_script("install.py", "uninstall", "--root", str(root), env=env)
-            self.assertEqual(res_un.returncode, 0, res_un.stdout + res_un.stderr)
-            self.assertIn("core.hooksPath is set to : git hooks left alone", res_un.stdout)
+            self.assertNotEqual(res_un.returncode, 0)
+            self.assertIn("core.hooksPath is set to : git hooks left alone", res_un.stdout + res_un.stderr)
             self.assertTrue((root / ".git/hooks/pre-commit").exists())
 
     def test_f5_configured_whitespace_hooks_path_treated_as_custom(self):
@@ -278,8 +282,8 @@ class GitHookRelocationTests(unittest.TestCase):
             env["GIT_CONFIG_KEY_0"] = "core.hooksPath"
             env["GIT_CONFIG_VALUE_0"] = " "
             res_un = run_script("install.py", "uninstall", "--root", str(root), env=env)
-            self.assertEqual(res_un.returncode, 0, res_un.stdout + res_un.stderr)
-            self.assertIn("core.hooksPath is set to  : git hooks left alone", res_un.stdout)
+            self.assertNotEqual(res_un.returncode, 0)
+            self.assertIn("core.hooksPath is set to  : git hooks left alone", res_un.stdout + res_un.stderr)
             self.assertTrue((root / ".git/hooks/pre-commit").exists())
 
     def test_adjacent_reinstall_preserves_user_modified_hook_with_marker(self):
@@ -297,3 +301,116 @@ class GitHookRelocationTests(unittest.TestCase):
             self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
             self.assertEqual(target.read_bytes(), modified_bytes)
             self.assertIn("left existing git pre-commit hook alone; add the CGSpec call to it yourself", res.stdout)
+
+    # --- Round 2 Review 51 Regressions ---
+
+    def test_r2_f1_copied_linked_worktree_cannot_delete_original_hooks(self):
+        with TempDir() as tmp:
+            main = tmp / "main"
+            main.mkdir()
+            git(main, "init", "-q", "-b", "main")
+            git(main, "commit", "--allow-empty", "-m", "init")
+            wt = tmp / "wt"
+            git(main, "worktree", "add", "-b", "wt-branch", str(wt))
+            install(main)
+            install(wt)
+            hooks_before = {p.name: p.read_bytes() for p in (main / ".git/hooks").iterdir()}
+            copied_wt = tmp / "copied_wt"
+            shutil.copytree(wt, copied_wt)
+            res = run_script("install.py", "uninstall", "--root", str(copied_wt))
+            self.assertNotEqual(res.returncode, 0)
+            self.assertEqual(hooks_before, {p.name: p.read_bytes() for p in (main / ".git/hooks").iterdir()})
+            # Original commit succeeds with CGSpec hooks intact
+            (main / "file.txt").write_text("content" + chr(10))
+            git(main, "add", "file.txt")
+            git(main, "commit", "-m", "verify hooks intact")
+
+    def test_r2_f1_moved_worktree_reused_location_cannot_delete_new_repo_hooks(self):
+        with TempDir() as tmp:
+            main1 = tmp / "main1"
+            main1.mkdir()
+            git(main1, "init", "-q", "-b", "main")
+            git(main1, "commit", "--allow-empty", "-m", "init")
+            wt = tmp / "wt"
+            git(main1, "worktree", "add", "-b", "trial", str(wt))
+            install(wt)
+            wt_moved = tmp / "wt_moved"
+            wt.rename(wt_moved)
+            # Old location wt reused for another project with a worktree
+            main2 = tmp / "main2"
+            main2.mkdir()
+            git(main2, "init", "-q", "-b", "main")
+            git(main2, "commit", "--allow-empty", "-m", "init")
+            git(main2, "worktree", "add", "-b", "trial", str(wt))
+            install(wt)
+            hooks_before = {p.name: p.read_bytes() for p in (main2 / ".git/hooks").iterdir()}
+            res = run_script("install.py", "uninstall", "--root", str(wt_moved))
+            self.assertNotEqual(res.returncode, 0)
+            self.assertEqual(hooks_before, {p.name: p.read_bytes() for p in (main2 / ".git/hooks").iterdir()})
+
+    def test_r2_f1_crafted_commondir_in_primary_git_dir_refused(self):
+        with TempDir() as tmp:
+            a = self.project(tmp / "a")
+            b = self.project(tmp / "b")
+            b_before = {p.name: p.read_bytes() for p in (b / ".git/hooks").iterdir()}
+            (a / ".git/commondir").write_text(f"{b}/.git" + chr(10))
+            res = run_script("install.py", "uninstall", "--root", str(a))
+            self.assertNotEqual(res.returncode, 0)
+            self.assertEqual(b_before, {p.name: p.read_bytes() for p in (b / ".git/hooks").iterdir()})
+
+    def test_r2_f1_repaired_moved_worktree_uninstalls_normally(self):
+        with TempDir() as tmp:
+            main = tmp / "main"
+            main.mkdir()
+            git(main, "init", "-q", "-b", "main")
+            git(main, "commit", "--allow-empty", "-m", "init")
+            wt = tmp / "wt"
+            git(main, "worktree", "add", "-b", "trial", str(wt))
+            install(wt)
+            wt_moved = tmp / "wt_moved"
+            wt.rename(wt_moved)
+            git(main, "worktree", "repair", str(wt_moved))
+            res = run_script("install.py", "uninstall", "--root", str(wt_moved))
+            self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+            for name in ("pre-commit", "commit-msg"):
+                self.assertFalse((main / ".git/hooks" / name).exists())
+
+    def test_r2_f2_uninstall_under_temporary_override_fails_closed_and_commits_continue(self):
+        with TempDir() as tmp:
+            root = self.project(tmp / "proj")
+            pre_commit = root / ".git/hooks/pre-commit"
+            engine_file = root / "docs/_cgspec/01-engine/cgspec_hook.py"
+            owned_file = root / "docs/_cgspec/01-engine/owned-files.json"
+            env = os.environ.copy()
+            env["GIT_CONFIG_COUNT"] = "1"
+            env["GIT_CONFIG_KEY_0"] = "core.hooksPath"
+            env["GIT_CONFIG_VALUE_0"] = "/dev/null"
+            res = run_script("install.py", "uninstall", "--root", str(root), env=env)
+            self.assertNotEqual(res.returncode, 0)
+            # Fail closed: engine, ownership, and hooks must remain intact
+            self.assertTrue(pre_commit.exists())
+            self.assertTrue(engine_file.exists())
+            self.assertTrue(owned_file.exists())
+            # Commit without override succeeds
+            (root / "change.txt").write_text("valid" + chr(10))
+            git(root, "add", "change.txt")
+            git(root, "commit", "-m", "commit succeeds because engine is preserved")
+            # Clean uninstall without override succeeds
+            res_clean = run_script("install.py", "uninstall", "--root", str(root))
+            self.assertEqual(res_clean.returncode, 0, res_clean.stdout + res_clean.stderr)
+            self.assertFalse(pre_commit.exists())
+            self.assertFalse(engine_file.exists())
+
+    def test_r2_f3_hostile_git_config_cannot_hide_custom_hooks_path(self):
+        with TempDir() as tmp:
+            root = tmp / "proj"
+            root.mkdir()
+            git(root, "init", "-q", "-b", "main")
+            git(root, "config", "core.hooksPath", "my-hooks")
+            env = os.environ.copy()
+            env["GIT_CONFIG"] = "/dev/null"
+            res = run_script("install.py", "install", "--root", str(root), "--profile", "web-workspace",
+                             "--topology", "single", "--tools", "git", env=env)
+            self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+            self.assertFalse((root / ".git/hooks/pre-commit").exists())
+            self.assertIn("core.hooksPath is set to my-hooks: git hooks left alone", res.stdout)

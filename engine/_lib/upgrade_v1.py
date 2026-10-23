@@ -283,7 +283,11 @@ def run(root: Path, options: dict, apply: bool, rollback: bool = False) -> tuple
             report["unresolved"].append(f"rollback stopped; recovery data retained: {exc}")
             return 2, report
         if conflicts:
-            report["unresolved"] += [f"changed since upgrade: {p}" for p in conflicts]
+            for p in conflicts:
+                if p.startswith("unsafe git hook path:"):
+                    report["unresolved"].append(f"{p}; rollback is unavailable after repository relocation")
+                else:
+                    report["unresolved"].append(f"changed since upgrade: {p}")
             return 2, report
         if journal.is_dir():
             shutil.rmtree(journal)

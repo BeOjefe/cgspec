@@ -6,6 +6,8 @@ import os
 import subprocess
 from pathlib import Path
 
+from .common import CgspecError
+
 EVENTS = ("pre-commit", "commit-msg")
 
 _REPO_SELECTORS = (
@@ -18,6 +20,7 @@ _REPO_SELECTORS = (
     "GIT_GRAFT_FILE",
     "GIT_NAMESPACE",
     "GIT_PREFIX",
+    "GIT_CONFIG",
 )
 
 
@@ -40,7 +43,7 @@ def git_config_get(root: Path, key: str) -> str | None:
     if result.returncode != 0:
         return None
     val = result.stdout
-    return val[:-1] if val.endswith("\n") else val
+    return val[:-1] if val.endswith(chr(10)) else val
 
 
 def has_symlink(path: Path) -> bool:
@@ -66,6 +69,11 @@ def directory(root: Path) -> tuple[Path | None, str]:
         return None, "git metadata entry is a symlink: git hooks left alone"
     if not dot_git.exists():
         return None, "not a git repository root: git hooks left alone"
+
+    if dot_git.is_dir():
+        commondir_file = dot_git / "commondir"
+        if commondir_file.is_symlink() or commondir_file.exists():
+            return None, "commondir file inside normal git directory: git hooks left alone"
 
     if dot_git.is_file():
         try:
@@ -93,13 +101,32 @@ def directory(root: Path) -> tuple[Path | None, str]:
                 common_path = gitdir_path / common_path
             if has_symlink(common_path):
                 return None, "git metadata path contains a symlink: git hooks left alone"
+            gitdir_back = gitdir_path / "gitdir"
+            if gitdir_back.is_symlink():
+                return None, "git metadata path contains a symlink: git hooks left alone"
+            if not gitdir_back.is_file():
+                return None, "git worktree back-pointer is missing; run 'git worktree repair': git hooks left alone"
+            try:
+                raw_back = gitdir_back.read_text(encoding="utf-8", errors="replace").strip()
+            except OSError:
+                return None, "cannot read git worktree back-pointer: git hooks left alone"
+            back_path = Path(raw_back)
+            if not back_path.is_absolute():
+                back_path = gitdir_path / back_path
+            if has_symlink(back_path):
+                return None, "git metadata path contains a symlink: git hooks left alone"
+            try:
+                if back_path.resolve() != dot_git.resolve():
+                    return None, "git worktree back-pointer does not belong to this checkout; run 'git worktree repair': git hooks left alone"
+            except OSError:
+                return None, "git worktree back-pointer does not belong to this checkout; run 'git worktree repair': git hooks left alone"
 
     top = git_out(root, "rev-parse", "--show-toplevel")
     if top is None or Path(top).resolve() != root.resolve():
         return None, "not a git repository root: git hooks left alone"
     custom = git_config_get(root, "core.hooksPath")
     if custom is not None:
-        return None, f"core.hooksPath is set to {custom}: git hooks left alone; add the CGSpec call yourself"
+        return None, f"core.hooksPath is set to {custom}: git hooks left alone"
     common = git_out(root, "rev-parse", "--git-common-dir")
     if not common:
         return None, "cannot locate git common directory: git hooks left alone"
@@ -143,7 +170,9 @@ def migrate(root: Path, record: dict, template: str = "", hook: str = "") -> lis
 
 def expected_hook_bytes(template: str, hook: str, event: str) -> bytes:
     """Explicit LF byte encoding for exact hook identity comparison and writing."""
-    return template.format(hook=hook, event=event).replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+    text = template.format(hook=hook, event=event)
+    text = text.replace(chr(13) + chr(10), chr(10)).replace(chr(13), chr(10))
+    return text.encode("utf-8")
 
 
 def remove(root: Path, record: dict, template: str, hook: str) -> list[str]:
@@ -152,7 +181,10 @@ def remove(root: Path, record: dict, template: str, hook: str) -> list[str]:
         return []
     hooks, reason = directory(root)
     if hooks is None:
-        return [reason]
+        raise CgspecError(
+            f"owned Git hooks ({', '.join(names)}) cannot be located ({reason}); "
+            "uninstall aborted to prevent dangling hooks"
+        )
     notes = []
     for name in names:
         path = hooks / name
