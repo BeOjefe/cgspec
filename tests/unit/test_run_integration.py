@@ -205,7 +205,7 @@ class RunIntegrationTests(unittest.TestCase):
         git(self.root, "checkout", "--", "docs/_cgspec/05-runs/R-20261024-0001/run.json")
 
         # Case B: Clean CI evaluation
-        ci_res = call_hook(self.root, "ci", None, "--base", base_commit, "--no-rerun")
+        ci_res = call_hook(self.root, "ci", None, "--base", base_commit)
         self.assertEqual(ci_res.returncode, 0, f"CI failed: {ci_res.stdout}{ci_res.stderr}")
         self.assertIn("CGSpec governance passed", ci_res.stdout)
 

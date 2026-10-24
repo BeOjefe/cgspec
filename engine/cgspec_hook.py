@@ -274,9 +274,9 @@ def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str) -> int
             print("CGSpec: decorative emoji in the commit message (spec 1)")
             return EXIT_FAIL
         from _lib import commit_trust
-        from _lib.gitview import View
-        if commit_trust.staged_trailer_refs(View.staged(root)) and not commit_trust.TRAILER.search(text):
-            print("CGSpec: this commit cites the 'trailer' approval; add 'Approved-by: <you>' to the message yourself")
+        problem = commit_trust.commit_msg_problem(root, text)
+        if problem:
+            print(problem)
             return EXIT_FAIL
         return EXIT_OK
     raise CgspecError(f"unknown event: {event}")
