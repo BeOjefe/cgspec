@@ -200,31 +200,47 @@ def project_content(root: Path, rel: str, payload: dict, tool: str, fallback: st
         args = (payload.get("toolCall") or {}).get("args") or {}
         name = (payload.get("toolCall") or {}).get("name", "")
         if name in ("replace_file_content", "multi_replace_file_content") and target.is_file():
-            tgt, rep = args.get("TargetContent", ""), args.get("ReplacementContent", "")
+            chunks = args.get("ReplacementChunks") or [
+                {"TargetContent": args.get("TargetContent", ""), "ReplacementContent": args.get("ReplacementContent", "")}
+            ]
             try:
                 orig = target.read_text(encoding="utf-8", errors="replace")
-                return orig.replace(tgt, rep, 1) if (tgt and tgt in orig) else orig
+                replaced = orig
+                for c in chunks:
+                    t, r = c.get("TargetContent", ""), c.get("ReplacementContent", "")
+                    if t and t in replaced:
+                        replaced = replaced.replace(t, r, 1)
+                if replaced != orig:
+                    return replaced
             except OSError:
                 return fallback
-        if name == "write_to_file" and args.get("Append") and target.is_file():
-            try:
-                return target.read_text(encoding="utf-8", errors="replace") + (args.get("CodeContent") or "")
-            except OSError:
-                return fallback
-        if name == "write_to_file" and args.get("CodeContent") is not None:
-            return args.get("CodeContent")
+        elif name == "write_to_file":
+            if args.get("Append") and target.is_file():
+                try:
+                    return target.read_text(encoding="utf-8", errors="replace") + (args.get("CodeContent") or "")
+                except OSError:
+                    return fallback
+            if args.get("CodeContent") is not None:
+                return args.get("CodeContent")
     elif tool == "claude":
         name, data = payload.get("tool_name", ""), payload.get("tool_input") or {}
         if name in ("Edit", "MultiEdit") and target.is_file():
-            old_s, new_s = data.get("old_string", ""), data.get("new_string", "")
+            edits = data.get("edits") or [{"old_string": data.get("old_string", ""), "new_string": data.get("new_string", "")}]
             try:
                 orig = target.read_text(encoding="utf-8", errors="replace")
-                return orig.replace(old_s, new_s, 1) if (old_s and old_s in orig) else orig
+                replaced = orig
+                for e in edits:
+                    o, n = e.get("old_string", ""), e.get("new_string", "")
+                    if o and o in replaced:
+                        replaced = replaced.replace(o, n, 1)
+                if replaced != orig:
+                    return replaced
             except OSError:
                 return fallback
         if name == "Write" and data.get("content") is not None:
             return data.get("content")
     return fallback
+
 
 
 def check_write(ctx: Context, rel: str, content: str | None, is_new: bool | None = None) -> list[str]:
