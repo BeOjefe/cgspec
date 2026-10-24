@@ -15,6 +15,15 @@ from .globs import match_any
 from .inbox import contains_secret
 from .path_policy import needs_tier
 
+MAX_CODE_LINES = 400
+HOST_PATH = re.compile(
+    r"(?<![A-Za-z0-9_])(?:"
+    r"/home/[A-Za-z0-9_.-]+/"
+    r"|/Users/[A-Za-z0-9_.-]+/"
+    r"|[A-Za-z]:\\\\Users\\\\[A-Za-z0-9_.-]+\\\\"
+    r"|[A-Za-z]:\\Users\\[A-Za-z0-9_.-]+\\"
+    r")"
+)
 EMOJI = re.compile(
     "[\\U0001F000-\\U0001FAFF]"  # pictographs, emoticons, transport, flags
     "|[\\u2614\\u2615\\u2648-\\u2653\\u267F\\u2693\\u26A1\\u26AA\\u26AB\\u26BD\\u26BE\\u26C4\\u26C5\\u26CE\\u26D4\\u26EA"
@@ -53,6 +62,7 @@ class Context:
     project: dict = field(default_factory=dict)
     frozen: set[str] = field(default_factory=set)
     checks: set[str] = field(default_factory=set)
+    legacy: set[str] = field(default_factory=set)
 
     @classmethod
     def load(cls, root: Path) -> "Context":
@@ -65,7 +75,9 @@ class Context:
         frozen = {e.get("path", "") for e in read((STATE_DIR / "frozen.json").as_posix()).get("entries", [])}
         checks = {p for c in read("docs/_cgspec/04-checks/manifest.json").get("checks", [])
                   for p in (c.get("path", ""), c.get("guide", "")) if p}
-        return cls(root, read(PROJECT_FILE.as_posix()), frozen, checks)
+        legacy_files = read((STATE_DIR / "legacy-baseline.json").as_posix()).get("files", {})
+        legacy = set(legacy_files) if isinstance(legacy_files, dict) else set()
+        return cls(root, read(PROJECT_FILE.as_posix()), frozen, checks, legacy)
 
     @property
     def classes(self) -> dict:
@@ -163,6 +175,18 @@ def _tier_reason(ctx: Context, rel: str, is_new: bool) -> str | None:
     return None
 
 
+def _hygiene_reasons(ctx: Context, rel: str, content: str) -> list[str]:
+    reasons = []
+    if "\r\n" in content:
+        reasons.append(f"CRLF line endings in content for {rel}; use LF (\\n) only")
+    in_code = match_any(rel, ctx.classes.get("code", []))
+    if in_code and rel not in ctx.legacy and len(content.splitlines()) > MAX_CODE_LINES:
+        reasons.append(f"{rel} exceeds {MAX_CODE_LINES} lines (spec 7b); split into smaller single-purpose files")
+    if (in_code or match_any(rel, L.CONFIG_GLOBS)) and HOST_PATH.search(content):
+        reasons.append(f"content for {rel} contains a hardcoded host path; use project-relative paths or environment variables")
+    return reasons
+
+
 def check_write(ctx: Context, rel: str, content: str | None, is_new: bool | None = None) -> list[str]:
     """Reasons to refuse writing `rel` (project-relative). Empty list means allowed."""
     reasons = []
@@ -178,6 +202,8 @@ def check_write(ctx: Context, rel: str, content: str | None, is_new: bool | None
     if content and (kind := contains_secret(content)):
         reasons.append(f"content for {rel} looks like a {kind} (spec 1: no secrets in files; "
                        "use environment variables, and reference them by name only)")
+    if content:
+        reasons += _hygiene_reasons(ctx, rel, content)
     tier_why = None if why else _tier_reason(ctx, rel, is_new)
     if tier_why:
         reasons.append(tier_why)

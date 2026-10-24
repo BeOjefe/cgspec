@@ -21,7 +21,7 @@ SECRETS = [
     ("slack-token", re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}\b")),
     ("google-key", re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b")),
     ("jwt", re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b")),
-    ("url-password", re.compile(r"(?<=://)([^:/@\s]+):([^@\s]+)(?=@)")),
+    ("url-password", re.compile(r"(?<=://)([^:/@\s]+):([^@\s]+)(?=@)")),  # cgspec:test-fixture (matches itself)
 ]
 ASSIGNMENT = re.compile(r"(?i)\b((?:password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret)\s*[:=]\s*)(\"[^\"]*\"|'[^']*'|\S+)")
 

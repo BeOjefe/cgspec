@@ -8,7 +8,7 @@ import shutil
 import unittest
 from unittest.mock import patch
 
-from tests.helpers import TempDir, doctor, git, install, run_script, snapshot_tree
+from tests.helpers import REPO, TempDir, doctor, git, install, run_script, snapshot_tree
 
 
 def old_project(root):
@@ -67,7 +67,7 @@ class UpgradeV1Tests(unittest.TestCase):
             self.assertFalse((root / "docs/_cgspec/01-script").exists())
             self.assertEqual(doctor(root).returncode, 0, doctor(root).stdout)
             self.assertIn("adrs/ADR-001-choice.md", (root / "docs/00-INDEX.md").read_text())
-            self.assertEqual(json.loads((root / "docs/_cgspec/project.json").read_text())["cgspec_version"], "0.2.0")
+            self.assertEqual(json.loads((root / "docs/_cgspec/project.json").read_text())["cgspec_version"], (REPO / "engine/VERSION").read_text().strip())
             imported = (root / "docs/adrs/ADR-001-choice.md").read_text()
             self.assertIn("Created: unknown · Last edited:", imported)
             self.assertEqual((imported.splitlines(keepends=True)[0] +
@@ -190,6 +190,21 @@ class UpgradeV1Tests(unittest.TestCase):
             self.assertEqual(snapshot_tree(root), changed)
             self.assertFalse((root / ".cgspec-upgrade-v1").exists())
 
+    def test_r2_rollback_after_relocation_reports_unavailable_not_changed(self):
+        with TempDir() as tmp:
+            root = tmp / "proj"
+            root.mkdir()
+            old_project(root)
+            git(root, "init", "-q")
+            upgrade(root, "--tools", "git", "--apply")
+            moved = tmp / "moved_proj"
+            root.rename(moved)
+            result, report = upgrade(moved, "--rollback")
+            self.assertEqual(result.returncode, 2)
+            report_str = str(report["unresolved"])
+            self.assertNotIn("changed since upgrade", report_str)
+            self.assertIn("unsafe git hook path", report_str)
+
     def test_rollback_rejects_corrupt_backup(self):
         from engine._lib import upgrade_v1 as migration
         with TempDir() as root:
@@ -280,7 +295,7 @@ class UpgradeV1Tests(unittest.TestCase):
                 self.assertTrue(path.is_file(), event)
                 self.assertIn("cgspec_hook.py", path.read_text())
             owned = json.loads((root / "docs/_cgspec/01-engine/owned-files.json").read_text())
-            self.assertEqual(len(owned["adapters"]["git_abs"]), 2)
+            self.assertEqual(owned["adapters"]["git_hooks"], ["pre-commit", "commit-msg"])
 
     def test_modes_and_empty_legacy_dirs_survive_upgrade_rollback(self):
         with TempDir() as root:

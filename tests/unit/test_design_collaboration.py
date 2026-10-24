@@ -49,10 +49,70 @@ class PushBackContractTests(unittest.TestCase):
                      if line.startswith("- Clear feedback is applied"))
         self.assertIn("understanding check", clear)
 
-    def test_method_states_the_human_job(self):
+    def test_method_states_who_carries_the_definition(self):
+        """Was test_method_states_the_human_job. That framing is what the 2026-10-23 stewardship
+        council replaced: push-back and the read-before-consequential-approval rule stay, but the
+        definition, records and reconciliation belong to the agent."""
         collab = section(read("docs/METHOD-v0.2.md"), "1. Collaboration contract").lower()
         self.assertIn("push back", collab)
         self.assertIn("read what you approve", collab)
+        self.assertIn("never asked to reconcile", collab)
+
+
+class StewardshipContractTests(unittest.TestCase):
+    """2026-10-23 agent-stewardship council (Gemini 3.8, human-collaboration and enforcement lenses).
+
+    The method promised that the agent absorbs changes of mind, while the contract called
+    architecture, documentation and reconciling a change of direction "the user's real job" and
+    listed changing direction as grounds for pushback. Both cannot hold. These pin the resolution:
+    the agent owns definition and reconciliation; push-back targets actions, never the person.
+    """
+
+    def setUp(self):
+        self.push = section(read("engine/CONTRACT.md"), "Push back when the work is at risk")
+        self.method = read("docs/METHOD-v0.2.md")
+        self.collab = section(self.method, "1. Collaboration contract")
+
+    def test_the_blame_framing_is_gone(self):
+        for text in (self.push, self.collab):
+            lowered = text.lower()
+            self.assertNotIn("real job", lowered)
+            self.assertNotIn("human job", lowered)
+            self.assertNotIn("your part is the definition", lowered)
+            self.assertNotIn("change direction without saying", lowered)
+
+    def test_the_agent_owns_reconciliation(self):
+        lowered = self.push.lower()
+        self.assertIn("none of that is the user's job", lowered)
+        self.assertIn("never fault them", lowered)
+        self.assertIn("do not ask the user to reconcile", lowered)
+
+    def test_new_thoughts_are_applied_or_parked_without_interrogation(self):
+        self.assertIn("`pending`", self.push)
+        self.assertIn('do not ask "is there more coming?"', self.push.lower())
+        self.assertNotIn("ask whether more is coming", self.method)
+
+    def test_the_method_no_longer_claims_every_message_is_triaged(self):
+        """The inbox hook captures text; nothing records a disposition, and most hosts have no hook."""
+        self.assertNotIn("Every message is triaged", self.method)
+        self.assertIn("Capture is not triage", self.method)
+
+    def test_a_definition_the_agent_wrote_is_not_approval(self):
+        """Final-challenge M2: the agent's own minimum definition must not authorize its own build,
+        and the forge skill must say the same thing as the contract."""
+        self.assertIn("a definition you wrote is not approval", self.push.lower())
+        forge = read("skills/cgspec-forge/SKILL.md").lower()
+        self.assertIn("a definition you wrote is not approval", forge)
+
+    def test_impact_runs_on_the_same_condition_in_contract_and_method(self):
+        """Final-challenge minor 5: the contract ran impact.py on every late change, the method only
+        when approved work is contradicted."""
+        contract = read("engine/CONTRACT.md")
+        line = next(l for l in contract.splitlines() if "impact.py" in l and "late change" in l)
+        self.assertIn("approved", line)
+
+    def test_stopping_to_ask_has_a_legal_path(self):
+        self.assertIn("checkpoint --awaiting", self.push)
 
 
 class DesignGuidanceTests(unittest.TestCase):

@@ -30,6 +30,16 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | `docs/_cgspec/07-state/approvals.json` | `approvals` | `user-message` hook only | One entry per user message that reads as an approval. A ledger entry with status Approved must cite one of these IDs (`--approval-ref A-...`). |
 | `docs/_cgspec/07-state/stop-retries.json` | none | `stop` hook | Counts consecutive stop refusals; reset when the agent ends cleanly. |
 
+## Git adapter ownership
+
+`owned-files.json` is installer state, not user approval. Under `adapters`,
+`git_hooks` stores only installed event names (`pre-commit`, `commit-msg`).
+Paths are discovered from the current Git checkout at operation time. Legacy
+`git_abs` and `git` entries are read for recognized event names only, never as
+filesystem targets; upgrade replaces them with `git_hooks`. Uninstall preserves
+scripts that differ from the installed template. Linked worktrees use Git's
+common directory and therefore share hooks; this is not per-worktree ownership.
+
 ## IDs
 
 | Kind | Form | Example |
@@ -103,7 +113,7 @@ A check that compares against history reads the base with `git -C "$CGSPEC_REPO_
 "$CGSPEC_BASE_REV:<path>"` and the candidate from its working directory. `templates/checks/no_new_suppressions.py`
 does this and refuses to guess (exit 2) when the variables are missing.
 
-Browser runs: `CGSPEC_BROWSER=none` forces BLOCKED; `CGSPEC_CHROMIUM` names a Chromium executable. When `CGSPEC_PLAYWRIGHT_DIR` is set (an absolute directory outside the project; the CI workflow sets it), Playwright is loaded only from `$CGSPEC_PLAYWRIGHT_DIR/node_modules`, never from the project's `node_modules` or `NODE_PATH`; otherwise the project's Playwright is used. A journey or audit passes only when the driver reported every expected viewport and these files exist with non-zero size and a PNG/WebM signature: for each viewport, `<label>-<viewport>.png` (final journey state, or the audited page), `<label>-<viewport>-<name>.png` for each journey `screenshot` step, and `<label>-<viewport>.webm` with `--video`.
+Browser runs: `CGSPEC_BROWSER=none` forces BLOCKED; `CGSPEC_CHROMIUM` names a Chromium executable. When `CGSPEC_PLAYWRIGHT_DIR` is set (an absolute directory outside the project; the CI workflow sets it), Playwright is loaded only from `$CGSPEC_PLAYWRIGHT_DIR/node_modules`, never from the project's `node_modules` or `NODE_PATH`; otherwise the project's Playwright is used. A journey or audit passes only when the driver reported every expected viewport and these files exist with non-zero size and a PNG/WebM signature: for each viewport, `<label>-<viewport>.png` (final journey state, or the audited page), `<label>-<viewport>-dark.png` (audit dark render), `<label>-<viewport>-<name>.png` for each journey `screenshot` step, and `<label>-<viewport>.webm` with `--video`.
 
 Document dates: `cgspec_hook.py doc sync` dates new documents, advances `Last edited` on edited ones, reverts date-only edits and labels edited legacy documents `Created: unknown`; the `stop` hook runs it at the end of each turn.
 
@@ -134,7 +144,7 @@ every session, and the commit hook and CI still catch the change.
 
 ## Checkpoint updates and recovery
 
-`cgspec_hook.py checkpoint --next '...' --in-flight '...'` updates validated existing state. `--done`, `--blocked` and `--in-flight` are mutually exclusive. Damaged or missing state is preserved and requires explicit repair from known records; the command never replaces it with empty defaults.
+`cgspec_hook.py checkpoint --next '...' --in-flight '...'` updates validated existing state. `--done`, `--blocked`, `--awaiting` and `--in-flight` are mutually exclusive. `--awaiting '<question>'` records `awaiting_user` (`at`, `question`, `used`, `count`) and keeps `in_flight`: the stop check accepts one allowed stop on an unused question, then marks it used and checks in-flight work normally again; a refused stop does not use it. A new `--awaiting` before any stop replaces the question. `--done`, `--blocked`, or a change of `in_flight` value (flag or patch) clears it; restating the same `in_flight` does not. Nothing is parked when it clears: hosts without a stop check never mark a question used, so `used` does not mean answered. `count` counts questions put to the user during the current in-flight batch and is lost when the batch ends; only hosts with a stop check increase it, because only they mark a question used. The session pack shows an unused question as asked, not as unanswered. The session pack shows the question, worded as still waiting or as last asked, so a resumed session sees what the user was asked. Damaged or missing state is preserved and requires explicit repair from known records; the command never replaces it with empty defaults.
 
 `checkpoint --update-file <path>` (or `--update-file -` for stdin) accepts a JSON object containing semantic checkpoint fields. Use a unique file under `.cgspec-scratch/` or `/tmp`. Each named field replaces its entire value; omitted fields remain unchanged, arrays/maps replace rather than merge, and `null` is valid only for nullable schema fields. Derived `source`, `unresolved_stop`, `schema` and `updated` cannot be patched. Do not mix a patch key with a flag updating the same field. These commands assume one checkpoint writer; cross-process ownership remains pending.
 

@@ -1,7 +1,7 @@
 # CGSpec Method v0.2 — Specification
-Created: unknown · Last edited: 2026-10-23T07:28:13Z
+Created: unknown · Last edited: 2026-10-24T00:34:12Z
 
-Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Source for the rebuild in `cgspec-next`.
+Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Built in this repository; there is no second development checkout (see `AGENTS.md`).
 
 **CGSpec is one package installed into a project: the AI carries the method, you set goals and judge results, and every rule that can be checked by a machine is enforced by one, not left to the AI's goodwill.** It works for a one-page site up to many independent repos, and for new or half-finished projects. Each rule below is stated once; other sections link to it.
 
@@ -38,7 +38,7 @@ What changed from v0.1: every round-1 and round-2 review finding is resolved in 
 | Delivery | What ships first | Slices, tests, code, evidence | Irreversible actions (data deletion, production, publishing) |
 | Method | Nothing | Follows it, repairs drift, keeps records, manages budget | Never |
 
-**Your part is the definition, and the agent will push back if you skip it.** With a clear goal, an understood specification, architecture decisions, documentation and a working environment, even complex code takes hours to days. Without them, it produces rework. So you are asked to do the human job well: say concretely what you want and how success is recognised, read what you approve, and decide when a real choice is in front of you. The agent tells you once, in plain words, when you are rushing to code, approving unread, or skipping definition or setup. It names the cost and the smallest fix. It stops only when continuing would build on an expensive or unsafe guess. You can overrule it; your decision is then recorded as an accepted risk. The agent never argues against a taste choice you made knowingly. The rule is in the contract, under "Push back when the work is at risk".
+**The agent carries the definition; you only have to say what you want, in your own words.** Rework comes from building on an unclear goal, a missing decision or a broken environment, so the agent writes the minimum definition from what you say (a definition it wrote is not your approval: anything beyond small work waits for you to approve it), proposes the architecture, keeps the records and the environment, and absorbs new ideas and changes of mind as they come: it applies what fits, parks what does not with a reason, and explains the effect when a new thought contradicts something already approved. You are never asked to reconcile earlier decisions or to phrase things in method terms. The agent pushes back on actions, not on you: building on a costly guess, a consequential approval whose effect you have not seen, or a skipped setup the next step needs. It says so once, in plain words, with the cost and the smallest fix, which is usually something it does itself. Before a consequential approval it shows the exact change and checks that its effect was understood, so read what you approve when it matters. It stops only when continuing would build on an expensive or unsafe guess, and then asks one question. You can overrule it; your decision is then recorded as an accepted risk. The agent never argues against a taste choice you made knowingly. The rule is in the contract, under "Push back when the work is at risk".
 
 How the agent talks to you:
 
@@ -48,7 +48,8 @@ How the agent talks to you:
 - Clear feedback is applied, not interviewed. Only ambiguous or intent-changing feedback gets one focused question, and a consequential or hard-to-undo approval gets one short understanding check (contract, "Push back when the work is at risk").
 - Diagrams (Mermaid) over walls of text; details live in files.
 - No decorative emojis in chat, docs or code (enforced by the commit hook).
-- No secrets (keys, tokens, passwords, private keys) in files, and no reading credential stores (shell history, `.ssh/`, `.aws/credentials`, `.netrc`, `.git-credentials`, Docker config) from a shell command — use environment variables, reference them by name only (enforced by the write hook, the commit hook, and the shell-command gate; the lab finding that triggered this is in `cgspec-audit-2026-10-18/`).
+- No secrets (keys, tokens, passwords, private keys) in files, and no reading credential stores (shell history, `.ssh/`, `.aws/credentials`, `.netrc`, `.git-credentials`, Docker config) from a shell command — use environment variables, reference them by name only (enforced by the write hook, the commit hook, and the shell-command gate; the lab finding that triggered this is in `cgspec-workspace/dossier/`).
+- The agent never force-pushes, rewrites history (`filter-branch`, `filter-repo`), runs `git reset --hard`, force-deletes a branch, or merges a pull request; it tells the user the exact command to run themselves (enforced by the shell-command gate on every host, including Antigravity; the incident that triggered this is in `cgspec-workspace/dossier/`: a delegated fixer agent rewrote branch history and force-pushed without asking).
 
 **No hidden decisions.** You can hand any choice to the agent. Then it is recorded with status `Delegated` (section 2): what was chosen, the other options, why, and whether it can be undone. Every report ends with "Decisions I made for you" with links; you can reverse any of them. Choices made by helper agents reach you through the same list. A decision counts as significant when it would surprise you later, cost time to undo, or limit future options.
 
@@ -201,7 +202,7 @@ Upgrade mode (older CGSpec version): a path map from old to new locations, a lin
 
 ## 6. Design path
 
-**Visual choices start during brainstorming.** Whenever images would clarify an option, the agent displays real reference images beside short labelled descriptions before asking the user to choose. Use the skill's `references/visual-choices.md`; links, image paths or screenshots saved only on disk do not count as a displayed comparison. If display is unavailable, state the limitation and leave that visual decision open. Purely technical or verbal choices do not need decorative images.
+**Visual choices start during brainstorming.** Whenever images would clarify an option, the agent displays real reference images beside short labelled descriptions before asking the user to choose. Use the [visual-choice guide](../skills/cgspec-ui-ux/references/visual-choices.md); links, image paths or screenshots saved only on disk do not count as a displayed comparison. If display is unavailable, state the limitation and leave that visual decision open. Purely technical or verbal choices do not need decorative images.
 
 **Design walks eight layers, UX before UI, each with a fixed deliverable and a list of what is deliberately left out; the AI leads with references and never polishes a lucky AI screen into the product.** Design can take days; code is no longer the hard part.
 
@@ -239,6 +240,7 @@ Rules:
 - **Tweaks vs changes.** A tweak inside approved tokens and zones is applied directly (T0). Changing a zone, a flow or a token reopens that layer; a token change reopens layers 6 and 7 on every screen.
 - **Constrained UI.** Prototypes assemble registered components with typed props instead of inventing layouts each time (RES-002), which keeps results stable and repeatable.
 - **Generic-look tells.** The audit flags known AI-default patterns (RES-004: untouched component-library look, unprompted purple, gradient text, neon glows, centered hero + three cards, cream + serif "tasteful default") as warnings; usability breakers are errors.
+- **Prior art.** RES-005 (Anthropic's `design` plugin) and RES-006 (`scroll-craft`) record what comparable skills enforce mechanically versus leave to prose, and list proposals not yet adopted: a UX-copy skill, scroll-motion checks, and a cross-project uniqueness register.
 - **Versions.** Living source in `docs/prototypes/<screen>/`; a new snapshot `vN` is cut only when a layer is locked for that screen, by the bundler, recorded in the ledger. Snapshots are frozen (section 8).
 
 **From layer 5 on, design is built in the real frontend.** Layers 0–4 stay a throwaway grey prototype, because screens and flows change many times and each change must stay cheap. When layer 4 is locked for the v0.1 screens, the agent runs a short frontend-stack decision (one ADR; a council only if the profile is T3) using the design system chosen at layer 0 when there is one. Layers 5–7 are then built directly as the real frontend with mocked data behind typed interfaces, so stage 3 only decides and connects the backend and nothing is rebuilt. What carries over from the grey prototype: (1) the journeys written at layer 4 against test IDs run unchanged against the real frontend; (2) the token sheet is the app's real tokens, enforced by Stylelint; (3) checks use behavior and state assertions, not pixel equality with the grey prototype. If the real frontend behaves differently from what you approved at layer 4, the build fails. If stage 3 later finds a backend constraint the frontend cannot meet, the frontend ADR is reopened like any other (section 7b).
@@ -420,7 +422,7 @@ What remains possible, and how to close it: the implementation now requires an e
 | Before compaction | Agent saves semantic progress before context pressure. The hook captures bounded mechanical source context and prints the pack; it does not invent a fresh semantic summary. Unavailable hooks cannot guarantee a save. |
 | Before a tool | Gates above |
 | After a tool | Mark evidence whose covered files changed as stale, count helper agents against the budget (index and document dates are refreshed at the end of the turn) |
-| Stop | Refuse to end until doctor passes, ledger updated, checkpoint fresh, decisions list written; allowed to end with a recorded BLOCKED or PARTIAL; respects the tool's loop flag (`stop_hook_active`) and a retry counter on disk (max 2) |
+| Stop | Refuse to end while doctor reports errors, work is in flight, or the checkpoint is older than the latest ledger entry; allowed to end once the batch is done or recorded BLOCKED, or on a recorded question to the user (`checkpoint --awaiting`, which keeps the batch in flight and excuses one stop). Bounded by a retry counter on disk: after two refusals it ends and keeps the unresolved reasons. The tool's loop flag (`stop_hook_active`) is not read |
 
 | AI tool | What it supports | Fallback |
 | --- | --- | --- |
@@ -459,7 +461,7 @@ Checkpoint (`07-state/checkpoint.json`, committed): goal, stage per part, accept
 
 The agent always says which wake-up it set.
 
-**Memory and late changes.** Every message is triaged: current step (apply now), other screens or later UX (experience spine), backend or future scope (OOUX, architecture or inbox), research (`RES-NNN`); each lands with a ledger line. A late idea or change of mind goes through the change flow: capture → ask whether more is coming → impact script (`impact.py <paths|IDs> [--term noun] [--screen name]` follows links and record-ID mentions backwards from nouns, screens, layers and baselines, then lists records to update, code in affected slice scopes, evidence that goes stale and frozen baselines that need a new version; plain code, no AI context, read-only) → impact map shown to you → approve → all records updated together → affected evidence marked stale and re-run. On big projects, one scout per repo reads only the affected files.
+**Memory and late changes.** Where the host has a user-message hook (Claude Code), each message is captured to the inbox with secrets scrubbed and cut to its first 2,000 characters; a capture failure never blocks the message. Capture is not triage: the engine does not record where a message was routed, and on hosts without that hook there is no automatic capture at all. The agent does the routing, and records only what affects the work rather than every message: current step (apply now), other screens or later UX (experience spine), backend or future scope (OOUX, architecture, or the checkpoint's `pending`), research (`RES-NNN`). A late idea or change of mind goes through the change flow: the agent compares it with the work in progress → applies it if it fits, or parks it with a reason if it does not → if it contradicts approved work, impact script (`impact.py <paths|IDs> [--term noun] [--screen name]` follows links and record-ID mentions backwards from nouns, screens, layers and baselines, then lists records to update, code in affected slice scopes, evidence that goes stale and frozen baselines that need a new version; plain code, no AI context, read-only) → impact map shown to you with a recommendation → approve → all records updated together → affected evidence marked stale and re-run. On big projects, one scout per repo reads only the affected files.
 
 ## 10. Scale, migration and operations
 
@@ -503,6 +505,8 @@ Plugin repository layout:
 | `tests/` | Unit tests + negative fixtures + the smoke test |
 
 Install into a project (`engine/install.py`): copies `engine/` to `docs/_cgspec/01-engine/` with a hash manifest and the plugin version (vendored, so a project never breaks when the plugin moves); writes the version marker; wires the adapters for the tools present; writes the thin entry points; records every file it created in an owned-files list for uninstall. Running it twice changes nothing.
+
+Git hook ownership records event names, not workstation paths. At uninstall, Git locates the current checkout's default hook directory; legacy stored paths contribute only recognized event names and are never followed. Only an unchanged installed hook is removed. Modified or symlinked hooks and custom `core.hooksPath` locations are left alone with a diagnostic. An upgrade converts legacy Git hook ownership to event names. Linked worktrees share the repository's common hook directory; independent per-worktree installation ownership is not implemented.
 
 Smoke test, required to pass in the plugin's CI before step 5 of the plan:
 
@@ -597,7 +601,7 @@ Smoke test, required to pass in the plugin's CI before step 5 of the plan:
 
 ## 14. Evidence base and plan
 
-**The design choices below rest on published evidence where it exists; where it doesn't, the CortexGate pilot measures it.** Full research with all links: `cgspec-audit-2026-10-18/13-RESEARCH-PASS.md`.
+**The design choices below rest on published evidence where it exists; where it doesn't, the CortexGate pilot measures it.** Full research with all links: `cgspec-workspace/dossier/13-RESEARCH-PASS.md`.
 
 | Choice | Evidence |
 | --- | --- |
@@ -614,18 +618,22 @@ Smoke test, required to pass in the plugin's CI before step 5 of the plan:
 
 No published evidence yet for: wireframe-first and style tiles (practitioner consensus only), your quota thresholds, and CGSpec's benefit over one careful agent. The pilot measures the last one.
 
-**Plan:**
+**Plan (historical, Oct 2026 — not current instructions):**
+
+The original build sequence below is kept for provenance. It is **not** a live plan: it names a
+`cgspec-next` checkout that no longer exists, and its step 7 schedules timed check-ins, which
+`engine/CONTRACT.md` forbids an agent from inventing. For what is actually built, see
+`docs/STATUS.md`; for the current repair programme, see the dossier reports named there.
 
 ```mermaid
 flowchart LR
-  A[1 Review round 3<br/>on this spec] --> B[2 Build in cgspec-next<br/>engine + tests + smoke test]
+  A[1 Review round 3<br/>on this spec] --> B[2 Build engine<br/>+ tests + smoke test]
   B --> C[3 Skills + contract]
   C --> D[4 Rehearse on a copy<br/>of CortexGate]
   D --> E[5 Upgrade CortexGate]
   E --> F[6 Fresh CortexGate session]
-  F --> G[7 Check-ins every 20 min,<br/>stop after 3 idle]
-  G --> H[8 Pilot: compare against<br/>one careful agent]
-  G -->|improvement| B
+  F --> H[7 Pilot: compare against<br/>one careful agent]
+  H -->|improvement| B
 ```
 
-Step 2 starts with the file formats (tier.json, run.json, frozen.json, evidence records) and the command-line and exit-code contract of cgspec\_hook.py, then install, doctor and memlog; the section 8 gates come after. Step 7 uses chained one-off reminders (recurring tasks here are normally at most hourly). Step 8 measures escaped defects, rework, your interruptions, tokens and time, not the method's own PASS count.
+Step 2 started with the file formats (tier.json, run.json, frozen.json, evidence records) and the command-line and exit-code contract of cgspec\_hook.py, then install, doctor and memlog; the section 8 gates came after. Step 7 measures escaped defects, rework, your interruptions, tokens and time, not the method's own PASS count.

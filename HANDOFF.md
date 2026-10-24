@@ -12,7 +12,7 @@ Date: 2026-10-19. Previous owner: Claude (claude.ai session). Read this first, t
 | --- | --- |
 | Spec (historical at rev 48) | Claude Doc then matched the repo copy; later branch edits and the v0.2 rename make the old digest obsolete. The current repo spec is `docs/METHOD-v0.2.md`. |
 | Code | This handoff originally covered `method-v2`, then `claude/design-craft`; both names describe earlier work, not the current branch. |
-| Audit dossier, history, reviews | `~/Documents/Project/cgspec-audit-2026-10-18/` (09-RESUME-STATE.md is the running log; 10-13 are re-audit, reviews, research) |
+| Audit dossier, history, reviews | `~/Documents/Project/cgspec-workspace/dossier/` (09-RESUME-STATE.md is the running log; 10-13 are re-audit, reviews, research) |
 | Live repos | `~/Documents/Project/cgspec` and `~/Documents/Project/cortexgate`: NOT touched. Do not edit them until step 5 of the plan. |
 
 ## What is built (spec build step 2: engine + enforcement)
@@ -73,7 +73,7 @@ Low: `find -iname '*.JSON' -delete` slips past the tool hook (best effort; commi
 ## Next steps (spec section 14 plan)
 
 1. Independent re-review of 9e6be76..e13a009; fix findings.
-2. Built since this note was written: `post-tool` hook, `bundle_prototype.py`, `visual_audit.py`, `journey.py`, `impact.py`, check registration (`cgspec_hook.py check`), `cgspec_hook.py checkpoint`. See `cgspec-audit-2026-10-18/19-*.md` for the current state.
+2. Built since this note was written: `post-tool` hook, `bundle_prototype.py`, `visual_audit.py`, `journey.py`, `impact.py`, check registration (`cgspec_hook.py check`), `cgspec_hook.py checkpoint`. See `cgspec-workspace/dossier/19-*.md` for the current state.
 3. Publish: the intended plugin remote is `BeOjefe/cgspec`; release tagging and live CI rehearsal remain pending.
 4. Step 3: the 9 skills (`skills/<name>/SKILL.md`) and the short contract; roles in `agents/`. Remove the old v1 `skills/`, `agents/`, `cgspec_template/` once replaced.
 5. Step 4: rehearse install/upgrade on a COPY of CortexGate. Step 5: upgrade real CortexGate. Step 6: fresh CortexGate session. Step 7: periodic check-ins. Step 8: pilot vs one careful agent.
@@ -83,4 +83,4 @@ Low: `find -iname '*.JSON' -delete` slips past the tool hook (best effort; commi
 - Tests first for every change; for key rules, revert the fix once and confirm a test fails.
 - Commit identity: reuse the repo's last author (`git -c user.name=... -c user.email=...`); never change git config.
 - Keep files <= 400 lines, functions <= 60 (enforced by `tests/unit/test_code_rules.py`).
-- Update `docs/METHOD-v0.2.md` and the live doc together when behavior changes; log progress in `cgspec-audit-2026-10-18/09-RESUME-STATE.md`.
+- Update `docs/METHOD-v0.2.md` and the live doc together when behavior changes; log progress in `cgspec-workspace/dossier/09-RESUME-STATE.md`.

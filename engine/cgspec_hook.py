@@ -66,11 +66,11 @@ def normalize(payload: dict, tool: str) -> dict:
 
 def shell_reasons(ctx: Context, command: str, cwd: str | None) -> list[str]:
     from _lib.gates import credential_read_reasons, git_tracked, protected_list
-    from _lib.shellparse import WRITE_HINTS, mentions
+    from _lib.shellparse import WRITE_HINTS, destructive_git_reasons, mentions
     import posixpath
     targets, deletes, inline, broad = write_targets(command, cwd or str(ctx.root))
     guarded = protected_list(ctx)
-    reasons = credential_read_reasons(command)
+    reasons = credential_read_reasons(command) + destructive_git_reasons(command)
     if re.search(r"\binstall\.py\b[^;&|]*\b(uninstall|upgrade|install)\b", command):
         reasons.append("installing, upgrading or uninstalling CGSpec is done by the user, not the agent; "
                        "tell the user the exact install.py command to run")
@@ -249,6 +249,8 @@ def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str) -> int
             print(f"cgspec_hook: document date sync failed: {exc!r}", file=sys.stderr)
         errors, summary = doctor_state(root)
         allow, message = session.stop_decision(root, session.stop_problems(root, errors))
+        if allow:
+            session.mark_question_used(root)
         if args.tool == "antigravity":
             if not allow:
                 print(json.dumps({"decision": "continue", "reason": message}))
@@ -387,7 +389,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.event == "ci":
             return ci(root, args.base, not args.no_rerun, args)
         if args.event in ("user-message", "session-start", "session-check", "pre-compact", "stop", "commit-msg"):
-            return lifecycle(root, args.event, args, "" if args.event == "commit-msg" else sys.stdin.read())
+            return lifecycle(root, args.event, args, sys.stdin.read() if args.event == "user-message" else "")
         raise CgspecError(f"unknown event: {args.event}")
     except CgspecError as exc:
         print(f"cgspec_hook: {exc}", file=sys.stderr)
