@@ -1,5 +1,5 @@
 # CGSpec Method v0.2 — Specification
-Created: unknown · Last edited: 2026-10-23T13:42:19Z
+Created: unknown · Last edited: 2026-10-24T00:34:12Z
 
 Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Built in this repository; there is no second development checkout (see `AGENTS.md`).
 
@@ -49,6 +49,7 @@ How the agent talks to you:
 - Diagrams (Mermaid) over walls of text; details live in files.
 - No decorative emojis in chat, docs or code (enforced by the commit hook).
 - No secrets (keys, tokens, passwords, private keys) in files, and no reading credential stores (shell history, `.ssh/`, `.aws/credentials`, `.netrc`, `.git-credentials`, Docker config) from a shell command — use environment variables, reference them by name only (enforced by the write hook, the commit hook, and the shell-command gate; the lab finding that triggered this is in `cgspec-workspace/dossier/`).
+- The agent never force-pushes, rewrites history (`filter-branch`, `filter-repo`), runs `git reset --hard`, force-deletes a branch, or merges a pull request; it tells the user the exact command to run themselves (enforced by the shell-command gate on every host, including Antigravity; the incident that triggered this is in `cgspec-workspace/dossier/`: a delegated fixer agent rewrote branch history and force-pushed without asking).
 
 **No hidden decisions.** You can hand any choice to the agent. Then it is recorded with status `Delegated` (section 2): what was chosen, the other options, why, and whether it can be undone. Every report ends with "Decisions I made for you" with links; you can reverse any of them. Choices made by helper agents reach you through the same list. A decision counts as significant when it would surprise you later, cost time to undo, or limit future options.
 
