@@ -157,10 +157,11 @@ class VisualVerifyRegressionTests(unittest.TestCase):
         def fake_run(root, runs, shots_dir, video=False):
             shots_dir.mkdir(parents=True, exist_ok=True)
             for r in runs:
-                (shots_dir / f"{r["label"]}-desktop.png").write_bytes(make_valid_png(10, 10))
-                (shots_dir / f"{r["label"]}-mobile.png").write_bytes(make_valid_png(10, 10))
-                (shots_dir / f"{r["label"]}-desktop-dark.png").write_bytes(make_valid_png(10, 10))
-                (shots_dir / f"{r["label"]}-mobile-dark.png").write_bytes(make_valid_png(10, 10))
+                lbl = r["label"]
+                (shots_dir / f"{lbl}-desktop.png").write_bytes(make_valid_png(10, 10))
+                (shots_dir / f"{lbl}-mobile.png").write_bytes(make_valid_png(10, 10))
+                (shots_dir / f"{lbl}-desktop-dark.png").write_bytes(make_valid_png(10, 10))
+                (shots_dir / f"{lbl}-mobile-dark.png").write_bytes(make_valid_png(10, 10))
             return {"results": [{"label": "invoice", "viewports": [
                 {"viewport": "desktop", "ok": True, "errors": [], "quality": {}},
                 {"viewport": "mobile", "ok": True, "errors": [], "quality": {}},
