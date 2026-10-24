@@ -275,4 +275,3 @@ def check_write(ctx: Context, rel: str, content: str | None, is_new: bool | None
     if tier_why:
         reasons.append(tier_why)
     return reasons
-
