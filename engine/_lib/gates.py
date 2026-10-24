@@ -192,6 +192,40 @@ def _hygiene_reasons(ctx: Context, rel: str, content: str) -> list[str]:
     return reasons
 
 
+def project_content(root: Path, rel: str, payload: dict, tool: str, fallback: str | None) -> str | None:
+    """Project the resulting file content after a tool edit or write."""
+    target = root / rel
+    if tool == "antigravity":
+        args = (payload.get("toolCall") or {}).get("args") or {}
+        name = (payload.get("toolCall") or {}).get("name", "")
+        if name in ("replace_file_content", "multi_replace_file_content") and target.is_file():
+            tgt, rep = args.get("TargetContent", ""), args.get("ReplacementContent", "")
+            try:
+                orig = target.read_text(encoding="utf-8", errors="replace")
+                return orig.replace(tgt, rep, 1) if (tgt and tgt in orig) else orig
+            except OSError:
+                return fallback
+        if name == "write_to_file" and args.get("Append") and target.is_file():
+            try:
+                return target.read_text(encoding="utf-8", errors="replace") + (args.get("CodeContent") or "")
+            except OSError:
+                return fallback
+        if name == "write_to_file" and args.get("CodeContent") is not None:
+            return args.get("CodeContent")
+    elif tool == "claude":
+        name, data = payload.get("tool_name", ""), payload.get("tool_input") or {}
+        if name in ("Edit", "MultiEdit") and target.is_file():
+            old_s, new_s = data.get("old_string", ""), data.get("new_string", "")
+            try:
+                orig = target.read_text(encoding="utf-8", errors="replace")
+                return orig.replace(old_s, new_s, 1) if (old_s and old_s in orig) else orig
+            except OSError:
+                return fallback
+        if name == "Write" and data.get("content") is not None:
+            return data.get("content")
+    return fallback
+
+
 def check_write(ctx: Context, rel: str, content: str | None, is_new: bool | None = None) -> list[str]:
     """Reasons to refuse writing `rel` (project-relative). Empty list means allowed."""
     reasons = []
@@ -213,7 +247,15 @@ def check_write(ctx: Context, rel: str, content: str | None, is_new: bool | None
                        "use environment variables, and reference them by name only)")
     if content:
         reasons += _hygiene_reasons(ctx, rel, content)
+    elif (ctx.root / rel).is_file() and match_any(rel, ctx.classes.get("code", [])) and rel not in ctx.legacy:
+        try:
+            cnt = len((ctx.root / rel).read_text(encoding="utf-8", errors="replace").splitlines())
+            if cnt > MAX_CODE_LINES:
+                reasons.append(f"{rel} ({cnt} lines) exceeds {MAX_CODE_LINES} lines (spec 7b); split into smaller single-purpose files")
+        except OSError:
+            pass
     tier_why = None if why else _tier_reason(ctx, rel, is_new)
     if tier_why:
         reasons.append(tier_why)
     return reasons
+

@@ -186,11 +186,15 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
         if change.path.startswith(trust.ENGINE) or change.path in exempt:
             continue  # engine files are checked above; install-owned files (e.g. copied skills) come from the plugin
         raw_bytes = view.read_new(change.path) if change.status != "D" else None
-        if raw_bytes and b"\x00" not in raw_bytes and b"\r\n" in raw_bytes:
-            reasons.append(f"{change.path}: contains CRLF line endings; convert to LF before committing")
-        if change.status in "AC" and _is_script_name(change.path, None):
-            content = (raw_bytes or b"").decode("utf-8", "replace")
-            if not _script_allowed(ctx, change.path, content):
+        if raw_bytes and b"\x00" not in raw_bytes:
+            content = raw_bytes.decode("utf-8", "replace")
+            if change.path not in ctx.legacy and match_any(change.path, classes.get("code", [])):
+                lines_cnt = len(content.splitlines())
+                if lines_cnt > 400:
+                    reasons.append(f"{change.path}: {lines_cnt} lines exceeds the 400 lines per file limit (spec 7b)")
+            if b"\r\n" in raw_bytes:
+                reasons.append(f"{change.path}: contains CRLF line endings; convert to LF before committing")
+            if change.status in "AC" and _is_script_name(change.path, None) and not _script_allowed(ctx, change.path, content):
                 reasons.append(f"new script {change.path} is not allowed here (spec 8)")
     for path, lines in view.added_lines().items():
         if path.startswith(trust.ENGINE):
