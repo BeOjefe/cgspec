@@ -190,6 +190,21 @@ class UpgradeV1Tests(unittest.TestCase):
             self.assertEqual(snapshot_tree(root), changed)
             self.assertFalse((root / ".cgspec-upgrade-v1").exists())
 
+    def test_r2_rollback_after_relocation_reports_unavailable_not_changed(self):
+        with TempDir() as tmp:
+            root = tmp / "proj"
+            root.mkdir()
+            old_project(root)
+            git(root, "init", "-q")
+            upgrade(root, "--tools", "git", "--apply")
+            moved = tmp / "moved_proj"
+            root.rename(moved)
+            result, report = upgrade(moved, "--rollback")
+            self.assertEqual(result.returncode, 2)
+            report_str = str(report["unresolved"])
+            self.assertNotIn("changed since upgrade", report_str)
+            self.assertIn("unsafe git hook path", report_str)
+
     def test_rollback_rejects_corrupt_backup(self):
         from engine._lib import upgrade_v1 as migration
         with TempDir() as root:
@@ -280,7 +295,7 @@ class UpgradeV1Tests(unittest.TestCase):
                 self.assertTrue(path.is_file(), event)
                 self.assertIn("cgspec_hook.py", path.read_text())
             owned = json.loads((root / "docs/_cgspec/01-engine/owned-files.json").read_text())
-            self.assertEqual(len(owned["adapters"]["git_abs"]), 2)
+            self.assertEqual(owned["adapters"]["git_hooks"], ["pre-commit", "commit-msg"])
 
     def test_modes_and_empty_legacy_dirs_survive_upgrade_rollback(self):
         with TempDir() as root:

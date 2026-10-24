@@ -185,7 +185,7 @@ def _prepare(stage: Path, options: dict, report: dict, hooks: list[dict]) -> Non
         write_json(marker, project)
         owned_path = stage / "docs/_cgspec/01-engine/owned-files.json"
         owned = json.loads(owned_path.read_text())
-        owned.setdefault("adapters", {})["git_abs"] = [h["path"] for h in hooks if h["created"]]
+        owned.setdefault("adapters", {})["git_hooks"] = [Path(h["path"]).name for h in hooks if h["created"]]
         write_json(owned_path, owned)
     _legacy_baseline(stage, original, report)
     doctor_fix(stage, options["profile"])
@@ -266,6 +266,35 @@ def _current_status(root: Path, report: dict) -> tuple[int, dict]:
     return 0, report
 
 
+def _rollback(root: Path, journal: Path, archived: Path, report: dict) -> tuple[int, dict]:
+    source = journal if journal.is_dir() else archived
+    if not source.is_dir():
+        report["unresolved"].append("no upgrade journal or archive exists")
+        return 2, report
+    try:
+        conflicts = _safe_restore(root, source)
+    except (OSError, ValueError, KeyError, tarfile.TarError) as exc:
+        report["unresolved"].append(f"rollback stopped; recovery data retained: {exc}")
+        return 2, report
+    if conflicts:
+        for p in conflicts:
+            if p.startswith("unsafe git hook path:"):
+                report["unresolved"].append(f"{p}; rollback is unavailable after repository relocation")
+            else:
+                report["unresolved"].append(f"changed since upgrade: {p}")
+        return 2, report
+    if journal.is_dir():
+        shutil.rmtree(journal)
+    else:
+        shutil.rmtree(archived)
+        try:
+            archived.parent.rmdir()
+        except OSError:
+            pass
+    report["verdict"] = "ROLLED_BACK"
+    return 0, report
+
+
 def run(root: Path, options: dict, apply: bool, rollback: bool = False) -> tuple[int, dict]:
     report = {"verdict": "PARTIAL", "path_map": {}, "archive": [], "archived_hashes": {},
               "remove_empty": [], "rewritten": [], "unresolved": [],
@@ -273,28 +302,7 @@ def run(root: Path, options: dict, apply: bool, rollback: bool = False) -> tuple
     journal = root / JOURNAL
     archived = root / ARCHIVE
     if rollback:
-        source = journal if journal.is_dir() else archived
-        if not source.is_dir():
-            report["unresolved"].append("no upgrade journal or archive exists")
-            return 2, report
-        try:
-            conflicts = _safe_restore(root, source)
-        except (OSError, ValueError, KeyError, tarfile.TarError) as exc:
-            report["unresolved"].append(f"rollback stopped; recovery data retained: {exc}")
-            return 2, report
-        if conflicts:
-            report["unresolved"] += [f"changed since upgrade: {p}" for p in conflicts]
-            return 2, report
-        if journal.is_dir():
-            shutil.rmtree(journal)
-        else:
-            shutil.rmtree(archived)
-            try:
-                archived.parent.rmdir()
-            except OSError:
-                pass
-        report["verdict"] = "ROLLED_BACK"
-        return 0, report
+        return _rollback(root, journal, archived, report)
     if journal.exists():
         report["unresolved"].append(f"interrupted upgrade journal at {JOURNAL}; run --rollback first")
         return 2, report

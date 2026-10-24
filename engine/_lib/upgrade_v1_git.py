@@ -4,31 +4,15 @@ from __future__ import annotations
 
 import hashlib
 import os
-import subprocess
 from pathlib import Path
 
 from .adapters import GIT_HOOK, HOOK
-
-
-def _git(root: Path, *args: str) -> str | None:
-    done = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True)
-    return done.stdout.strip() if done.returncode == 0 else None
+from . import git_hooks
 
 
 def hook_dir(root: Path) -> Path | None:
-    top = _git(root, "rev-parse", "--show-toplevel")
-    if not top or Path(top).resolve() != root.resolve():
-        return None
-    if _git(root, "config", "--get", "core.hooksPath"):
-        return None
-    raw = _git(root, "rev-parse", "--git-path", "hooks")
-    if not raw:
-        return None
-    path = Path(raw)
-    path = path if path.is_absolute() else root / path
-    if any(p.is_symlink() for p in (path, *path.parents) if p != Path("/")):
-        return None
-    return path.resolve()
+    hooks, _, _ = git_hooks.directory(root)
+    return hooks
 
 
 def plan(root: Path, tools: str) -> tuple[list[dict], list[str]]:
@@ -40,7 +24,7 @@ def plan(root: Path, tools: str) -> tuple[list[dict], list[str]]:
     out, issues = [], []
     for event in ("pre-commit", "commit-msg"):
         target = hooks / event
-        desired = GIT_HOOK.format(hook=HOOK, event=event).encode()
+        desired = git_hooks.expected_hook_bytes(GIT_HOOK, HOOK, event)
         if target.is_symlink() or (target.exists() and not target.is_file()):
             issues.append(f"git hook target unsafe: {target}")
         elif target.exists() and target.read_bytes() != desired:
@@ -83,7 +67,7 @@ def publish(root: Path, hooks: list[dict]) -> None:
             continue
         target = Path(item["path"])
         target.parent.mkdir(parents=True, exist_ok=True)
-        desired = GIT_HOOK.format(hook=HOOK, event=item["event"]).encode()
+        desired = git_hooks.expected_hook_bytes(GIT_HOOK, HOOK, item["event"])
         with target.open("xb") as handle:
             handle.write(desired)
         os.chmod(target, item["mode"])

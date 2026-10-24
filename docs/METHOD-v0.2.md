@@ -506,6 +506,8 @@ Plugin repository layout:
 
 Install into a project (`engine/install.py`): copies `engine/` to `docs/_cgspec/01-engine/` with a hash manifest and the plugin version (vendored, so a project never breaks when the plugin moves); writes the version marker; wires the adapters for the tools present; writes the thin entry points; records every file it created in an owned-files list for uninstall. Running it twice changes nothing.
 
+Git hook ownership records event names, not workstation paths. At uninstall, Git locates the current checkout's default hook directory; legacy stored paths contribute only recognized event names and are never followed. Only an unchanged installed hook is removed. Modified or symlinked hooks and custom `core.hooksPath` locations are left alone with a diagnostic. An upgrade converts legacy Git hook ownership to event names. Linked worktrees share the repository's common hook directory; independent per-worktree installation ownership is not implemented.
+
 Smoke test, required to pass in the plugin's CI before step 5 of the plan:
 
 1. Fresh empty repo → install → doctor PASS on each template.
