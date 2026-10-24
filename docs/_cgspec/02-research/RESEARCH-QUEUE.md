@@ -1,5 +1,5 @@
 # Research queue
-Created: 2026-10-22T20:50:49Z · Last edited: 2026-10-23T23:15:12Z
+Created: 2026-10-22T20:50:49Z · Last edited: 2026-10-24T11:24:15Z
 
 Spikes that are queued but not yet run. A queued item is a question, not a finding: nothing
 here may be cited as evidence. When a spike concludes it becomes a `RES-NNN-<slug>.md` file
@@ -52,7 +52,7 @@ Its parts also map onto CGSpec's with suspicious neatness, and each mapping is a
 
 ### What finishes this spike
 
-The next free `RES-NNN` (`RES-005` and `RES-006` are taken) that answers, with file-and-line evidence from the tree rather than from the README:
+The next free `RES-NNN` (`RES-005` through `RES-007` are taken) that answers, with file-and-line evidence from the tree rather than from the README:
 
 1. Which of its rules are mechanically enforced (a script, a hook, a check that can fail) and
    which are prose the agent may ignore. Count both.
@@ -93,3 +93,25 @@ them.
    or would not have caught.
 3. Decide each `RES-006` proposal: adopt with a named CGSpec home and a test, or reject with a
    reason. Use no paid `kie.ai` call without the user's yes.
+
+---
+
+## QUEUE-003 — GitNexus (`abhigyanpatwari/GitNexus`) & Deferred Community Hook Patterns
+
+- **Source:** <https://github.com/abhigyanpatwari/GitNexus> and <https://www.reddit.com/r/ClaudeCode/comments/1t93ikr/best_hooks_you_use/> (initial pass concluded in [`RES-007`](RES-007-claude-code-hooks-benchmark-and-hygiene-gates.md); deferred items tracked here).
+- **Status:** queued, not yet read in depth.
+- **Added:** 2026-10-24, at the user's request (`[11:20 AM, 10/24/2026]`).
+
+### Why CGSpec needs it
+
+1. **GitNexus (`abhigyanpatwari/GitNexus`):** Evaluate how GitNexus builds codebase knowledge graphs / structural dependency maps and compare it against CGSpec's `engine/impact.py` and `engine/ingest.py`. Specifically: can CGSpec's zero-dependency `impact.py` (or optional local MCP tooling) borrow graph-traversal or blast-radius techniques without violating the stdlib-only engine constraint?
+2. **Deferred `r/ClaudeCode/1t93ikr` hook patterns:** `RES-007` adopted pre-write hygiene gates (`CRLF`, 400-line cap, workstation paths), anti-deflection on `--blocked`, and starter template checks, but left open:
+   - **Read-before-Edit tracking across hosts:** whether `pre-tool` and `post-tool` can reliably track files read in the current session (or since `pre-compact`) across Claude Code and Antigravity without false positives when hosts omit read-tool hook events.
+   - **Auto-injected error/context routing on `user-message`:** whether `user-message` should surface relevant slice/check guides when the user pastes a stack trace or error code.
+
+### What finishes this spike
+
+The next free `RES-NNN` that answers:
+1. What GitNexus does, its licence, runtime dependencies, and how its graph indexing compares with `engine/impact.py` and `engine/ingest.py`.
+2. Which graph or impact-analysis capabilities belong inside CGSpec's stdlib `impact.py` versus an optional external tool integration.
+3. A concrete decision (adopt with test coverage or reject with reason) on cross-host Read-before-Edit tracking and error-context injection from `r/ClaudeCode/1t93ikr`.
