@@ -7,24 +7,37 @@ from pathlib import Path
 import re
 import sys
 
-JS_SUFFIXES = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}
-CODE_SUFFIXES = JS_SUFFIXES | {".py"}
+BRACE_SUFFIXES = {
+    ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs",
+    ".go", ".rs", ".java", ".kt", ".kts", ".swift",
+    ".c", ".cc", ".cpp", ".h", ".hpp", ".cs", ".php",
+    ".dart", ".scala", ".zig", ".vue", ".svelte",
+}
+SCRIPT_SUFFIXES = {".rb", ".sh", ".bash"}
+CODE_SUFFIXES = {".py"} | BRACE_SUFFIXES | SCRIPT_SUFFIXES
 PAIRS = {"(": ")", "{": "}", "[": "]"}
 MAX_FILE_LINES, MAX_CODE_ONLY_LINES, MAX_FUNCTION_LINES, MAX_RETURN_LINES = 400, 350, 60, 12
 MIN_COMMENTED_FILE_LINES, MIN_COMMENTED_FUNC_LINES = 15, 20
 DECOMPOSE_MSG = "; decompose into named intermediate variables first, then return only the composed variable"
+FUNC_PATS = (
+    re.compile(r"(?:export\s+(?:default\s+)?)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)"),
+    re.compile(r"\bfunc\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)\s*(?:\[[^\]]*\])?\s*\("),
+    re.compile(r"\b(?:fn|fun)\s+(?:<[^>]*>\s*)?([A-Za-z_]\w*)\s*(?:<[^>]*>)?\s*\("),
+    re.compile(r"(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:<[^>]*>)?(?:\([^{]*\)|[A-Za-z_$][\w$]*)\s*=>\s*\{"),
+)
 
 def _count_code_lines(lines: list[str]) -> int:
     """Count non-blank, non-comment lines of code."""
-    pfx = ("#", "//", "/*", "*", "*/")
+    pfx = ("#", "//", "/*", "*", "*/", "<!--", "-->")
     return sum(1 for ln in lines if ln.strip() and not ln.strip().startswith(pfx))
 
 def _has_header(path: Path, lines: list[str], tree: ast.AST | None) -> bool:
     """Verify presence of a top-of-file docstring or comment header."""
-    if path.suffix.lower() == ".py":
+    if path.suffix.lower() in ({".py"} | SCRIPT_SUFFIXES):
         return bool(tree and ast.get_docstring(tree)) or any(l.strip().startswith("#") and not l.strip().startswith("#!") for l in lines[:8] if l.strip())
-    top = [s for s in (l.strip() for l in lines) if s and not s.startswith("#!") and s.rstrip(";").strip("\"'") != "use strict"][:5]
-    return any(l.startswith(("//", "/*")) for l in top)
+    skip = {"use strict", "<?php"}
+    top = [s for s in (l.strip() for l in lines) if s and not s.startswith("#!") and s.rstrip(";").strip("\"'") not in skip][:8]
+    return any(l.startswith(("//", "/*", "#", "<!--")) for l in top)
 
 def _has_nested_py_return_logic(val: ast.AST) -> bool:
     """Detect nested ternary expressions, nested comprehensions, or lambdas."""
@@ -149,18 +162,15 @@ def _check_js_tokens(path: Path, content: str, out: list[str]) -> None:
         i += 1
 
 def _check_js_funcs(path: Path, content: str, lines: list[str], out: list[str]) -> None:
-    """Validate JS/TS function lengths and comment coverage."""
-    pats = [
-        re.compile(r"(?:export\s+(?:default\s+)?)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)"),
-        re.compile(r"(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:<[^>]*>)?(?:\([^{]*\)|[A-Za-z_$][\w$]*)\s*=>\s*\{"),
-    ]
+    """Validate brace-language function lengths and comment coverage."""
     seen: set[tuple[str, int]] = set()
-    for idx, pat in enumerate(pats):
+    arrow_idx = len(FUNC_PATS) - 1
+    for idx, pat in enumerate(FUNC_PATS):
         for m in pat.finditer(content):
             name = m.group(1)
-            p_open = content.find("(", m.end()) if idx == 0 else -1
+            p_open = content.find("(", m.end() - 1) if idx != arrow_idx else -1
             p_close = _find_balanced(content, p_open, "(", ")") if p_open != -1 else -1
-            b_open = content.find("{", p_close) if p_close != -1 else (m.end() - 1 if idx != 0 else -1)
+            b_open = content.find("{", p_close) if p_close != -1 else (m.end() - 1 if idx == arrow_idx else -1)
             b_close = _find_balanced(content, b_open, "{", "}") if b_open != -1 else -1
             if b_close == -1:
                 continue
@@ -173,7 +183,7 @@ def _check_js_funcs(path: Path, content: str, lines: list[str], out: list[str]) 
                 out.append(f"{path.as_posix()}:{ln}: function '{name}' is {length} lines, exceeding the 60 lines limit (spec 7b)")
             if length > MIN_COMMENTED_FUNC_LINES:
                 hdr = lines[max(0, ln - 4) : min(len(lines), content[:b_open].count("\n") + 3)]
-                if not any(("//" in l or "/*" in l or "*/" in l) for l in hdr):
+                if not any(("//" in l or "/*" in l or "*/" in l or l.strip().startswith("#")) for l in hdr):
                     out.append(f"{path.as_posix()}:{ln}: function '{name}' ({length} lines) lacks a leading comment or JSDoc")
 
 def check_file(path: Path) -> list[str]:
@@ -181,20 +191,24 @@ def check_file(path: Path) -> list[str]:
     raw = path.read_bytes()
     problems = [f"{path.as_posix()}: contains CRLF line endings; convert to LF"] if b"\r\n" in raw else []
     text, suffix = raw.decode("utf-8", errors="replace"), path.suffix.lower()
-    if suffix not in CODE_SUFFIXES:
-        return problems
-    lines, code_lines = text.splitlines(), _count_code_lines(text.splitlines())
+    lines = text.splitlines()
     if len(lines) > MAX_FILE_LINES:
         problems.append(f"{path.as_posix()}: {len(lines)} lines exceeds the 400 lines per file limit (spec 7b)")
+    if suffix not in CODE_SUFFIXES:
+        return problems
+    code_lines = _count_code_lines(lines)
     if code_lines > MAX_CODE_ONLY_LINES:
         problems.append(f"{path.as_posix()}: {code_lines} non-comment code lines exceeds limit of 350")
     if suffix == ".py":
         _check_py(path, text, lines, code_lines, problems)
-    elif suffix in JS_SUFFIXES:
+    elif suffix in BRACE_SUFFIXES:
         if code_lines > MIN_COMMENTED_FILE_LINES and not _has_header(path, lines, None):
             problems.append(f"{path.as_posix()}: missing top-of-file docstring or header comment explaining its atomic responsibility")
         _check_js_tokens(path, text, problems)
         _check_js_funcs(path, text, lines, problems)
+    elif suffix in SCRIPT_SUFFIXES:
+        if code_lines > MIN_COMMENTED_FILE_LINES and not _has_header(path, lines, None):
+            problems.append(f"{path.as_posix()}: missing top-of-file docstring or header comment explaining its atomic responsibility")
     return problems
 
 def main(argv: list[str]) -> int:

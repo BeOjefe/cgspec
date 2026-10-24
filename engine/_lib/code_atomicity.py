@@ -5,17 +5,30 @@ import ast
 from pathlib import Path
 import re
 
-CODE_SUFFIXES = {".py", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}
-JS_SUFFIXES = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}
+BRACE_SUFFIXES = {
+    ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs",
+    ".go", ".rs", ".java", ".kt", ".kts", ".swift",
+    ".c", ".cc", ".cpp", ".h", ".hpp", ".cs", ".php",
+    ".dart", ".scala", ".zig", ".vue", ".svelte",
+}
+SCRIPT_SUFFIXES = {".rb", ".sh", ".bash"}
+JS_SUFFIXES = BRACE_SUFFIXES
+CODE_SUFFIXES = {".py"} | BRACE_SUFFIXES | SCRIPT_SUFFIXES
 PAIRS = {"(": ")", "{": "}", "[": "]"}
 MAX_FILE_LINES, MAX_CODE_ONLY_LINES = 400, 350
 MAX_FUNCTION_LINES, MAX_RETURN_LINES = 60, 12
 MIN_COMMENTED_FILE_LINES, MIN_COMMENTED_FUNC_LINES = 15, 20
+FUNC_PATS = (
+    re.compile(r"(?:export\s+(?:default\s+)?)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)"),
+    re.compile(r"\bfunc\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)\s*(?:\[[^\]]*\])?\s*\("),
+    re.compile(r"\b(?:fn|fun)\s+(?:<[^>]*>\s*)?([A-Za-z_]\w*)\s*(?:<[^>]*>)?\s*\("),
+    re.compile(r"(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:<[^>]*>)?(?:\([^{]*\)|[A-Za-z_$][\w$]*)\s*=>\s*\{"),
+)
 
 
 def _count_code_lines(lines: list[str]) -> int:
     """Count non-blank, non-comment lines of code."""
-    pfx = ("#", "//", "/*", "*", "*/")
+    pfx = ("#", "//", "/*", "*", "*/", "<!--", "-->")
     return sum(1 for ln in lines if ln.strip() and not ln.strip().startswith(pfx))
 
 
@@ -27,10 +40,14 @@ def _has_py_header(lines: list[str], tree: ast.AST | None) -> bool:
     return any(ln.startswith("#") and not ln.startswith("#!") for ln in top)
 
 
-def _has_js_header(lines: list[str]) -> bool:
-    """Verify presence of a top-of-file header comment in JS/TS source."""
-    filtered = [s for s in (ln.strip() for ln in lines) if s and not s.startswith("#!") and s.rstrip(";").strip("\"'") != "use strict"][:5]
-    return any(ln.startswith(("//", "/*")) for ln in filtered)
+def _has_brace_header(lines: list[str]) -> bool:
+    """Verify presence of a top-of-file header comment in non-Python source."""
+    skip = {"use strict", "<?php"}
+    filtered = [
+        s for s in (ln.strip() for ln in lines)
+        if s and not s.startswith("#!") and s.rstrip(";").strip("\"'") not in skip
+    ][:8]
+    return any(ln.startswith(("//", "/*", "#", "<!--")) for ln in filtered)
 
 
 def _has_nested_py_return_logic(val: ast.AST) -> bool:
@@ -176,17 +193,14 @@ def _check_js_returns(rel: str, content: str, out: list[str]) -> None:
 
 
 def _check_js_functions(rel: str, content: str, lines: list[str], check_comments: bool, out: list[str]) -> None:
-    """Validate JS/TS function lengths and header comment presence."""
-    pats = [
-        re.compile(r"(?:export\s+(?:default\s+)?)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)"),
-        re.compile(r"(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:<[^>]*>)?(?:\([^{]*\)|[A-Za-z_$][\w$]*)\s*=>\s*\{"),
-    ]
+    """Validate brace-language function lengths and header comment presence."""
     seen: set[tuple[str, int]] = set()
-    for idx, pat in enumerate(pats):
+    arrow_idx = len(FUNC_PATS) - 1
+    for idx, pat in enumerate(FUNC_PATS):
         for m in pat.finditer(content):
             name, b_open = m.group(1), -1
-            if idx == 0:
-                p_open = content.find("(", m.end())
+            if idx != arrow_idx:
+                p_open = content.find("(", m.end() - 1)
                 if p_open != -1:
                     p_close = _find_balanced(content, p_open, "(", ")")
                     b_open = content.find("{", p_close) if p_close != -1 else -1
@@ -208,7 +222,7 @@ def _check_js_functions(rel: str, content: str, lines: list[str], check_comments
                 pre = lines[max(0, ln - 4) : max(0, ln - 1)]
                 b_ln = content[:b_open].count("\n") + 1
                 inside = lines[b_ln : min(len(lines), b_ln + 2)]
-                if not any(("//" in l or "/*" in l or "*/" in l) for l in pre + inside):
+                if not any(("//" in l or "/*" in l or "*/" in l or l.strip().startswith("#")) for l in pre + inside):
                     out.append(f"{rel}:{ln}: function '{name}' ({length} lines) lacks a leading comment or JSDoc")
 
 
@@ -226,11 +240,13 @@ def check_code_quality(rel: str, content: str, check_comments: bool = True) -> l
         reasons.append(f"{rel} has {code_lines} non-comment code lines (limit {MAX_CODE_ONLY_LINES}); split into smaller atomic modules")
     if suffix == ".py":
         _check_py(rel, content, lines, code_lines, check_comments, reasons)
-    elif suffix in JS_SUFFIXES:
-        if check_comments and code_lines > MIN_COMMENTED_FILE_LINES:
-            if not _has_js_header(lines):
-                reasons.append(f"{rel}: missing top-of-file docstring or header comment explaining its atomic responsibility")
+    elif suffix in BRACE_SUFFIXES:
+        if check_comments and code_lines > MIN_COMMENTED_FILE_LINES and not _has_brace_header(lines):
+            reasons.append(f"{rel}: missing top-of-file docstring or header comment explaining its atomic responsibility")
         _check_jsx_callbacks(rel, content, reasons)
         _check_js_returns(rel, content, reasons)
         _check_js_functions(rel, content, lines, check_comments, reasons)
+    elif suffix in SCRIPT_SUFFIXES:
+        if check_comments and code_lines > MIN_COMMENTED_FILE_LINES and not _has_py_header(lines, None):
+            reasons.append(f"{rel}: missing top-of-file docstring or header comment explaining its atomic responsibility")
     return reasons

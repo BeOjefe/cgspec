@@ -238,6 +238,45 @@ class CodeAtomicityTests(unittest.TestCase):
         self.assertEqual(check_code_quality("data.json", '{"key": "value"}'), [])
         self.assertEqual(check_code_quality("docs.md", "# Documentation\nMore info"), [])
 
+    def test_multi_language_go_rust_kotlin_and_ruby(self):
+        """Verify Go, Rust, Kotlin, and Ruby files are checked for headers, functions, and returns."""
+        go_bad = (
+            "package server\n\n"
+            "func (s *Server) HandleRequest(w ResponseWriter, r *Request) error {\n"
+            + "".join(f"    v{i} := {i}\n" for i in range(62))
+            + "    return nil\n"
+            "}\n"
+        )
+        go_issues = check_code_quality("internal/server.go", go_bad)
+        self.assertTrue(any("missing top-of-file" in i for i in go_issues), go_issues)
+        self.assertTrue(any("function 'HandleRequest' is 65 lines" in i for i in go_issues), go_issues)
+
+        rs_bad = (
+            "// Rust module header\n"
+            "pub fn compute_items<T>(input: Vec<T>) -> Vec<T> {\n"
+            "    return vec![\n"
+            + "".join(f"        item_{i},\n" for i in range(14))
+            + "    ];\n"
+            "}\n"
+        )
+        rs_issues = check_code_quality("src/lib.rs", rs_bad)
+        self.assertTrue(any("return statement spans 16 lines" in i for i in rs_issues), rs_issues)
+
+        kt_good = (
+            "// Kotlin service header\n"
+            "// Computes user summary\n"
+            "fun buildSummary(id: String): String {\n"
+            + "".join(f"    val part{i} = id\n" for i in range(22))
+            + "    return part0\n"
+            "}\n"
+        )
+        self.assertEqual(check_code_quality("src/Service.kt", kt_good), [])
+
+        rb_bad = "".join(f"x_{i} = {i}\n" for i in range(20))
+        rb_issues = check_code_quality("scripts/task.rb", rb_bad)
+        self.assertTrue(any("missing top-of-file" in i for i in rb_issues), rb_issues)
+
 
 if __name__ == "__main__":
     unittest.main()
+
