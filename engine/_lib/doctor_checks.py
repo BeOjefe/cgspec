@@ -64,6 +64,13 @@ def project(root: Path, data: dict | None) -> Iterator[Finding]:
         return
     for error in validate_named(data, "project"):
         yield Finding("E-SCHEMA", "docs/_cgspec/project.json", error)
+    if "visual_drift_threshold" in data:
+        raw = data["visual_drift_threshold"]
+        import math
+        if (isinstance(raw, bool) or not isinstance(raw, (int, float)) or
+                not math.isfinite(raw) or raw < 0 or raw > 100):
+            yield Finding("E-PROJECT-DRIFT-THRESHOLD", "docs/_cgspec/project.json",
+                          "visual_drift_threshold must be a finite number between 0 and 100")
 
 
 def symlinks(root: Path) -> Iterator[Finding]:
@@ -264,6 +271,10 @@ def frozen(root: Path) -> Iterator[Finding]:
     for snap in sorted(snaps.glob("*.html")) if snaps.is_dir() else []:
         if snap.resolve() not in listed:
             yield Finding("E-FROZEN-UNLISTED", _rel(snap, root), "snapshot not recorded in frozen.json (only the bundler makes snapshots)")
+    baselines = root / "docs/prototypes/_baselines"
+    for base in sorted(baselines.glob("*.png")) if baselines.is_dir() else []:
+        if base.resolve() not in listed:
+            yield Finding("E-FROZEN-UNLISTED", _rel(base, root), "baseline not recorded in frozen.json (only visual_audit --approve-baseline makes baselines)")
 
 
 def _has_shebang(path: Path) -> bool:

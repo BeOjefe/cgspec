@@ -85,8 +85,8 @@ async function step(page, s, shots, label) {
   throw new Error(`unknown step ${JSON.stringify(s)}`);
 }
 
-async function withPage(browser, viewport, fn, shots, label, video) {
-  const options = { ...(VIEWPORTS[viewport] || VIEWPORTS.desktop) };
+async function withPage(browser, viewport, fn, shots, label, video, extraOptions = {}) {
+  const options = { ...(VIEWPORTS[viewport] || VIEWPORTS.desktop), ...extraOptions };
   if (video) options.recordVideo = { dir: shots, size: options.viewport };
   const context = await browser.newContext(options);
   const page = await context.newPage();
@@ -186,12 +186,168 @@ async function focusCheck(page) {
   return { checked, missing: Array.from(new Set(missing)).slice(0, 8) };
 }
 
+
+async function compareImagesInBrowser(browser, fileA, fileB, diffOutputPath, tolerance = 16) {
+  if (!fs.existsSync(fileA) || !fs.existsSync(fileB)) return null;
+  const dataA = "data:image/png;base64," + fs.readFileSync(fileA).toString("base64");
+  const dataB = "data:image/png;base64," + fs.readFileSync(fileB).toString("base64");
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await page.goto("about:blank");
+    const result = await page.evaluate(async ({ dataA, dataB, tolerance }) => {
+      const loadImg = (src) => new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+      const [imgA, imgB] = await Promise.all([loadImg(dataA), loadImg(dataB)]);
+      const w1 = imgA.naturalWidth, h1 = imgA.naturalHeight;
+      const w2 = imgB.naturalWidth, h2 = imgB.naturalHeight;
+      const MAX_PIXELS = 20000000;
+      const MAX_DIM = 16384;
+      if (w1 > MAX_DIM || h1 > MAX_DIM || (w1 * h1) > MAX_PIXELS ||
+          w2 > MAX_DIM || h2 > MAX_DIM || (w2 * h2) > MAX_PIXELS) {
+        return {
+          error: `resource limit exceeded: image dimensions exceed maximum bound (${w1}x${h1} vs ${w2}x${h2})`,
+          limitExceeded: true,
+        };
+      }
+      if (w1 !== w2 || h1 !== h2) {
+        return {
+          differentDimensions: true,
+          changedPercent: 100.0,
+          w1, h1, w2, h2,
+        };
+      }
+      const width = w1, height = h1;
+      const cA = document.createElement("canvas");
+      cA.width = width; cA.height = height;
+      const ctxA = cA.getContext("2d");
+      ctxA.drawImage(imgA, 0, 0);
+      const imgDataA = ctxA.getImageData(0, 0, width, height).data;
+
+      const cB = document.createElement("canvas");
+      cB.width = width; cB.height = height;
+      const ctxB = cB.getContext("2d");
+      ctxB.drawImage(imgB, 0, 0);
+      const imgDataB = ctxB.getImageData(0, 0, width, height).data;
+
+      const diffCanvas = document.createElement("canvas");
+      diffCanvas.width = width; diffCanvas.height = height;
+      const diffCtx = diffCanvas.getContext("2d");
+      const diffImgData = diffCtx.createImageData(width, height);
+      const dData = diffImgData.data;
+
+      let changedCount = 0;
+      const blockSize = 20;
+      const gridW = Math.ceil(width / blockSize);
+      const gridH = Math.ceil(height / blockSize);
+      const changedGrid = new Uint8Array(gridW * gridH);
+
+      for (let y = 0; y < height; y++) {
+        const gy = Math.floor(y / blockSize);
+        for (let x = 0; x < width; x++) {
+          const idx = (y * width + x) * 4;
+          const dr = Math.abs(imgDataA[idx] - imgDataB[idx]);
+          const dg = Math.abs(imgDataA[idx + 1] - imgDataB[idx + 1]);
+          const db = Math.abs(imgDataA[idx + 2] - imgDataB[idx + 2]);
+          const da = Math.abs(imgDataA[idx + 3] - imgDataB[idx + 3]);
+          if (dr > tolerance || dg > tolerance || db > tolerance || da > tolerance) {
+            changedCount++;
+            changedGrid[gy * gridW + Math.floor(x / blockSize)] = 1;
+            dData[idx] = 255;
+            dData[idx + 1] = 0;
+            dData[idx + 2] = 80;
+            dData[idx + 3] = 255;
+          } else {
+            const gray = Math.round(0.299 * imgDataB[idx] + 0.587 * imgDataB[idx + 1] + 0.114 * imgDataB[idx + 2]);
+            dData[idx] = gray;
+            dData[idx + 1] = gray;
+            dData[idx + 2] = gray;
+            dData[idx + 3] = 100;
+          }
+        }
+      }
+
+      diffCtx.putImageData(diffImgData, 0, 0);
+      const totalPixels = width * height;
+      const changedPercent = totalPixels > 0 ? (changedCount / totalPixels) * 100 : 0;
+
+      const regions = [];
+      const visited = new Uint8Array(gridW * gridH);
+      for (let gy = 0; gy < gridH; gy++) {
+        for (let gx = 0; gx < gridW; gx++) {
+          if (!changedGrid[gy * gridW + gx] || visited[gy * gridW + gx]) continue;
+          let minX = gx, maxX = gx, minY = gy, maxY = gy;
+          const q = [[gx, gy]];
+          visited[gy * gridW + gx] = 1;
+          while (q.length > 0) {
+            const [curX, curY] = q.pop();
+            minX = Math.min(minX, curX);
+            maxX = Math.max(maxX, curX);
+            minY = Math.min(minY, curY);
+            maxY = Math.max(maxY, curY);
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                const nx = curX + dx, ny = curY + dy;
+                if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH) {
+                  const nidx = ny * gridW + nx;
+                  if (changedGrid[nidx] && !visited[nidx]) {
+                    visited[nidx] = 1;
+                    q.push([nx, ny]);
+                  }
+                }
+              }
+            }
+          }
+          const boxX = minX * blockSize;
+          const boxY = minY * blockSize;
+          const boxW = Math.min(width - boxX, (maxX - minX + 1) * blockSize);
+          const boxH = Math.min(height - boxY, (maxY - minY + 1) * blockSize);
+          regions.push([boxX, boxY, boxW, boxH]);
+        }
+      }
+
+      let diffDataUrl = null;
+      if (changedCount > 0) {
+        diffDataUrl = diffCanvas.toDataURL("image/png");
+      }
+      return {
+        differentDimensions: false,
+        changedPercent: totalPixels > 0 ? (changedCount / totalPixels) * 100 : 0,
+        changedPixels: changedCount,
+        totalPixels,
+        regions: regions.slice(0, 10),
+        diffDataUrl,
+      };
+    }, { dataA, dataB, tolerance });
+
+    if (result.diffDataUrl && diffOutputPath) {
+      const base64Data = result.diffDataUrl.replace(/^data:image\/png;base64,/, "");
+      fs.writeFileSync(diffOutputPath, Buffer.from(base64Data, "base64"));
+      result.diffFile = path.basename(diffOutputPath);
+    }
+    delete result.diffDataUrl;
+    return result;
+  } finally {
+    await context.close();
+  }
+}
+
 async function audit(browser, run, shots) {
   const out = [];
   for (const viewport of ["desktop", "mobile"]) {
     const label = `${run.label}-${viewport}`;
-    out.push(await withPage(browser, viewport, async (page, errors) => {
+    const lightShotPath = path.join(shots, `${run.label}-${viewport}.png`);
+    const darkShotPath = path.join(shots, `${run.label}-${viewport}-dark.png`);
+    const diffShotPath = path.join(shots, `${run.label}-${viewport}-diff.png`);
+
+    // 1. Light render
+    const lightResult = await withPage(browser, viewport, async (page, errors) => {
       await page.goto(run.url, { waitUntil: "load" });
+      await page.screenshot({ path: lightShotPath, fullPage: true });
       const facts = await page.evaluate((mobile) => {
         const doc = document.documentElement;
         const small = [];
@@ -208,9 +364,39 @@ async function audit(browser, run, shots) {
       }, viewport === "mobile");
       const quality = await page.evaluate(measureQuality);
       quality.focus = await focusCheck(page);
-      await page.screenshot({ path: path.join(shots, `${run.label}-${viewport}.png`), fullPage: true });
       return { viewport, errors, ...facts, quality };
-    }, shots, label, Boolean(run.video)));
+    }, shots, label, Boolean(run.video), { colorScheme: "light" });
+
+    // 2. Dark render
+    let darkQuality = null;
+    let darkErrors = [];
+    await withPage(browser, viewport, async (page, errors) => {
+      await page.goto(run.url, { waitUntil: "load" });
+      await page.screenshot({ path: darkShotPath, fullPage: true });
+      darkQuality = await page.evaluate(measureQuality);
+      darkQuality.focus = await focusCheck(page);
+      darkErrors = errors || [];
+    }, shots, `${label}-dark`, false, { colorScheme: "dark" });
+
+    const darkDiff = await compareImagesInBrowser(browser, lightShotPath, darkShotPath, null, 16);
+    let darkTheme = false;
+    if (darkDiff && (darkDiff.differentDimensions || darkDiff.changedPixels > 0)) {
+      darkTheme = true;
+    }
+
+    // 3. Drift against baseline if baseline exists
+    let drift = null;
+    if (run.baselines && run.baselines[viewport]) {
+      drift = await compareImagesInBrowser(browser, run.baselines[viewport], lightShotPath, diffShotPath, 16);
+    }
+
+    out.push({
+      ...lightResult,
+      darkTheme,
+      darkQuality,
+      darkErrors,
+      drift,
+    });
   }
   return { label: run.label, viewports: out };
 }
@@ -232,7 +418,13 @@ async function main() {
   }
   const results = [];
   try {
-    for (const run of job.runs) results.push(await (run.kind === "audit" ? audit : journey)(browser, run, job.shots));
+    for (const run of job.runs) {
+      try {
+        results.push(await (run.kind === "audit" ? audit : journey)(browser, run, job.shots));
+      } catch (err) {
+        results.push({ label: run.label, error: String(err && err.stack || err) });
+      }
+    }
   } finally {
     await browser.close();
   }

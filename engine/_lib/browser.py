@@ -30,6 +30,8 @@ def expected_files(item: dict, shots: Path, viewport: str) -> list[Path]:
     """Artifacts the driver must leave for one viewport of one run (names match browser_driver.js)."""
     label = f"{item['label']}-{viewport}"
     files = [shots / f"{label}.png"]
+    if item.get("kind") == "audit":
+        files.append(shots / f"{label}-dark.png")
     if item.get("kind") != "audit":
         files += [shots / f"{label}-{s['screenshot']}.png" for s in item.get("steps", [])
                   if isinstance(s, dict) and "screenshot" in s]
@@ -113,11 +115,29 @@ def run(root: Path, runs: list[dict], shots: Path, video: bool = False) -> dict:
     if not node:
         return {"blocked": "Node.js is not installed; browser checks need Node and Playwright"}
     shots.mkdir(parents=True, exist_ok=True)
+    b_dir = (root / "docs/prototypes/_baselines").resolve()
+    state_dir = (root / "docs/_cgspec").resolve()
+    shots_res = shots.resolve()
+    if shots_res == b_dir or shots_res.is_relative_to(b_dir) or shots_res == state_dir or shots_res.is_relative_to(state_dir):
+        return {"blocked": "scratch directory resolves into baseline storage or state"}
+    for item in runs:
+        b_map = item.get("baselines") or {}
+        for vp, b_file in b_map.items():
+            bp = Path(b_file)
+            if bp.is_symlink():
+                return {"blocked": f"baseline {bp.name} is a symlink"}
+            if not bp.resolve().is_relative_to(b_dir):
+                return {"blocked": f"baseline {bp.name} resolves outside baseline storage"}
     for item in runs:  # stale artifacts from an earlier run must not count as proof
         for viewport in expected_viewports(item):
-            for path in expected_files(item, shots, viewport):
-                if path.is_symlink() or path.is_file():
-                    path.unlink()
+            for p in expected_files(item, shots, viewport):
+                if p.is_symlink():
+                    p.unlink()
+                elif p.is_file():
+                    res = p.resolve()
+                    if res == b_dir or res.is_relative_to(b_dir) or res == state_dir or res.is_relative_to(state_dir):
+                        return {"blocked": f"output artifact {p} resolves into baseline storage or state"}
+                    p.unlink()
     env = dict(os.environ)
     if trusted:
         env.pop("NODE_PATH", None)

@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import colorsys
 import json
+import math
 import re
 import sys
 from html.parser import HTMLParser
@@ -25,6 +26,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import browser, evidence, visual_quality  # noqa: E402
+from _lib.visual_baseline import approve_baseline, find_baselines  # noqa: E402
 from _lib.common import EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, PROJECT_FILE, CgspecError, resolve_root  # noqa: E402
 from _lib.gates import EMOJI  # noqa: E402
 from _lib.layout import GUI_PROFILES  # noqa: E402
@@ -34,7 +36,6 @@ VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "met
 REF_ATTRS = ("for", "list", "form", "aria-controls", "aria-labelledby", "aria-describedby", "aria-owns")
 HANDLER_ATTRS = ("onclick", "onmousedown", "onpointerdown", "ontouchstart", "onkeydown", "onchange", "oninput")
 COLOR = re.compile(r"#([0-9a-f]{6}|[0-9a-f]{3})\b|rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)|hsla?\(\s*(\d+)", re.I)
-
 
 class Page(HTMLParser):
     def __init__(self):
@@ -81,7 +82,6 @@ class Page(HTMLParser):
         for i in self.stack:
             self.elements[i]["text"] += data
 
-
 def _local_text(here: Path, refs: list[str]) -> str:
     out = []
     for ref in refs:
@@ -92,12 +92,10 @@ def _local_text(here: Path, refs: list[str]) -> str:
             out.append(path.read_text(encoding="utf-8", errors="replace"))
     return "\n".join(out)
 
-
 def _label(el: dict) -> str:
     a = el["attrs"]
     name = " ".join(el["text"].split())[:40] or a.get("aria-label") or a.get("title") or a.get("data-testid") or ""
     return f"<{el['tag']}{' ' + repr(name) if name else ''}>"
-
 
 def _wired(el: dict, script: str) -> bool:
     a = el["attrs"]
@@ -114,7 +112,6 @@ def _wired(el: dict, script: str) -> bool:
     keys += [c for c in a.get("class", "").split() if len(c) > 2]
     return any(k and re.search(rf"""["'`#.\[=]{re.escape(k)}["'`\]\s)]""", script) for k in keys)
 
-
 def _hsl(match) -> tuple[float, float, float] | None:
     if match.group(1):
         h = match.group(1)
@@ -126,7 +123,6 @@ def _hsl(match) -> tuple[float, float, float] | None:
         return None  # hsl() hue alone is enough for purple only; skip to avoid guessing
     hue, light, sat = colorsys.rgb_to_hls(r, g, b)
     return hue * 360, sat, light
-
 
 def tells(css: str, page: Page, accepted: set[str] | None = None) -> list[str]:
     allowed = accepted or set()
@@ -147,7 +143,6 @@ def tells(css: str, page: Page, accepted: set[str] | None = None) -> list[str]:
     if "cream-serif" not in allowed and cream and serif:
         found.append("W-LOOK-CREAM-SERIF: cream background with serif type, the 'tasteful default'")
     return found
-
 
 def static_audit(path: Path, profile: str, accepted: set[str] | None = None) -> tuple[list[str], list[str]]:
     raw = path.read_text(encoding="utf-8", errors="replace")
@@ -200,20 +195,69 @@ def static_audit(path: Path, profile: str, accepted: set[str] | None = None) -> 
         warnings.append("W-LANG: <html> has no lang attribute")
     return errors, warnings + tells(css, page, accepted)
 
+def _evaluate_drift(vp_name: str, vp: dict, has_baselines: dict, drift_threshold: float,
+                    errors: list[str], warnings: list[str], infos: list[str]) -> None:
+    baseline_exists = has_baselines.get(vp_name, False)
+    drift = vp.get("drift")
+    if not baseline_exists:
+        infos.append(f"({vp_name}): no approved baseline")
+        return
+    if drift is None or not isinstance(drift, dict) or ("error" in drift and not drift.get("limitExceeded")):
+        errors.append(f"E-DRIFT ({vp_name}): baseline exists but drift comparison was missing, null, or failed")
+    elif drift.get("limitExceeded"):
+        warnings.append(f"W-DRIFT-LIMIT ({vp_name}): {drift.get('error', 'comparison resource limit reached')}")
+    elif drift.get("differentDimensions"):
+        errors.append(f"E-DRIFT ({vp_name}): 100% changed: layout height changed ({drift.get('w1')}x{drift.get('h1')} vs {drift.get('w2')}x{drift.get('h2')})")
+    else:
+        changed = drift.get("changedPixels", 0)
+        total = drift.get("totalPixels", 0)
+        pct = (changed / total * 100.0) if total > 0 else 0.0
+        regions = drift.get("regions", [])
+        reg = f"in {len(regions)} region{'s' if len(regions) != 1 else ''}: {regions}" if regions else ""
+        exceeds = (changed > 0) if drift_threshold == 0 else (pct > drift_threshold)
+        if exceeds:
+            errors.append(f"E-DRIFT ({vp_name}): {pct:.2f}% pixels changed (threshold {drift_threshold}%) {reg}".strip())
+        elif changed > 0:
+            warnings.append(f"W-DRIFT ({vp_name}): {pct:.2f}% pixels changed {reg}".strip())
+        else:
+            infos.append(f"({vp_name}): 0% visual drift against baseline")
+        if drift.get("diffFile"):
+            infos.append(f"diff image in .cgspec-scratch/visual/{drift['diffFile']}")
 
-def rendered(item: dict, tokens: dict | None = None) -> tuple[list[str], list[str]]:
-    errors, warnings = [], []
-    for vp in item["viewports"]:
+def rendered(item: dict, tokens: dict | None = None, drift_threshold: float = 0.5,
+             has_baselines: dict[str, bool] | None = None) -> tuple[list[str], list[str], list[str]]:
+    errors, warnings, infos = [], [], []
+    has_baselines = has_baselines if has_baselines is not None else {}
+    for vp in item.get("viewports", []):
+        vp_name = vp.get("viewport", "desktop")
         quality_errors, quality_warnings = visual_quality.analyse(vp, tokens or {})
         errors += quality_errors
         warnings += quality_warnings
-        errors += [f"E-RUNTIME ({vp['viewport']}): {e}" for e in vp["errors"][:5]]
-        if vp["viewport"] == "mobile" and vp["overflow"]:
+        errors += [f"E-RUNTIME ({vp_name}): {e}" for e in vp.get("errors", [])[:5]]
+        errors += [f"E-RUNTIME ({vp_name}) (dark): {e}" for e in vp.get("darkErrors", [])[:5]]
+        if vp_name == "mobile" and vp.get("overflow"):
             errors.append(f"E-OVERFLOW: page is {vp['scrollWidth']}px wide on a {vp['width']}px phone screen")
         if vp.get("smallCount"):
             warnings.append(f"W-TOUCH-TARGET: {vp['smallCount']} controls under 44px on mobile: {', '.join(vp['small'])}")
-    return errors, warnings
 
+        # Dark mode checks
+        dark_q = vp.get("darkQuality") or {}
+        dark_errors, dark_warns = visual_quality.analyse({"viewport": vp_name, "quality": dark_q}, tokens or {})
+        if vp.get("darkTheme") is False:
+            infos.append("page has no dark theme")
+            # Duplicate presentation suppressed, but any new dark errors must be reported
+            new_dark_errs = [e for e in dark_errors if e not in quality_errors]
+            errors += [e.replace(f"({vp_name})", f"({vp_name}) (dark)") for e in new_dark_errs]
+            new_dark_warns = [w for w in dark_warns if w not in quality_warnings]
+            warnings += [w.replace(f"({vp_name})", f"({vp_name}) (dark)") for w in new_dark_warns]
+        else:
+            errors += [e.replace(f"({vp_name})", f"({vp_name}) (dark)") for e in dark_errors]
+            warnings += [w.replace(f"({vp_name})", f"({vp_name}) (dark)") for w in dark_warns]
+
+        # Drift checks
+        _evaluate_drift(vp_name, vp, has_baselines, drift_threshold, errors, warnings, infos)
+
+    return errors, warnings, infos
 
 def targets_of(root: Path, raw: list[str]) -> list[tuple[str, Path, list[str]]]:
     """(label, html file, covers)."""
@@ -222,6 +266,11 @@ def targets_of(root: Path, raw: list[str]) -> list[tuple[str, Path, list[str]]]:
         raw = [p.name for p in sorted(base.iterdir()) if p.is_dir() and not p.name.startswith("_")] if base.is_dir() else []
     out = []
     for item in raw:
+        if not item or not isinstance(item, str):
+            raise CgspecError(f"invalid screen identifier {item!r}")
+        if (item.startswith("./") or item.startswith("../") or item.startswith("/") or
+                Path(item).is_absolute() or ".." in Path(item).parts or item.endswith("/")):
+            raise CgspecError(f"invalid screen identifier {item!r}: aliases, absolute paths, and traversal are rejected")
         if evidence.unsafe_name(item):
             raise CgspecError(f"screen or page name {item!r} contains newlines or control characters")
         path = root / item
@@ -235,6 +284,27 @@ def targets_of(root: Path, raw: list[str]) -> list[tuple[str, Path, list[str]]]:
         raise CgspecError("nothing to audit: no prototype screens and no pages given")
     return out
 
+def _prepare_runs(root: Path, items: list[tuple[str, Path, list[str]]], video: bool) -> tuple[list[dict], dict[str, dict[str, bool]]]:
+    has_baselines = {}
+    runs = []
+    for label, path, _ in items:
+        b_driver, has_map = find_baselines(root, label)
+        has_baselines[label] = has_map
+        runs.append({"kind": "audit", "label": label, "url": path.resolve().as_uri(),
+                     "video": video, "baselines": b_driver})
+    return runs, has_baselines
+
+def _validate_drift_threshold(project: dict) -> float:
+    raw = project.get("visual_drift_threshold", 0.5)
+    if isinstance(raw, bool) or not isinstance(raw, (int, float, str)):
+        raise CgspecError("visual_drift_threshold must be a finite real number between 0 and 100")
+    try:
+        val = float(raw)
+    except (ValueError, TypeError):
+        raise CgspecError("visual_drift_threshold must be a finite real number between 0 and 100")
+    if not math.isfinite(val) or val < 0 or val > 100:
+        raise CgspecError(f"visual_drift_threshold {raw} is out of range [0, 100] or non-finite")
+    return val
 
 def audit(root: Path, raw: list[str], write: bool = True, video: bool = False,
           records: list[dict] | None = None) -> tuple[int, list[str]]:
@@ -244,42 +314,44 @@ def audit(root: Path, raw: list[str], write: bool = True, video: bool = False,
         project = json.loads((root / PROJECT_FILE).read_text(encoding="utf-8"))
         profile = project.get("profile", "")
     except (OSError, ValueError):
-        project = {}
-        profile = ""
+        project, profile = {}, ""
     if profile and profile not in GUI_PROFILES:
         return EXIT_OK, [f"NOT_APPLICABLE: profile {profile} has no user interface"]
     items = targets_of(root, raw)
     accepted = visual_quality.deliberate(root)
     tokens = visual_quality.find_tokens(root, project)
-    results = {label: static_audit(path, profile, accepted) for label, path, _ in items}
+    drift_threshold = _validate_drift_threshold(project)
+    runs, has_baselines = _prepare_runs(root, items, video)
+    results = {label: (*static_audit(path, profile, accepted), []) for label, path, _ in items}
     if tokens.get("issue"):
-        for errors, warnings in results.values():
+        for errors, warnings, _ in results.values():
             warnings.append(tokens["issue"])
-    runs = [{"kind": "audit", "label": label, "url": path.resolve().as_uri(), "video": video}
-            for label, path, _ in items]
     shots = root / ".cgspec-scratch/visual"
     shown = browser.run(root, runs, shots, video=video)
-    blocked = shown.get("blocked")
-    reported = browser.results_by_label(shown)
+    blocked, reported = shown.get("blocked"), browser.results_by_label(shown)
     for run_item in runs if not blocked else []:
-        item = reported.get(run_item["label"])
-        # A rendered PASS needs both viewports reported and their screenshots (and videos) on disk.
+        label = run_item["label"]
+        item = reported.get(label)
+        if isinstance(item, dict) and "error" in item:
+            results[label][0].append(f"E-SCREEN-RUN: {item['error']}")
+            continue
         problems = browser.proof_problems(run_item, item, shots)
-        results[run_item["label"]][0].extend(f"E-PROOF: {problem}" for problem in problems)
+        results[label][0].extend(f"E-PROOF: {p}" for p in problems)
         if problems:
             continue
-        errs, warns = rendered(item, tokens)
-        results[run_item["label"]][0].extend(errs)
-        results[run_item["label"]][1].extend(warns)
-    rank, lines = {"PASS": EXIT_OK, "PARTIAL": EXIT_PARTIAL, "FAIL": EXIT_FAIL}, []
-    seen = set()
+        errs, warns, infos = rendered(item, tokens, drift_threshold, has_baselines.get(label, {}))
+        results[label][0].extend(errs)
+        results[label][1].extend(warns)
+        results[label][2].extend(infos)
+    rank, lines, seen = {"PASS": EXIT_OK, "PARTIAL": EXIT_PARTIAL, "FAIL": EXIT_FAIL}, [], set()
     for label, path, covers in items:
-        errors, warnings = results[label]
-        verdict = "FAIL" if errors else ("PARTIAL" if blocked else "PASS")
+        errors, warnings, infos = results[label]
+        has_limit_warn = any("W-DRIFT-LIMIT" in w for w in warnings)
+        verdict = "FAIL" if errors else ("PARTIAL" if (blocked or has_limit_warn) else "PASS")
         seen.add(verdict)
-        detail = errors + warnings + ([f"rendered checks not run: {blocked}"] if blocked else
+        detail = errors + warnings + infos + ([f"rendered checks not run: {blocked}"] if blocked else
                                       [f"screenshots in .cgspec-scratch/visual/{label}-desktop.png and -mobile.png"])
-        lines.append(f"{verdict} {path.relative_to(root).as_posix()}" + "".join(f"\n  {d}" for d in detail))
+        lines.append(f"{verdict} {path.relative_to(root).as_posix()}" + "".join("\n  " + d for d in detail))
         records.append({"item": path.relative_to(root).as_posix(), "verdict": verdict, "detail": "\n".join(detail)})
         if write:
             evidence.write(root, "visual", label, f"visual-audit:{label}", verdict, covers, "\n".join(detail),
@@ -287,15 +359,24 @@ def audit(root: Path, raw: list[str], write: bool = True, video: bool = False,
     worst = next((rank[v] for v in ("FAIL", "PARTIAL", "PASS") if v in seen), EXIT_OK)
     return worst, lines
 
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("targets", nargs="*", help="screen names or HTML files (default: every prototype screen)")
     parser.add_argument("--no-evidence", action="store_true")
     parser.add_argument("--video", action="store_true", help="record WebM browser video where rendered audit runs")
     parser.add_argument("--json-out", help="write structured results (one record per screen) to this file")
+    parser.add_argument("--approve-baseline", metavar="SCREEN", help="approve current screenshots of SCREEN as baseline")
+    parser.add_argument("--approval", help="approval id from 07-state/approvals.json")
+    parser.add_argument("--reason", default="", help="reason for approved baseline")
     parser.add_argument("--root")
     args = parser.parse_args(argv)
+    if args.approve_baseline:
+        try:
+            approve_baseline(resolve_root(args.root), args.approve_baseline, args.reason, approval=args.approval)
+            return EXIT_OK
+        except CgspecError as exc:
+            print(f"visual_audit: {exc}", file=sys.stderr)
+            return EXIT_FAIL
     records: list[dict] = []
     try:
         code, lines = audit(resolve_root(args.root), args.targets, not args.no_evidence, args.video, records)
@@ -310,7 +391,6 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_INTERNAL
     print("\n".join(lines))
     return code
-
 
 if __name__ == "__main__":
     sys.exit(main())

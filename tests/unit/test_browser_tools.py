@@ -212,6 +212,10 @@ class BrowserTests(Base):
         (self.root / "src/tokens.json").write_text(json.dumps(
             {"font": {"size": {"base": {"$type": "dimension", "$value": "14px"}}},
              "space": {"unit": {"$type": "dimension", "$value": "4px"}}}))
+        pf = self.root / "docs/_cgspec/project.json"
+        data = json.loads(pf.read_text())
+        data["design_tokens"] = "src/tokens.json"
+        pf.write_text(json.dumps(data))
         out = self.audit("invoice").stdout
         self.assertIn("W-TYPE-SCALE", out)
 
