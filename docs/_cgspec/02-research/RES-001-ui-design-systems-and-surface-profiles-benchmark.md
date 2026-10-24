@@ -4,8 +4,8 @@
 > **Status:** `CONCLUDED (GUIDING STAGE 2 SURFACE PROFILES)`  
 > **Author:** Antigravity Architect & BeOjefe Engineering  
 > **Date:** October 2026  
-> **Target Spines:** [`docs/03-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-EXPERIENCE.md), [`skills/cgspec-ui-ux/SKILL.md`](file:///home/ojefe/Documents/Project/cgspec/skills/cgspec-ui-ux/SKILL.md)  
-> **Related Decisions:** [`ADR-001`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-001-first-principles-spec-driven-sdlc-architecture.md), [`ADR-004`](file:///home/ojefe/Documents/Project/cgspec/docs/adr/ADR-004-arbitrary-multi-service-topologies-and-virtual-mounting.md)
+> **Target Spines:** `docs/spines/03-EXPERIENCE.md`, [`skills/cgspec-ui-ux/SKILL.md`](../../../skills/cgspec-ui-ux/SKILL.md)  
+> **Related Decisions:** `ADR-001` (`docs/adr/ADR-001-first-principles-spec-driven-sdlc-architecture.md`), `ADR-004` (`docs/adr/ADR-004-arbitrary-multi-service-topologies-and-virtual-mounting.md`)
 
 ---
 

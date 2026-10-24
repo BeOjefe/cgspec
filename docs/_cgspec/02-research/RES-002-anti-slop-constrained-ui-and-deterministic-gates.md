@@ -4,8 +4,8 @@
 > **Status:** `CONCLUDED (OPERATIONALIZED IN VISUAL_AUDIT.PY & STAGE 2 SKILLS)`  
 > **Author:** Antigravity Architect & BeOjefe Engineering  
 > **Date:** October 2026  
-> **Target Spines:** [`docs/03-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-EXPERIENCE.md), [`skills/cgspec-ui-ux/SKILL.md`](file:///home/ojefe/Documents/Project/cgspec/skills/cgspec-ui-ux/SKILL.md), [`docs/.cgspec/01-script/visual_audit.py`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/01-script/visual_audit.py)  
-> **Related Decisions:** [`ADR-001`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/04-adr/ADR-001-first-principles-spec-driven-sdlc-architecture.md), [`ADR-002`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/04-adr/ADR-002-reformed-cgspec-v2-spine-taxonomy-and-law-3-purity.md), [`RES-001`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/02-research/RES-001-ui-design-systems-and-surface-profiles-benchmark.md)
+> **Target Spines:** `docs/spines/03-EXPERIENCE.md`, [`skills/cgspec-ui-ux/SKILL.md`](../../../skills/cgspec-ui-ux/SKILL.md), [`engine/visual_audit.py`](../../../engine/visual_audit.py)  
+> **Related Decisions:** `ADR-001` (`docs/adr/ADR-001-first-principles-spec-driven-sdlc-architecture.md`), `ADR-002` (`docs/adr/ADR-002-monorepo-vs-polyrepo-and-db-migrations.md`), [`RES-001`](RES-001-ui-design-systems-and-surface-profiles-benchmark.md)
 
 ---
 
@@ -78,7 +78,7 @@ As demonstrated by Puck, unbounded code synthesis always degrades over time. CGS
 2. **Schema-Driven State Representation:** UI state transitions are modeled deterministically (e.g. `?state=populated`, `?state=skeleton`, `?state=empty`, `?state=error`).
 
 ### Pillar 2: Deterministic Anti-Slop Gates (The Hallmark Architecture)
-Together AI's Hallmark proved that 65+ binary pattern gates can eliminate generic design monoculture in one pass without slowing down the agent with heavy LLM calls. CGSpec embeds these checks directly into [`docs/.cgspec/01-script/visual_audit.py`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/01-script/visual_audit.py).
+Together AI's Hallmark proved that 65+ binary pattern gates can eliminate generic design monoculture in one pass without slowing down the agent with heavy LLM calls. CGSpec embeds these checks directly into [`engine/visual_audit.py`](../../../engine/visual_audit.py).
 
 ---
 

@@ -3,7 +3,7 @@
 - **Status:** `[Concluded]`
 - **Date:** `2026-10-18T07:35:00Z`
 - **Authors:** `@jeanfranck`, `Claude Research Swarm`, `Argon Lead Auditor`
-- **Target Spines:** [`docs/03-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-EXPERIENCE.md), `visual_audit.py`, [`skills/cgspec-ui-ux/SKILL.md`](file:///home/ojefe/Documents/Project/cgspec/skills/cgspec-ui-ux/SKILL.md)
+- **Target Spines:** `docs/spines/03-EXPERIENCE.md`, `visual_audit.py`, [`skills/cgspec-ui-ux/SKILL.md`](../../../skills/cgspec-ui-ux/SKILL.md)
 - **Primary References:**
   - [JCarterJohnson/vibecoded-design-tells (Reddit-Mined Empirical Study & unslop-ui/code/text)](https://github.com/JCarterJohnson/vibecoded-design-tells)
   - [DesignCode.io (Meng To High-Craft UI, Interactive Tokens & SwiftUI/Web Ergonomics)](https://designcode.io/)
