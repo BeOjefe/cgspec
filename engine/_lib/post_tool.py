@@ -8,7 +8,20 @@ from pathlib import Path
 from .common import EVIDENCE_DIR, STATE_DIR, write_json
 from .globs import match_any
 
-HELPER_TOOLS = {"Task", "Agent"}
+HELPER_TOOLS = {"Task", "Agent", "invoke_subagent", "delegate_task", "mcp__t3_code__delegate_task"}
+
+
+def is_helper_call(payload: dict, tool: str = "claude") -> bool:
+    """Return True if the payload represents starting a helper subagent."""
+    if payload.get("tool_name") in HELPER_TOOLS:
+        return True
+    call = payload.get("toolCall") or {}
+    name = call.get("name", "")
+    if name in HELPER_TOOLS:
+        return True
+    if name == "call_mcp_tool" and (call.get("args") or {}).get("ToolName") == "delegate_task":
+        return True
+    return False
 
 
 def mark_stale(root: Path, changed: list[str]) -> list[str]:

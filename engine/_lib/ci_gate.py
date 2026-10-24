@@ -62,6 +62,8 @@ def prove_failed(root: Path, record: dict) -> str | None:
     failed_at, test_file = str(record.get("failed_at", "")), str(record.get("test_file", ""))
     if git(root, "cat-file", "-e", f"{failed_at}:{test_file}").returncode != 0:
         return f"{name}: test file {test_file} did not exist at {failed_at[:10]}, so it cannot have failed there"
+    if git(root, "diff", "--quiet", failed_at, "HEAD", "--", test_file).returncode != 0:
+        return f"{name}: test file {test_file} was modified after failed_at {failed_at[:10]}; a failing test cannot be weakened to make it pass"
     before = _run_at(root, record.get("failed_at", ""), command)
     if isinstance(before, str):
         return f"{name}: {before}"

@@ -1,5 +1,5 @@
 {
-  "title": "docs/_cgspec/05-runs/<run-id>/run.json \u2014 one team task with frozen criteria",
+  "title": "docs/_cgspec/05-runs/<run-id>/run.json — one team task with frozen criteria",
   "type": "object",
   "required": [
     "schema",
@@ -20,6 +20,44 @@
     "run_id": {
       "type": "string",
       "pattern": "^R-\\d{8}-[0-9a-f]{4}$"
+    },
+    "status": {
+      "enum": [
+        "active",
+        "completed",
+        "superseded"
+      ]
+    },
+    "completed_at": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "superseded_by": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^R-\\d{8}-[0-9a-f]{4}$"
+        }
+      ]
+    },
+    "superseded_at": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string"
+        }
+      ]
     },
     "tier": {
       "enum": [

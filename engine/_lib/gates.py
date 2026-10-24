@@ -88,6 +88,8 @@ class Context:
             return "the vendored engine changes only through install.py upgrade"
         if rel in ALWAYS_PROTECTED:
             return "this state file is written only by the engine"
+        if rel.startswith("docs/_cgspec/05-runs/"):
+            return "run records are created and managed only through cgspec_hook.py run commands"
         if rel in GUARD_FILES or any(rel.startswith(d) or rel + "/" == d for d in GUARD_DIRS):
             return ("CGSpec's hooks and skills are installed here; an agent never changes its own guards or method. "
                     "The user changes them with install.py upgrade or uninstall")
@@ -193,6 +195,10 @@ def check_write(ctx: Context, rel: str, content: str | None, is_new: bool | None
     why = ctx.protected(rel)
     if why:
         reasons.append(f"{rel} is protected: {why}")
+    from . import runs
+    unit_why = runs.check_unit_scope(ctx.root, rel)
+    if unit_why:
+        reasons.append(unit_why)
     if is_new and _is_script_name(rel, content) and not _script_allowed(ctx, rel, content):
         reasons.append(f"new script {rel} is not allowed here; scripts live in src/, tests, "
                        ".cgspec-scratch/ or a registered check (spec 8)")

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -130,6 +131,9 @@ def pre_tool(root: Path, tool: str, raw: str) -> int:
                 if rel is not None:
                     touched.append(rel)
                     reasons += check_write(ctx, rel, call.get("content"))
+                else:
+                    if os.environ.get("CGSPEC_UNIT") or os.environ.get("CGSPEC_RUN"):
+                        reasons.append(f"{raw_path} is outside project root or escapes via symlink")
     except Exception as exc:  # fail closed only where it matters
         if ctx and any(ctx.protected(rel) for rel in touched):
             return block(tool, f"CGSpec blocked (internal error on a protected path): {exc!r}")
@@ -353,14 +357,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base", help="ci: base commit of the range to check")
     from _lib.checkpoint_cmd import add_arguments
     add_arguments(parser)
-    parser.add_argument("--file", help="check register: proposed script under .cgspec-scratch/checks/")
-    parser.add_argument("--applies-to", dest="applies_to", help="check register: comma-separated globs")
-    parser.add_argument("--description", help="check register: what the check verifies")
-    parser.add_argument("--approval", help="check register: approval id from your message, or 'trailer'")
-    parser.add_argument("--command", help="check register: JSON list with {path} and {files}")
-    parser.add_argument("--guide", help="check register: proposed Markdown guide under .cgspec-scratch/checks/")
-    parser.add_argument("--no-rerun", action="store_true", help="ci: skip re-running failing-test records")
-    parser.add_argument("--release-dir", help="ci: checkout of the CGSpec plugin release to verify engine changes")
+    for f in ("--file", "--applies-to", "--description", "--approval", "--command", "--guide", "--release-dir"):
+        parser.add_argument(f)
+    parser.add_argument("--no-rerun", action="store_true")
+    for f in ("--criteria", "--tests", "--units", "--run-id", "--by", "--status", "--unit", "--unit-status"):
+        parser.add_argument(f)
+    parser.add_argument("--review-rounds", type=int)
     return parser
 
 
@@ -368,26 +370,19 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_intermixed_args(argv)
     try:
         root = resolve_root(args.root)
-        if args.event == "tier":
-            return cmd_tier(root, args)
-        if args.event == "pre-tool":
-            return pre_tool(root, args.tool, sys.stdin.read())
-        if args.event == "pre-commit":
-            return pre_commit(root)
-        if args.event == "post-tool":
-            return post_tool(root, args.tool, sys.stdin.read())
-        if args.event == "doc":
-            return cmd_doc(root, args)
+        if args.event == "tier": return cmd_tier(root, args)
+        if args.event == "run": from _lib import runs; return runs.cli(root, args)
+        if args.event == "pre-tool": return pre_tool(root, args.tool, sys.stdin.read())
+        if args.event == "pre-commit": return pre_commit(root)
+        if args.event == "post-tool": return post_tool(root, args.tool, sys.stdin.read())
+        if args.event == "doc": return cmd_doc(root, args)
+        if args.event == "check": from _lib.checks import cli; return cli(root, args)
+        if args.event == "ci": return ci(root, args.base, not args.no_rerun, args)
         if args.event == "checkpoint":
             from _lib.checkpoint_cmd import update
             cp = update(root, args)
             print(f"checkpoint updated: next: {cp['next_action'] or '(none)'}; in flight: {cp['in_flight'] or 'nothing'}")
             return EXIT_OK
-        if args.event == "check":
-            from _lib.checks import cli
-            return cli(root, args)
-        if args.event == "ci":
-            return ci(root, args.base, not args.no_rerun, args)
         if args.event in ("user-message", "session-start", "session-check", "pre-compact", "stop", "commit-msg"):
             return lifecycle(root, args.event, args, sys.stdin.read() if args.event == "user-message" else "")
         raise CgspecError(f"unknown event: {args.event}")

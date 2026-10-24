@@ -14,6 +14,7 @@ from .document_dates import managed_doc, validate_change
 from .inbox import contains_secret
 from .path_policy import live_prototype_source, needs_tier, prototype_journey
 from .globs import match_any
+from . import runs
 
 
 def _preserved_prototype(view: View, change) -> bool:
@@ -137,6 +138,7 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     ctx.project = project  # the view may see a staged project.json the disk copy doesn't have yet
     exempt = trust.install_exempt(view)
     reasons = trust.append_only(view) + trust.frozen_touched(view, changes)
+    reasons += runs.check_run_commit(view)
     reasons += trust.engine_changes(view, changes, release_dir, strict)
     reasons += trust.approvals_have_inbox_lines(view) + trust.check_approvals(view)
     reasons += trust.slice_approvals(view, changes) + trust.ledger_approvals(view)
