@@ -31,6 +31,8 @@ def slug(text: str) -> str:
 def write(root: Path, scope: str, name: str, check: str, verdict: str, covers: list[str], details: str,
           ran_by: str) -> Path:
     path = root / EVIDENCE_DIR / scope / f"{name}.json"
+    claim = {"journeys": "ui_behavior", "visual": "visual", "checks": "code_quality"}.get(scope, "other")
     write_json(path, {"schema": 1, "check": check, "revision": revision(root), "verdict": verdict, "state": "Fresh",
-                      "covers": covers, "details": details[:4000], "ran_at": utc_now(), "ran_by": ran_by})
+                      "claim": claim, "data_source": "unknown", "covers": covers,
+                      "details": details[:4000], "ran_at": utc_now(), "ran_by": ran_by})
     return path

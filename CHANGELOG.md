@@ -4,6 +4,17 @@ All notable changes, architectural invariants, and skill evolutions to `cgspec` 
 
 ---
 
+## [v0.2.3] — 2026-10-24
+
+### Added
+- Passing evidence records now state the claim and data source. Commit and doctor checks reject fixture-backed or unknown-source records that claim real-backend integration. This checks the consistency of the record; it does not authenticate an agent's assertion that a backend was used.
+
+### Fixed
+- Local browser checks now prefer the checked project's Playwright package, while trusted CI continues to load its external pinned copy. Baseline approval refuses symlinked storage or scratch artifacts and malformed cached screenshots before replacing them with a fresh capture.
+
+### Maintained
+- CI still reports `--no-rerun` as incomplete verification, including when no new failing-test record appears in the range.
+
 ## [v0.1.5] — 2026-10-17
 ### Fixed
 - **Law 9 Single-Supervisor Delegation Invariant:** Permanently eliminated debater subagents appearing in the user's main chat window. In Antigravity, any subagent spawned directly by the Main Agent sends its turn completion message back to the primary chat. The Main Agent is now **strictly forbidden from putting debater subagents in its `Subagents` array**. The Main Agent spawns **EXACTLY ONE subagent: `Council Supervisor & Inspector`**. The Supervisor executes the 3 orthogonal lenses (`debater-1`, `debater-2`, `debater-3`) directly in the disk workspace and streams only 3-line status updates to the Main Agent.

@@ -130,6 +130,31 @@ def _document_dates(view: View, changes) -> list[str]:
     return reasons
 
 
+def _evidence_rules(view: View, changes) -> list[str]:
+    """New passing evidence names what it proves and which data it exercised.
+
+    This is a claim-consistency check, not proof that an agent labelled its source
+    honestly. Project checks and independently run integration tests supply that proof.
+    """
+    prefix = "docs/_cgspec/06-evidence/"
+    reasons = []
+    for change in changes:
+        if change.status == "D" or not change.path.startswith(prefix) or not change.path.endswith(".json"):
+            continue
+        if change.path.startswith(prefix + "tests/"):
+            continue  # failing-test pairs use a different schema
+        record = trust.load(view.read_new(change.path))
+        if record.get("verdict") != "PASS":
+            continue
+        claim, source = record.get("claim"), record.get("data_source")
+        if not claim or not source:
+            reasons.append(f"{change.path}: passing evidence needs claim and data_source; "
+                           "state whether it used fixtures, a real backend, static checks or an unknown source")
+        elif claim == "integration" and source != "real_backend":
+            reasons.append(f"{change.path}: {source} cannot prove integration with a real backend")
+    return reasons
+
+
 def _governance_reasons(root: Path, view: View, changes) -> list[str]:
     """A candidate project configuration cannot narrow the fixed governance floor. Initial
     installation is a bootstrap; later changes need the user's signed `Approved-by:` trailer,
@@ -181,6 +206,7 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
                     and not trust.engine_file(c.path) and not c.path.startswith(trust.ENGINE)]
     reasons += _tier_rules(view, code_changes, tier)
     reasons += _test_pairs(view, code_changes, tier, classes, project)
+    reasons += _evidence_rules(view, changes)
     reasons += _document_dates(view, changes)
     for change in changes:
         if change.path.startswith(trust.ENGINE) or change.path in exempt:

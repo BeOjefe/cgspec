@@ -384,6 +384,10 @@ def blocked(root: Path) -> Iterator[Finding]:
     for path in sorted(evidence.rglob("*.json")) if evidence.is_dir() else []:
         data, findings = load_json(path, root, "test-pair" if path.parent.name == "tests" else "evidence")
         yield from findings
+        if (isinstance(data, dict) and data.get("verdict") == "PASS"
+                and data.get("claim") == "integration" and data.get("data_source") != "real_backend"):
+            yield Finding("E-EVIDENCE-SOURCE", _rel(path, root),
+                          "a passing integration claim must name real_backend as its data source")
         if isinstance(data, dict) and data.get("verdict") in ("BLOCKED", "PARTIAL") and data.get("state") != "Stale":
             count += 1
     if count:

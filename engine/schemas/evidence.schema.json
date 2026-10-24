@@ -29,6 +29,12 @@
         "NOT_APPLICABLE"
       ]
     },
+    "claim": {
+      "enum": ["integration", "ui_behavior", "visual", "code_quality", "governance", "other"]
+    },
+    "data_source": {
+      "enum": ["real_backend", "fixture", "static", "unknown"]
+    },
     "state": {
       "enum": [
         "Fresh",

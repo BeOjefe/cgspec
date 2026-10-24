@@ -198,6 +198,7 @@ def run(root: Path, files: list[str], run_all: bool = False, write_evidence: boo
         if write_evidence:
             write_json(root / EVIDENCE_DIR / "checks" / f"{cid}.json", {
                 "schema": 1, "check": cid, "revision": _revision(root), "verdict": verdict, "state": "Fresh",
+                "claim": "code_quality", "data_source": "static",
                 "covers": entry.get("applies_to", []), "details": output.strip()[:2000],
                 "ran_at": utc_now(), "ran_by": "cgspec_hook check run"})
     if not notes and not failures:
