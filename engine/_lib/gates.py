@@ -12,6 +12,7 @@ from . import layout as L
 from . import tiers
 from .common import ENGINE_DIR, MEMLOG_FILE, PROJECT_FILE, STATE_DIR
 from .globs import match_any
+from .governance_paths import GOVERNANCE_DIRS, GOVERNANCE_FILES, governance_path
 from .inbox import contains_secret
 from .path_policy import needs_tier
 
@@ -84,10 +85,14 @@ class Context:
         return value if isinstance(value, dict) else {}
 
     def protected(self, rel: str) -> str | None:
+        if governance_path(rel):
+            return "governance path; an authenticated approval for this exact change is required"
         if rel == ENGINE_DIR.as_posix() or rel.startswith(ENGINE_DIR.as_posix() + "/"):
             return "the vendored engine changes only through install.py upgrade"
         if rel in ALWAYS_PROTECTED:
             return "this state file is written only by the engine"
+        if rel.startswith("docs/_cgspec/05-runs/"):
+            return "run records are created and managed only through cgspec_hook.py run commands"
         if rel in GUARD_FILES or any(rel.startswith(d) or rel + "/" == d for d in GUARD_DIRS):
             return ("CGSpec's hooks and skills are installed here; an agent never changes its own guards or method. "
                     "The user changes them with install.py upgrade or uninstall")
@@ -131,7 +136,8 @@ def git_tracked(root: Path, rel: str) -> bool:
 
 
 def protected_list(ctx: "Context") -> list[str]:
-    return sorted(ctx.frozen | ctx.checks | set(ALWAYS_PROTECTED) | set(GUARD_FILES)) + [ENGINE_DIR.as_posix() + "/"] + GUARD_DIRS
+    return sorted(ctx.frozen | ctx.checks | set(ALWAYS_PROTECTED) | set(GUARD_FILES) |
+                  GOVERNANCE_FILES) + [ENGINE_DIR.as_posix() + "/"] + GUARD_DIRS + list(GOVERNANCE_DIRS)
 
 
 def _is_script_name(rel: str, content: str | None) -> bool:
@@ -193,6 +199,10 @@ def check_write(ctx: Context, rel: str, content: str | None, is_new: bool | None
     why = ctx.protected(rel)
     if why:
         reasons.append(f"{rel} is protected: {why}")
+    from . import runs
+    unit_why = runs.check_unit_scope(ctx.root, rel)
+    if unit_why:
+        reasons.append(unit_why)
     if is_new and _is_script_name(rel, content) and not _script_allowed(ctx, rel, content):
         reasons.append(f"new script {rel} is not allowed here; scripts live in src/, tests, "
                        ".cgspec-scratch/ or a registered check (spec 8)")

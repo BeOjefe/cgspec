@@ -88,6 +88,21 @@ class DestructiveGitTests(unittest.TestCase):
         self.blocked("gh pr merge 17", "merge")
         self.blocked("gh pr merge --admin --squash 19", "merge")
 
+    def test_commit_check_bypass_is_blocked(self):
+        self.blocked("git commit --no-verify -m fix", "--no-verify")
+        self.blocked("git commit -n -m bypass", "--no-verify")
+        self.blocked("git commit -an -m bypass", "--no-verify")
+        self.blocked("git commit --no-veri -m bypass", "--no-verify")
+        self.blocked("git -c core.hooksPath=/dev/null commit -m fix", "core.hooksPath")
+        self.blocked("git -ccore.hooksPath=/dev/null commit -m fix", "core.hooksPath")
+        self.blocked("git -c user.name=Test -c core.hooksPath=/dev/null commit -m fix", "core.hooksPath")
+        self.blocked("CG_HOOKS=/dev/null git --config-env=core.hooksPath=CG_HOOKS commit -m bypass", "core.hooksPath")
+
+    def test_commit_message_is_not_an_option(self):
+        self.allowed('git commit --allow-empty -m "--no-verify"')
+        self.allowed('git commit --allow-empty --message=--no-verify')
+        self.allowed('git commit --allow-empty -m "-n"')
+
     # --- things that must NOT be blocked ---------------------------------------------------------
     def test_safe_branch_delete_is_allowed(self):
         """-d (lowercase) only deletes an already-merged branch; it is not --force."""

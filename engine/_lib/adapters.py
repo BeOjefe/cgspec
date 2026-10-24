@@ -27,8 +27,8 @@ CLAUDE_EVENTS = {
     "Stop": (None, "stop"),
 }
 AG_EVENTS = {
-    "PreToolUse": ("write_to_file|replace_file_content|multi_replace_file_content|run_command", "pre-tool"),
-    "PostToolUse": ("write_to_file|replace_file_content|multi_replace_file_content|run_command", "post-tool"),
+    "PreToolUse": ("write_to_file|replace_file_content|multi_replace_file_content|client_edit_file|client_create_file|run_command", "pre-tool"),
+    "PostToolUse": ("write_to_file|replace_file_content|multi_replace_file_content|client_edit_file|client_create_file|run_command|invoke_subagent|call_mcp_tool", "post-tool"),
     "SessionStart": (None, "session-start"),
     "Stop": (None, "stop"),
 }

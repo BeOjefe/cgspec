@@ -62,6 +62,8 @@ def prove_failed(root: Path, record: dict) -> str | None:
     failed_at, test_file = str(record.get("failed_at", "")), str(record.get("test_file", ""))
     if git(root, "cat-file", "-e", f"{failed_at}:{test_file}").returncode != 0:
         return f"{name}: test file {test_file} did not exist at {failed_at[:10]}, so it cannot have failed there"
+    if git(root, "diff", "--quiet", failed_at, "HEAD", "--", test_file).returncode != 0:
+        return f"{name}: test file {test_file} was modified after failed_at {failed_at[:10]}; a failing test cannot be weakened to make it pass"
     before = _run_at(root, record.get("failed_at", ""), command)
     if isinstance(before, str):
         return f"{name}: {before}"
@@ -111,7 +113,10 @@ def run(root: Path, base: str | None, rerun_tests: bool = True,
     failures, check_notes = checks.run(root, changed, write_evidence=False, base_rev=base, repo_root=root)
     problems += [f"check {failure}" for failure in failures]
     notes += [note for note in check_notes if not note.startswith("no registered")]
-    if rerun_tests:
+    if not rerun_tests:
+        problems.append("incomplete verification: --no-rerun skipped failing-test proof; "
+                        "this result cannot satisfy the governance check")
+    else:
         for record in new_test_records(root, base):
             problem = prove_failed(root, record)
             if problem:
