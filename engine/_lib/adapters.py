@@ -208,33 +208,51 @@ def _freeze_workflow(root: Path, rel: str) -> None:
         write_json(frozen_path, data)
 
 
+def _wire_one(fd: int, event: str, owns_already: bool) -> tuple[str, bool]:
+    """Write one hook through the bound directory fd. Returns (note, claimed): claimed is True
+    only when this checkout may now consider the event its own (a fresh slot, or one it already
+    owned); an existing foreign-looking hook in an unconfirmed shared directory is never claimed."""
+    kind = git_hooks.entry_kind(fd, event)
+    if kind == "symlink":
+        return f"left symlinked git {event} hook alone", False
+    if kind == "other":
+        return f"left existing git {event} hook alone; add the CGSpec call to it yourself", False
+    expected = git_hooks.expected_hook_bytes(GIT_HOOK, HOOK, event)
+    if kind == "file":
+        if git_hooks.read_hook(fd, event) != expected:
+            return f"left existing git {event} hook alone; add the CGSpec call to it yourself", False
+        if not owns_already:
+            return (f"left existing git {event} hook alone; shared hooks directory not yet "
+                    "confirmed as this checkout's own"), False
+        return f"git {event} hook already matches", True
+    git_hooks.write_hook(fd, event, expected, 0o755)
+    return f"wired git {event} hook", True
+
+
 def _wire_git(root: Path, record: dict) -> list[str]:
-    hooks, reason = git_hooks.directory(root)
+    hooks, reason, needs_owner_record = git_hooks.directory(root)
     if hooks is None:
         msg = f"{reason}; add the CGSpec call yourself" if "add the CGSpec call" not in reason else reason
         return [msg]
-    notes = []
-    for event in ("pre-commit", "commit-msg"):
-        target = hooks / event
-        if target.is_symlink():
-            notes.append(f"left symlinked git {event} hook alone")
-            continue
-        expected = git_hooks.expected_hook_bytes(GIT_HOOK, HOOK, event)
-        if target.exists():
-            try:
-                current = target.read_bytes()
-            except OSError:
-                notes.append(f"left existing git {event} hook alone; add the CGSpec call to it yourself")
-                continue
-            if current != expected:
-                notes.append(f"left existing git {event} hook alone; add the CGSpec call to it yourself")
-                continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(expected)
-        os.chmod(target, 0o755)
-        if event not in record.get("git_hooks", []):
-            record.setdefault("git_hooks", []).append(event)
-        notes.append(f"wired git {event} hook")
+    owns_already = not needs_owner_record or git_hooks.check_ownership(root, hooks, record) is None
+    try:
+        hooks.mkdir(parents=True, exist_ok=True)
+        fd = git_hooks.open_hooks_dir(hooks)
+    except (OSError, CgspecError) as exc:
+        return [f"cannot prepare git hooks directory ({exc}): add the CGSpec call yourself"]
+    notes, claimed_any = [], False
+    try:
+        for event in ("pre-commit", "commit-msg"):
+            note, claimed = _wire_one(fd, event, owns_already)
+            notes.append(note)
+            if claimed:
+                claimed_any = True
+                if event not in record.get("git_hooks", []):
+                    record.setdefault("git_hooks", []).append(event)
+    finally:
+        os.close(fd)
+    if needs_owner_record and claimed_any:
+        git_hooks.bind_ownership(root, hooks, record)
     return notes
 
 

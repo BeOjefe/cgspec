@@ -11,7 +11,7 @@ from . import git_hooks
 
 
 def hook_dir(root: Path) -> Path | None:
-    hooks, _ = git_hooks.directory(root)
+    hooks, _, _ = git_hooks.directory(root)
     return hooks
 
 

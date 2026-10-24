@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -76,6 +77,21 @@ def git(root: Path, *args: str, check: bool = True):
                             cwd=root, capture_output=True, text=True)
     if check and result.returncode != 0:
         raise AssertionError(f"git {' '.join(args)} failed: {result.stderr}")
+    return result
+
+
+def git_live(root: Path, *args: str, check: bool = True):
+    """Run real git with the installed hooks active: no hooksPath override, no --no-verify,
+    and isolated from the host's own global/system config so hook-behaviour assertions mean
+    something (a bare `git` helper call always disables hooks via core.hooksPath=/dev/null)."""
+    env = os.environ.copy()
+    env["GIT_CONFIG_GLOBAL"] = "/dev/null"
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    result = subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=t@example.com",
+                             "-c", "commit.gpgsign=false", *args],
+                            cwd=root, capture_output=True, text=True, env=env)
+    if check and result.returncode != 0:
+        raise AssertionError(f"git {' '.join(args)} failed: {result.stdout}{result.stderr}")
     return result
 
 
