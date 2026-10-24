@@ -222,6 +222,13 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("W-BLOCKED", result.stdout)
         self.assertIn("1 unresolved", result.stdout)
 
+    def test_fixture_backed_integration_pass_is_rejected(self):
+        write_json(self.root / "docs/_cgspec/06-evidence/manual/integration.json", {
+            "schema": 1, "check": "create-team", "revision": "abc1234", "verdict": "PASS",
+            "claim": "integration", "data_source": "fixture",
+            "ran_at": "2026-10-24T00:00:00Z", "ran_by": "tester"})
+        self.assertFails("E-EVIDENCE-SOURCE")
+
     def test_missing_project_json_is_reported(self):
         (self.root / "docs/_cgspec/project.json").unlink()
         result = doctor(self.root)

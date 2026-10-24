@@ -199,7 +199,11 @@ def _load_and_validate_frozen(root: Path) -> tuple[Path, dict]:
 def _capture_fresh_screenshots(root: Path, label: str, page_path: Path, screen: str, b_dir: Path) -> tuple[Path, Path]:
     shots = root / ".cgspec-scratch/visual"
     shots.mkdir(parents=True, exist_ok=True)
+    _check_no_symlinks(root, shots)
     _check_no_symlinks(root, b_dir)
+    for existing in b_dir.glob("*.png"):
+        if existing.is_symlink():
+            raise CgspecError(f"baseline storage contains a symlink: {existing.name}")
     b_dir_res = b_dir.resolve()
     state_res = (root / STATE_DIR).resolve()
     if shots.resolve() in (b_dir_res, state_res) or shots.resolve().is_relative_to(b_dir_res) or shots.resolve().is_relative_to(state_res):
@@ -207,7 +211,11 @@ def _capture_fresh_screenshots(root: Path, label: str, page_path: Path, screen: 
     for vp in ("desktop", "mobile"):
         for suffix in (".png", "-dark.png", "-diff.png"):
             p = shots / f"{label}-{vp}{suffix}"
-            if p.is_symlink() or p.is_file():
+            if p.is_symlink():
+                raise CgspecError(f"scratch screenshot is a symlink: {p.name}")
+            if p.is_file():
+                if suffix == ".png":
+                    validate_png(p)
                 p.unlink()
     from visual_audit import _prepare_runs
     runs, _ = _prepare_runs(root, [(label, page_path, [screen])], video=False)

@@ -12,7 +12,11 @@ const TRUSTED = process.env.CGSPEC_PLAYWRIGHT_DIR || "";
 function loadPlaywright() {
   for (const name of PACKAGES) {
     try {
-      if (!TRUSTED) return require(name);
+      if (!TRUSTED) {
+        const local = path.join(process.cwd(), "node_modules", name);
+        if (fs.existsSync(path.join(local, "package.json"))) return require(local);
+        return require(name);
+      }
       const dir = path.join(TRUSTED, "node_modules", name);
       if (fs.existsSync(path.join(dir, "package.json"))) return require(dir);
     } catch (e) { /* try the next package */ }
