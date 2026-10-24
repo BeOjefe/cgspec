@@ -9,11 +9,12 @@ from . import tiers
 from .common import ENGINE_DIR, PROJECT_FILE, STATE_DIR
 from . import commit_trust as trust
 from .gates import EMOJI, HOST_PATH, Context, _is_script_name, _script_allowed
-from .gitview import View
+from .gitview import View, git
 from .document_dates import managed_doc, validate_change
 from .inbox import contains_secret
 from .path_policy import live_prototype_source, needs_tier, prototype_journey
 from .globs import match_any
+from .governance_paths import governance_path
 
 
 def _preserved_prototype(view: View, change) -> bool:
@@ -128,6 +129,35 @@ def _document_dates(view: View, changes) -> list[str]:
     return reasons
 
 
+def _governance_reasons(root: Path, view: View, changes) -> list[str]:
+    """A candidate project configuration cannot narrow the fixed governance floor. Initial
+    installation is a bootstrap; later changes need the user's signed `Approved-by:` trailer,
+    which ordinary inbox citations cannot provide."""
+    reasons: list[str] = []
+    project_path = PROJECT_FILE.as_posix()
+    old_project = view.read_old(project_path)
+    new_project = view.read_new(project_path)
+    prior_project_history = bool(view.old and git(root, "log", "-1", "--format=%H", view.old,
+                                                   "--", project_path).stdout.strip())
+    bootstrap = old_project is None and new_project is not None and not prior_project_history
+    if old_project is not None and new_project is None:
+        reasons.append(f"{project_path}: established CGSpec project state cannot be deleted or renamed away")
+    if old_project is None and new_project is not None and prior_project_history:
+        reasons.append(f"{project_path}: restoring prior project state is not a new installation")
+    authorized = trust.governance_authorized(view)
+    if old_project is not None and new_project is not None and not authorized:
+        if trust.load(old_project).get("plugin_source") != trust.load(new_project).get("plugin_source"):
+            reasons.append(f"{project_path}: APPROVAL_REQUIRED for plugin_source change; "
+                           "it selects the engine trusted by later CI runs")
+    for change in changes:
+        for rel in filter(None, (change.path, change.old_path)):
+            if governance_path(rel) and not bootstrap and not authorized:
+                reasons.append(f"{rel}: APPROVAL_REQUIRED for governance change ({change.status}); "
+                               "needs an 'Approved-by:' trailer on a commit signed by a trusted approver key; "
+                               "ordinary project approvals do not authorize guard changes")
+    return reasons
+
+
 def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bool = False) -> list[str]:
     changes = view.changes()
     project = trust.load(view.read_new(PROJECT_FILE.as_posix()))
@@ -137,6 +167,7 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     ctx.project = project  # the view may see a staged project.json the disk copy doesn't have yet
     exempt = trust.install_exempt(view)
     reasons = trust.append_only(view) + trust.frozen_touched(view, changes)
+    reasons += _governance_reasons(root, view, changes)
     reasons += trust.engine_changes(view, changes, release_dir, strict)
     reasons += trust.approvals_have_inbox_lines(view) + trust.check_approvals(view)
     reasons += trust.slice_approvals(view, changes) + trust.ledger_approvals(view)

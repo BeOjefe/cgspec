@@ -111,7 +111,10 @@ def run(root: Path, base: str | None, rerun_tests: bool = True,
     failures, check_notes = checks.run(root, changed, write_evidence=False, base_rev=base, repo_root=root)
     problems += [f"check {failure}" for failure in failures]
     notes += [note for note in check_notes if not note.startswith("no registered")]
-    if rerun_tests:
+    if not rerun_tests:
+        problems.append("incomplete verification: --no-rerun skipped failing-test proof; "
+                        "this result cannot satisfy the governance check")
+    else:
         for record in new_test_records(root, base):
             problem = prove_failed(root, record)
             if problem:

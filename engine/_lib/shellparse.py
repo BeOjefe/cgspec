@@ -124,7 +124,7 @@ def _without_engine_runs(command: str) -> str:
 
 
 DESTRUCTIVE_PUSH_FLAGS = {"--force", "-f", "--force-with-lease"}
-GIT_GLOBAL_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
+GIT_GLOBAL_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--config-env"}
 
 
 def _git_subcommand(rest: list[str]) -> list[str]:
@@ -132,11 +132,63 @@ def _git_subcommand(rest: list[str]) -> list[str]:
     subcommand and its arguments, so `git -C /tmp push --force` is still seen as `push --force`."""
     i = 0
     while i < len(rest) and rest[i].startswith("-"):
+        if rest[i].startswith(("-c", "-C")) and rest[i] not in ("-c", "-C"):
+            i += 1
+            continue
         if rest[i] in GIT_GLOBAL_WITH_VALUE or rest[i].split("=", 1)[0] in GIT_GLOBAL_WITH_VALUE:
             i += 1 if "=" in rest[i] else 2
         else:
             i += 1
     return rest[i:]
+
+
+def _commit_bypass_option(options: list[str]) -> bool:
+    """Inspect commit options, excluding values such as `-m '--no-verify'`."""
+    value_flags = {"-m", "-F", "-t", "-C", "-c", "-u", "--message", "--file", "--template",
+                   "--reuse-message", "--reedit-message", "--author", "--date", "--cleanup",
+                   "--fixup", "--squash", "--pathspec-from-file", "--trailer"}
+    i = 0
+    while i < len(options):
+        arg = options[i]
+        if arg == "--":
+            return False
+        if arg in value_flags:
+            i += 2
+            continue
+        if any(arg.startswith(flag + "=") for flag in value_flags if flag.startswith("--")):
+            i += 1
+            continue
+        if arg.startswith("--no-v") and "--no-verify".startswith(arg):
+            return True
+        if arg.startswith("-") and not arg.startswith("--"):
+            for char in arg[1:]:
+                if char == "n":
+                    return True
+                if "-" + char in value_flags:
+                    break  # remaining characters are this option's value
+        i += 1
+    return False
+
+
+def _hookspath_override(global_options: list[str]) -> bool:
+    i = 0
+    while i < len(global_options):
+        arg = global_options[i]
+        if arg in {"-c", "--config-env"} and i + 1 < len(global_options):
+            value = global_options[i + 1]
+            i += 2
+        elif arg.startswith("-c") and arg != "-c":
+            value = arg[2:]
+            i += 1
+        elif arg.startswith("--config-env="):
+            value = arg.split("=", 1)[1]
+            i += 1
+        else:
+            i += 1
+            continue
+        if value.split("=", 1)[0].lower() == "core.hookspath":
+            return True
+    return False
 
 
 def destructive_git_reasons(command: str) -> list[str]:
@@ -159,6 +211,12 @@ def destructive_git_reasons(command: str) -> list[str]:
             prog = posixpath.basename(args[0])
             rest = _git_subcommand(args[1:]) if prog == "git" else args[1:]
             sub = rest[0] if rest else ""
+            if prog == "git" and sub == "commit":
+                if _commit_bypass_option(rest[1:]):
+                    reasons.append("git commit --no-verify skips the commit checks; run the ordinary commit command")
+                globals_before_commit = args[1:1 + len(args[1:]) - len(rest)]
+                if _hookspath_override(globals_before_commit):
+                    reasons.append("git commit overrides core.hooksPath and can skip the commit checks")
             if prog == "git" and sub == "push":
                 flags = rest[1:]
                 if DESTRUCTIVE_PUSH_FLAGS & set(flags) or any(f.startswith("--force-with-lease=") for f in flags):

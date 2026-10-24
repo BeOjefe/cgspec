@@ -12,6 +12,7 @@ from . import layout as L
 from . import tiers
 from .common import ENGINE_DIR, MEMLOG_FILE, PROJECT_FILE, STATE_DIR
 from .globs import match_any
+from .governance_paths import GOVERNANCE_DIRS, GOVERNANCE_FILES, governance_path
 from .inbox import contains_secret
 from .path_policy import needs_tier
 
@@ -84,6 +85,8 @@ class Context:
         return value if isinstance(value, dict) else {}
 
     def protected(self, rel: str) -> str | None:
+        if governance_path(rel):
+            return "governance path; an authenticated approval for this exact change is required"
         if rel == ENGINE_DIR.as_posix() or rel.startswith(ENGINE_DIR.as_posix() + "/"):
             return "the vendored engine changes only through install.py upgrade"
         if rel in ALWAYS_PROTECTED:
@@ -131,7 +134,8 @@ def git_tracked(root: Path, rel: str) -> bool:
 
 
 def protected_list(ctx: "Context") -> list[str]:
-    return sorted(ctx.frozen | ctx.checks | set(ALWAYS_PROTECTED) | set(GUARD_FILES)) + [ENGINE_DIR.as_posix() + "/"] + GUARD_DIRS
+    return sorted(ctx.frozen | ctx.checks | set(ALWAYS_PROTECTED) | set(GUARD_FILES) |
+                  GOVERNANCE_FILES) + [ENGINE_DIR.as_posix() + "/"] + GUARD_DIRS + list(GOVERNANCE_DIRS)
 
 
 def _is_script_name(rel: str, content: str | None) -> bool:

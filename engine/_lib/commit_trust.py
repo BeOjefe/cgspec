@@ -314,3 +314,49 @@ def staged_trailer_refs(view: View) -> bool:
             if any((m := APPROVAL_FIELD.match(l)) and m.group(1).strip().strip("`") == TRAILER_REF for l in lines):
                 return True
     return False
+
+
+def is_bootstrap(view: View) -> bool:
+    """True for the first commit that introduces CGSpec project state in this history."""
+    if view.read_old(PROJECT_FILE.as_posix()) is not None or view.read_new(PROJECT_FILE.as_posix()) is None:
+        return False
+    from .gitview import git
+    seen = bool(view.old and git(view.root, "log", "-1", "--format=%H", view.old,
+                                 "--", PROJECT_FILE.as_posix()).stdout.strip())
+    return not seen
+
+
+def governance_change(view: View) -> bool:
+    """True when the change touches the fixed governance floor or the trusted plugin source."""
+    from .governance_paths import governance_path
+    if is_bootstrap(view):
+        return False
+    for change in view.changes():
+        if any(governance_path(rel) for rel in (change.path, change.old_path) if rel):
+            return True
+    old = load(view.read_old(PROJECT_FILE.as_posix()))
+    new = load(view.read_new(PROJECT_FILE.as_posix()))
+    return bool(old) and bool(new) and old.get("plugin_source") != new.get("plugin_source")
+
+
+def governance_authorized(view: View) -> bool:
+    """A governance change needs the user's `Approved-by:` trailer on a commit signed by a key the
+    parent already trusted. A staged change has no message yet: commit-msg demands the trailer and
+    CI verifies the signature, so the pre-commit view defers rather than silently passing."""
+    message = commit_message(view)
+    if message is None:
+        return True
+    return bool(TRAILER.search(message)) and trusted_signature(view)
+
+
+def commit_msg_problem(root: Path, text: str) -> str | None:
+    """Why the message file cannot be committed with the staged change, or None."""
+    view = View.staged(root)
+    if TRAILER.search(text):
+        return None
+    if staged_trailer_refs(view):
+        return "CGSpec: this commit cites the 'trailer' approval; add 'Approved-by: <you>' to the message yourself"
+    if governance_change(view):
+        return ("CGSpec: this commit changes governance files (hooks, workflows, ownership, plugin source); "
+                "add 'Approved-by: <you>' yourself and sign the commit with a trusted approver key")
+    return None
