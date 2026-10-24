@@ -152,7 +152,7 @@ def _governance_reasons(root: Path, view: View, changes) -> list[str]:
                            "it selects the engine trusted by later CI runs")
     for change in changes:
         for rel in filter(None, (change.path, change.old_path)):
-            if governance_path(rel) and not bootstrap and not authorized:
+            if governance_path(rel) and not bootstrap and not authorized and not trust.canonical_adapter_refresh(view, rel):
                 reasons.append(f"{rel}: APPROVAL_REQUIRED for governance change ({change.status}); "
                                "needs an 'Approved-by:' trailer on a commit signed by a trusted approver key; "
                                "ordinary project approvals do not authorize guard changes")

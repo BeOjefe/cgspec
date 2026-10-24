@@ -413,6 +413,19 @@ class SubagentRunsTests(unittest.TestCase):
         view_completed = View.commit(self.root, git(self.root, "rev-parse", "HEAD").stdout.strip())
         self.assertEqual(runs.check_run_commit(view_completed), [])
 
+    def test_legacy_run_without_status_field_is_treated_as_completed(self):
+        """Legacy 0.2.0 run.json files without top-level status are treated as completed."""
+        _, test_file, run_json = self._setup_frozen_run_commit()
+        data = json.loads(run_json.read_text(encoding="utf-8"))
+        del data["status"]
+        run_json.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "legacy run without status")
+        test_file.write_text("def test_later_slice(): pass\n", encoding="utf-8")
+        git(self.root, "add", "-A")
+        self.assertEqual(runs.check_run_commit(View.staged(self.root)), [])
+        self.assertIsNone(runs.check_unit_scope(self.root, "src/unrelated.ts"))
+
     def test_cli_run_freeze_show_complete_supersede(self):
         """cgspec_hook.py run CLI subcommands create, display, and transition runs."""
         crit = self.root / "docs/criteria.md"

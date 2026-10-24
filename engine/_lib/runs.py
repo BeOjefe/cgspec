@@ -70,9 +70,7 @@ def load_run_file(path: Path, root: Path | None = None) -> tuple[dict | None, li
                 try: validate_contained_path(root, ap)
                 except ValueError as exc: errors.append(f"{path}: {exc}")
     if "status" not in data:
-        units = data.get("units", [])
-        term = ("PASS", "FAIL", "PARTIAL", "BLOCKED", "NOT_APPLICABLE")
-        data["status"] = "completed" if units and all(u.get("status") in term for u in units) else "active"
+        data["status"] = "completed"
     return (None, errors) if errors else (data, [])
 
 def load_runs_with_errors(root: Path) -> tuple[list[tuple[str, dict]], list[str]]:
@@ -215,7 +213,7 @@ def _check_old_run(view, path: str) -> list[str]:
     if any(old_data.get(f) != new_data.get(f) for f in FROZEN_FIELDS):
         reasons.append(f"{path}: frozen run criteria, tests, and metadata cannot change after frozen_at")
     reasons.extend(_check_old_units(path, old_data.get("units", []), new_data.get("units", [])))
-    old_status, new_status = old_data.get("status", "active"), new_data.get("status", "active")
+    old_status, new_status = old_data.get("status", "completed"), new_data.get("status", "completed")
     if new_status not in ALLOWED_RUN_STATUSES:
         reasons.append(f"{path}: invalid run status '{new_status}'")
     if old_status in ("completed", "superseded") and new_status != old_status:
@@ -242,7 +240,7 @@ def check_run_commit(view) -> list[str]:
             reasons.append(f"{path}: run record is not valid JSON"); continue
         if path not in old_runs and (schema_errs := validate_named(data, "run")):
             reasons.append(f"{path}: schema error: {', '.join(schema_errs)}")
-        if data.get("frozen_at") and data.get("status", "active") == "active":
+        if data.get("frozen_at") and data.get("status", "completed") == "active":
             for kind in ("criteria", "tests"):
                 for entry in data.get(kind, []):
                     fpath = entry.get("path")

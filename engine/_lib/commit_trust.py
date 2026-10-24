@@ -326,13 +326,47 @@ def is_bootstrap(view: View) -> bool:
     return not seen
 
 
+def canonical_adapter_refresh(view: View, rel: str) -> bool:
+    """True when an existing Claude or Antigravity adapter file changed only by the exact
+    canonical `adapters.refresh` transformation."""
+    if rel not in {".claude/settings.json", ".agents/hooks.json"}:
+        return False
+    old_raw, new_raw = view.read_old(rel), view.read_new(rel)
+    if not old_raw or not new_raw:
+        return False
+    try:
+        expected = json.loads(old_raw.decode("utf-8"))
+        actual = json.loads(new_raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        return False
+    if not isinstance(expected, dict) or not isinstance(actual, dict):
+        return False
+    from . import adapters
+    if rel == ".claude/settings.json":
+        hooks = expected.get("hooks", {})
+        if not isinstance(hooks, dict):
+            return False
+        for event in list(hooks):
+            if isinstance(hooks.get(event), list):
+                hooks[event] = [e for e in hooks[event] if adapters.MARK not in json.dumps(e)]
+                if not hooks[event]:
+                    del hooks[event]
+        adapters._claude(expected)
+    else:
+        if "cgspec" not in expected:
+            return False
+        adapters._antigravity(expected)
+    return actual == expected
+
+
 def governance_change(view: View) -> bool:
     """True when the change touches the fixed governance floor or the trusted plugin source."""
     from .governance_paths import governance_path
     if is_bootstrap(view):
         return False
     for change in view.changes():
-        if any(governance_path(rel) for rel in (change.path, change.old_path) if rel):
+        if any(governance_path(rel) and not canonical_adapter_refresh(view, rel)
+               for rel in (change.path, change.old_path) if rel):
             return True
     old = load(view.read_old(PROJECT_FILE.as_posix()))
     new = load(view.read_new(PROJECT_FILE.as_posix()))
@@ -341,11 +375,11 @@ def governance_change(view: View) -> bool:
 
 def governance_authorized(view: View) -> bool:
     """A governance change needs the user's `Approved-by:` trailer on a commit signed by a key the
-    parent already trusted. A staged change has no message yet: commit-msg demands the trailer and
-    CI verifies the signature, so the pre-commit view defers rather than silently passing."""
+    parent already trusted. A staged change has no message yet: when the parent has trusted
+    approver keys, commit-msg demands the trailer and CI verifies the signature."""
     message = commit_message(view)
     if message is None:
-        return True
+        return bool(load(view.read_old(PROJECT_FILE.as_posix())).get("approver_keys"))
     return bool(TRAILER.search(message)) and trusted_signature(view)
 
 

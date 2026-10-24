@@ -34,9 +34,11 @@ class GovernancePathTests(unittest.TestCase):
 
         def blocked(message):
             git(root, "add", "-A")
+            staged_blocked = any("APPROVAL_REQUIRED" in r for r in evaluate(root, View.staged(root)))
             git(root, "commit", "-q", "-m", message)  # bypass the hook to set up each probe
             head = git(root, "rev-parse", "HEAD").stdout.strip()
-            return any("APPROVAL_REQUIRED" in r for r in evaluate(root, View.commit(root, head)))
+            commit_blocked = any("APPROVAL_REQUIRED" in r for r in evaluate(root, View.commit(root, head)))
+            return staged_blocked and commit_blocked
 
         with TempDir() as root:
             git_project(root)
@@ -156,6 +158,27 @@ class GovernancePathTests(unittest.TestCase):
                 "-m", "signed\n\nApproved-by: Me <me@example.com>")
             signed = git(root, "rev-parse", "HEAD").stdout.strip()
             reasons = evaluate(root, View.commit(root, signed))
+            self.assertFalse(any("APPROVAL_REQUIRED" in r for r in reasons), reasons)
+
+    def test_canonical_adapter_refresh_is_allowed_while_weakening_is_blocked(self):
+        import json
+        from _lib.commit_gate import evaluate
+        from _lib.gitview import View
+        from tests.helpers import run_script
+
+        with TempDir() as root:
+            git_project(root)
+            claude_settings = root / ".claude/settings.json"
+            data = json.loads(claude_settings.read_text())
+            del data["hooks"]["PreToolUse"]
+            claude_settings.write_text(json.dumps(data, indent=2) + "\n")
+            git(root, "add", ".claude/settings.json")
+            self.assertTrue(any("APPROVAL_REQUIRED" in r for r in evaluate(root, View.staged(root))))
+            git(root, "commit", "-q", "-m", "older adapter missing PreToolUse")
+            res = run_script("install.py", "upgrade", "--root", str(root))
+            self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+            git(root, "add", ".claude/settings.json")
+            reasons = evaluate(root, View.staged(root))
             self.assertFalse(any("APPROVAL_REQUIRED" in r for r in reasons), reasons)
 
 
