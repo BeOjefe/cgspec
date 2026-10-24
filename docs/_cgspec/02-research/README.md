@@ -1,5 +1,5 @@
 # Technical Spikes & Research Compendiums (`docs/_cgspec/02-research/`)
-Created: unknown · Last edited: 2026-10-22T21:26:35Z
+Created: unknown · Last edited: 2026-10-24T10:42:00Z
 
 This directory houses technical research spikes, comparative benchmarks, and exploratory feasibility investigations.
 
@@ -20,6 +20,7 @@ This directory houses technical research spikes, comparative benchmarks, and exp
 - **`RES-004`:** Empirical Vibe-Coded Design Tells, Anti-Slop Scanners & High-Craft Interaction Ergonomics.
 - **[`RES-005`](RES-005-anthropic-design-plugin-structure-and-skills.md):** Anthropic's `design` plugin 1.2.0: how a first-party multi-skill plugin is structured, and what each skill enforces versus leaves to prose. Source: `Design-1.2.0-v1/`.
 - **[`RES-006`](RES-006-scroll-craft-skill-standard-and-verification.md):** Nate Herk's `scroll-craft` 0.3.0: a skill that ships a design standard with its own verification scripts. Source: `scrollcraft/`.
+- **[`RES-007`](RES-007-claude-code-hooks-benchmark-and-hygiene-gates.md):** Community Claude Code hook taxonomy (`r/ClaudeCode/1t93ikr`): pre-write hygiene gates (`CRLF`, 400-line cap, workstation paths), anti-deflection on `--blocked`, and starter template checks.
 
 ---
 

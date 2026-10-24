@@ -20,4 +20,4 @@ Implement **`cgspec-council`** (`skills/cgspec-council/SKILL.md`):
 4. After Round `N`, the Supervisor terminates the debaters, archives raw transcripts in `docs/archive/debates/ADR-NNN/`, logs the lock to `docs/.memlog.md`, and writes a single `docs/adr/ADR-NNN-<slug>.md`.
 
 ## Consequences
-- [`docs/03-ARCHITECTURE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-ARCHITECTURE.md)
+- `docs/03-ARCHITECTURE.md` (v0.1 spine; now `docs/spines/04-ARCHITECTURE.md`)

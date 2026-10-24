@@ -4,8 +4,8 @@
 > **Status:** `CONCLUDED (SYNTHESIZED INTO STAGE 2 ENGINE & VISUAL_AUDIT.PY)`  
 > **Author:** Antigravity Architect & BeOjefe Engineering  
 > **Date:** October 2026  
-> **Target Spines:** [`docs/03-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-EXPERIENCE.md), [`skills/cgspec-ui-ux/SKILL.md`](file:///home/ojefe/Documents/Project/cgspec/skills/cgspec-ui-ux/SKILL.md), [`docs/.cgspec/01-script/visual_audit.py`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/01-script/visual_audit.py)  
-> **Related Decisions:** [`ADR-001`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/04-adr/ADR-001-first-principles-spec-driven-sdlc-architecture.md), [`RES-001`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/02-research/RES-001-ui-design-systems-and-surface-profiles-benchmark.md), [`RES-002`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/02-research/RES-002-anti-slop-constrained-ui-and-deterministic-gates.md)
+> **Target Spines:** `docs/spines/03-EXPERIENCE.md`, [`skills/cgspec-ui-ux/SKILL.md`](../../../skills/cgspec-ui-ux/SKILL.md), [`engine/visual_audit.py`](../../../engine/visual_audit.py)  
+> **Related Decisions:** `ADR-001` (`docs/adr/ADR-001-first-principles-spec-driven-sdlc-architecture.md`), [`RES-001`](RES-001-ui-design-systems-and-surface-profiles-benchmark.md), [`RES-002`](RES-002-anti-slop-constrained-ui-and-deterministic-gates.md)
 
 ---
 
@@ -22,7 +22,7 @@ When AI coding assistants (Claude Code, Cursor, Copilot, Codex, Antigravity) are
 The objective of this research spike is to:
 1. Conduct an exhaustive forensic teardown of the frontier tools created to solve this problem: **Impeccable Style** (`pbakaus/impeccable`), **Hallmark** (`nutlope/hallmark`), **TasteSkill** (`tasteskill.dev`), **UI/UX Pro Max** (`nextlevelbuilder`), and **Puck** (`puckeditor.com`).
 2. Deconstruct the multi-layered verification architectures used by these tools (Source/CLI static analysis vs. Browser computed style inspection vs. LLM design review).
-3. Synthesize their highest-leverage deterministic rules into CGSpec's **Stage 2 Engine** and [`docs/.cgspec/01-script/visual_audit.py`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/01-script/visual_audit.py).
+3. Synthesize their highest-leverage deterministic rules into CGSpec's **Stage 2 Engine** and [`engine/visual_audit.py`](../../../engine/visual_audit.py).
 
 ---
 
@@ -82,7 +82,7 @@ This 3-layer model perfectly validates CGSpec's **Law 9 (Closed-Loop Visual Self
 
 ## 4. Key Anti-Patterns Extracted for Programmatic Enforcement
 
-From Impeccable's 59 detector rules and Hallmark's 65 gates, the following patterns provide maximum deterministic leverage when added to [`visual_audit.py`](file:///home/ojefe/Documents/Project/cgspec/docs/.cgspec/01-script/visual_audit.py):
+From Impeccable's 59 detector rules and Hallmark's 65 gates, the following patterns provide maximum deterministic leverage when added to [`visual_audit.py`](../../../engine/visual_audit.py):
 
 | Anti-Pattern Name | Code Indicator | Usability Defect | Programmatic Detection |
 | :--- | :--- | :--- | :--- |
@@ -96,6 +96,6 @@ From Impeccable's 59 detector rules and Hallmark's 65 gates, the following patte
 
 ## 5. Architectural Invariants Integrated into CGSpec
 
-1. **Parity with `DESIGN.md`:** CGSpec's [`docs/03-EXPERIENCE.md`](file:///home/ojefe/Documents/Project/cgspec/docs/03-EXPERIENCE.md) serves as the canonical design token registry, incorporating Impeccable's token taxonomy (Colors, Radii, Typography Scales, Spatial Elevation).
+1. **Parity with `DESIGN.md`:** CGSpec's `docs/spines/03-EXPERIENCE.md` serves as the canonical design token registry, incorporating Impeccable's token taxonomy (Colors, Radii, Typography Scales, Spatial Elevation).
 2. **Deterministic-First Pipeline:** All Layer 1 anti-patterns must be verified by `visual_audit.py` in Phase A before any human review or Layer 3 LLM critique is scheduled.
-3. **Agent Refinement Vocabulary:** The Stage 2 Skill ([`skills/cgspec-ui-ux/SKILL.md`](file:///home/ojefe/Documents/Project/cgspec/skills/cgspec-ui-ux/SKILL.md)) incorporates Impeccable's refinement verbs (`/distill`, `/clarify`, `/polish`, `/typeset`) to guide agent self-correction during iterations.
+3. **Agent Refinement Vocabulary:** The Stage 2 Skill ([`skills/cgspec-ui-ux/SKILL.md`](../../../skills/cgspec-ui-ux/SKILL.md)) incorporates Impeccable's refinement verbs (`/distill`, `/clarify`, `/polish`, `/typeset`) to guide agent self-correction during iterations.

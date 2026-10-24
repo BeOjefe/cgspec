@@ -8,7 +8,7 @@ import shutil
 import unittest
 from unittest.mock import patch
 
-from tests.helpers import TempDir, doctor, git, install, run_script, snapshot_tree
+from tests.helpers import REPO, TempDir, doctor, git, install, run_script, snapshot_tree
 
 
 def old_project(root):
@@ -67,7 +67,7 @@ class UpgradeV1Tests(unittest.TestCase):
             self.assertFalse((root / "docs/_cgspec/01-script").exists())
             self.assertEqual(doctor(root).returncode, 0, doctor(root).stdout)
             self.assertIn("adrs/ADR-001-choice.md", (root / "docs/00-INDEX.md").read_text())
-            self.assertEqual(json.loads((root / "docs/_cgspec/project.json").read_text())["cgspec_version"], "0.2.0")
+            self.assertEqual(json.loads((root / "docs/_cgspec/project.json").read_text())["cgspec_version"], (REPO / "engine/VERSION").read_text().strip())
             imported = (root / "docs/adrs/ADR-001-choice.md").read_text()
             self.assertIn("Created: unknown · Last edited:", imported)
             self.assertEqual((imported.splitlines(keepends=True)[0] +

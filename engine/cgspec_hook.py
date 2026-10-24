@@ -389,7 +389,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.event == "ci":
             return ci(root, args.base, not args.no_rerun, args)
         if args.event in ("user-message", "session-start", "session-check", "pre-compact", "stop", "commit-msg"):
-            return lifecycle(root, args.event, args, "" if args.event == "commit-msg" else sys.stdin.read())
+            return lifecycle(root, args.event, args, sys.stdin.read() if args.event == "user-message" else "")
         raise CgspecError(f"unknown event: {args.event}")
     except CgspecError as exc:
         print(f"cgspec_hook: {exc}", file=sys.stderr)

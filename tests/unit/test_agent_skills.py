@@ -6,7 +6,7 @@ import json
 import re
 import unittest
 
-from tests.helpers import TempDir, doctor, git, run_script
+from tests.helpers import REPO, TempDir, doctor, git, run_script
 
 
 class AgentSkillsTests(unittest.TestCase):
@@ -20,7 +20,9 @@ class AgentSkillsTests(unittest.TestCase):
             self.assertTrue(skill.is_file())
             self.assertTrue((root / ".agents/skills/_cgspec-docs/METHOD-v0.2.md").is_file())
             for md in (root / ".agents/skills").rglob("*.md"):
-                for ref in re.findall(r"\]\(([^)\s#]+)", md.read_text()):
+                text = md.read_text()
+                for ref in re.findall(r"\]\(([^)\s#]+)", text):
+                    self.assertFalse(ref.startswith("file:"), f"{md} contains non-portable file:// link: {ref}")
                     if not re.match(r"^[a-z]+:", ref):
                         self.assertTrue((md.parent / ref).resolve().exists(), f"{md}: {ref}")
             self.assertIn("docs/_cgspec/01-engine/CONTRACT.md", skill.read_text())
@@ -28,6 +30,18 @@ class AgentSkillsTests(unittest.TestCase):
             out = run_script("install.py", "uninstall", "--root", str(root))
             self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
             self.assertFalse((root / ".agents").exists())
+
+    def test_plugin_docs_and_skills_have_no_broken_or_workstation_links(self):
+        for folder in (REPO / "skills", REPO / "docs", REPO / "engine"):
+            for md in folder.rglob("*.md"):
+                rel = md.relative_to(REPO).as_posix()
+                if any(rel.startswith(p) for p in ("docs/_cgspec/02-research/Design", "docs/_cgspec/02-research/scrollcraft")):
+                    continue
+                text = md.read_text(encoding="utf-8")
+                for ref in re.findall(r"\]\(([^)\s#]+)", text):
+                    self.assertFalse(ref.startswith("file:"), f"{rel} has non-portable file:// link: {ref}")
+                    if not re.match(r"^[a-z][a-z0-9+.-]*:", ref, re.I):
+                        self.assertTrue((md.parent / ref).resolve().exists(), f"{rel} has broken link: {ref}")
 
     def test_upgrade_refreshes_antigravity_hook_and_skills_with_backup(self):
         with TempDir() as root:

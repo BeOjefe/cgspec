@@ -10,6 +10,8 @@ from pathlib import Path
 
 from tests.helpers import REPO, TempDir, git, git_project, write_json
 
+CURRENT_VERSION = (REPO / "engine/VERSION").read_text(encoding="utf-8").strip()
+
 
 def make_release_source(tmp: Path, versions: list[str]) -> Path:
     """A git repo standing in for the published plugin, with one tag per version."""
@@ -18,7 +20,7 @@ def make_release_source(tmp: Path, versions: list[str]) -> Path:
     for version in versions:
         (src / "engine/VERSION").write_text(version + "\n")
         git(src, "commit", "-q", "-am", f"release {version}", "--allow-empty")
-        git(src, "tag", f"v{version}")
+        git(src, "tag", "-f", f"v{version}")
     return src
 
 
@@ -39,7 +41,7 @@ class CiSelectTests(unittest.TestCase):
         self.tmp = self._tmp.__enter__()
         self.root = self.tmp / "project"
         self.root.mkdir()
-        self.source = make_release_source(self.tmp, ["0.2.0", "0.3.0"])
+        self.source = make_release_source(self.tmp, [CURRENT_VERSION, "0.3.0"])
         git(self.root, "init", "-q", "-b", "main")
         from tests.helpers import run_script
         run_script("install.py", "install", "--root", str(self.root), "--profile", "headless", "--topology", "single",
@@ -67,12 +69,12 @@ class CiSelectTests(unittest.TestCase):
         git(self.root, "commit", "-q", "--no-verify", "-m", "project change")
         env = select(self.root, self.base, self.tmp)
         self.assertEqual(env["CGSPEC_BASE"], self.base)
-        self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), "0.2.0")
+        self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), CURRENT_VERSION)
 
     def test_downgrade_in_head_is_ignored(self):
         self.edit("docs/_cgspec/01-engine/VERSION", lambda p: p.write_text("0.1.0\n"))
         env = select(self.root, self.base, self.tmp)
-        self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), "0.2.0")
+        self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), CURRENT_VERSION)
 
     def test_upgrade_in_head_uses_the_newer_release(self):
         self.edit("docs/_cgspec/01-engine/VERSION", lambda p: p.write_text("0.3.0\n"))
@@ -124,7 +126,7 @@ class SelectorFallbackTests(unittest.TestCase):
         return "\n".join(block)
 
     def installed_checkout(self, tmp: Path) -> Path:
-        source = make_release_source(tmp, ["0.2.0"])
+        source = make_release_source(tmp, [CURRENT_VERSION])
         origin = tmp / "origin"
         origin.mkdir()
         git(origin, "init", "-q", "-b", "main")
@@ -186,10 +188,10 @@ class SelectorFallbackTests(unittest.TestCase):
 
     def test_preinstall_event_base_uses_default_branch_source(self):
         with TempDir() as tmp:
-            trusted = make_release_source(tmp, ["0.2.0"])
+            trusted = make_release_source(tmp, [CURRENT_VERSION])
             evil_parent = tmp / "evil"
             evil_parent.mkdir()
-            evil = make_release_source(evil_parent, ["0.2.0"])
+            evil = make_release_source(evil_parent, [CURRENT_VERSION])
             origin = tmp / "origin"
             origin.mkdir()
             git(origin, "init", "-q", "-b", "main")
@@ -219,7 +221,7 @@ class SelectorFallbackTests(unittest.TestCase):
 
     def test_new_branch_push_uses_the_default_branch_selector(self):
         with TempDir() as tmp:
-            source = make_release_source(tmp, ["0.2.0"])
+            source = make_release_source(tmp, [CURRENT_VERSION])
             origin = tmp / "origin"
             origin.mkdir()
             git(origin, "init", "-q", "-b", "main")
