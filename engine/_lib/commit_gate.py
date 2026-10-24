@@ -8,7 +8,7 @@ from pathlib import Path
 from . import tiers
 from .common import ENGINE_DIR, PROJECT_FILE, STATE_DIR
 from . import commit_trust as trust
-from .gates import EMOJI, Context, _is_script_name, _script_allowed
+from .gates import EMOJI, HOST_PATH, Context, _is_script_name, _script_allowed
 from .gitview import View
 from .document_dates import managed_doc, validate_change
 from .inbox import contains_secret
@@ -152,8 +152,11 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     for change in changes:
         if change.path.startswith(trust.ENGINE) or change.path in exempt:
             continue  # engine files are checked above; install-owned files (e.g. copied skills) come from the plugin
+        raw_bytes = view.read_new(change.path) if change.status != "D" else None
+        if raw_bytes and b"\x00" not in raw_bytes and b"\r\n" in raw_bytes:
+            reasons.append(f"{change.path}: contains CRLF line endings; convert to LF before committing")
         if change.status in "AC" and _is_script_name(change.path, None):
-            content = (view.read_new(change.path) or b"").decode("utf-8", "replace")
+            content = (raw_bytes or b"").decode("utf-8", "replace")
             if not _script_allowed(ctx, change.path, content):
                 reasons.append(f"new script {change.path} is not allowed here (spec 8)")
     for path, lines in view.added_lines().items():
@@ -161,6 +164,8 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
             continue
         if any(EMOJI.search(line) for line in lines):
             reasons.append(f"decorative emoji added in {path} (spec 1)")
+        if match_any(path, classes.get("code", [])) and any(HOST_PATH.search(line) for line in lines):
+            reasons.append(f"{path}: added content contains a hardcoded host path; use project-relative paths or environment variables")
         kind = next((k for line in lines if (k := contains_secret(line))), None)
         if kind:
             reasons.append(f"{path}: added content looks like a {kind} (spec 1: no secrets committed; "
