@@ -59,6 +59,25 @@ class WriteHygieneGateTests(unittest.TestCase):
                 self.assertEqual(result.returncode, BLOCK)
                 self.assertIn("host path", result.stderr)
 
+    def test_antigravity_replace_file_content_exceeding_400_lines_is_blocked(self):
+        big = "".join(f"export const v{i} = {i};\n" for i in range(398))
+        (self.root / "src/a.ts").write_text("export const a = 1;\n" + big)
+        ag_payload = {
+            "workspacePaths": [str(self.root)],
+            "toolCall": {
+                "name": "replace_file_content",
+                "args": {
+                    "TargetFile": str(self.root / "src/a.ts"),
+                    "TargetContent": "export const a = 1;",
+                    "ReplacementContent": "export const a = 1;\nexport const extra_1 = 2;\nexport const extra_2 = 3;\nexport const extra_3 = 4;\n",
+                },
+            },
+        }
+        res = hook(self.root, "pre-tool", ag_payload, "--tool", "antigravity")
+        self.assertEqual(res.returncode, 0)
+        self.assertIn('"deny"', res.stdout)
+        self.assertIn("400 lines", res.stdout)
+
 
 class CommitHygieneGateTests(unittest.TestCase):
     def setUp(self):
@@ -84,6 +103,15 @@ class CommitHygieneGateTests(unittest.TestCase):
         result = hook(self.root, "pre-commit", None, "--tool", "git")
         self.assertEqual(result.returncode, 1)
         self.assertIn("host path", result.stdout + result.stderr)
+
+    def test_commit_gate_blocks_file_exceeding_400_lines_in_staged_code(self):
+        long_content = "".join(f"export const v{i} = {i};\n" for i in range(405))
+        (self.root / "src/a.ts").write_text(long_content)
+        git(self.root, "add", "-A")
+        result = hook(self.root, "pre-commit", None, "--tool", "git")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("400 lines per file limit", result.stdout + result.stderr)
+
 
 
 class BlockedDeflectionGateTests(unittest.TestCase):

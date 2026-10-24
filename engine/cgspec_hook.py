@@ -14,7 +14,7 @@ sys.dont_write_bytecode = True  # never leave caches in the vendored engine
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import tiers  # noqa: E402
 from _lib.common import EXIT_BLOCK, EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, CgspecError, resolve_root  # noqa: E402
-from _lib.gates import Context, check_write  # noqa: E402
+from _lib.gates import Context, check_write, project_content  # noqa: E402
 from _lib.shellparse import write_targets  # noqa: E402
 
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
@@ -130,7 +130,8 @@ def pre_tool(root: Path, tool: str, raw: str) -> int:
                 rel = ctx.relative(raw_path, call.get("cwd"))
                 if rel is not None:
                     touched.append(rel)
-                    reasons += check_write(ctx, rel, call.get("content"))
+                    content = project_content(root, rel, payload, tool, call.get("content"))
+                    reasons += check_write(ctx, rel, content)
                 else:
                     if os.environ.get("CGSPEC_UNIT") or os.environ.get("CGSPEC_RUN"):
                         reasons.append(f"{raw_path} is outside project root or escapes via symlink")
