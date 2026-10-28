@@ -1,5 +1,5 @@
 # CGSpec Method v0.2 — Specification
-Created: unknown · Last edited: 2026-10-24T00:34:12Z
+Created: unknown · Last edited: 2026-10-28T17:22:30Z
 
 Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Built in this repository; there is no second development checkout (see `AGENTS.md`).
 
@@ -123,12 +123,16 @@ A doctor failure leads to repair, never to an upgrade; only the version marker t
 
 | Tier | Limits (all must hold) | Records | Review |
 | --- | --- | --- | --- |
-| T0 Tweak | ≤ 3 files, ≤ 40 changed lines, no new file, no change to schema, API, auth, dependencies or a locked design structure | `tier.json` entry listing the files + one ledger line | Deterministic checks only |
-| T1 Bounded | Inside one approved slice's file scope; ≤ 400 changed lines | Short slice + ledger | Checks + 1 reviewer (different model when available) |
+| T0 Tweak | ≤ 3 files, ≤ 40 changed lines, no new file, no change to schema, API, auth, dependencies or a locked design structure | `tier.json` entry listing the files and explicit outcome verification + one ledger line | Deterministic checks only |
+| T1 Bounded | Inside one approved slice's file scope; ≤ 400 changed lines | Short slice + versioned `.start.json` success/readiness agreement + ledger | Checks + 1 reviewer (different model when available) |
 | T2 Feature | New screen, flow, service or data model piece | Spines + full slice + ADR if a real choice exists | Checks + 1 different-model reviewer; up to 2 specialist checks as scripts; max 3 helper agents at once |
 | T3 Structural | New product, architecture change, migration, repo split, auth or data change, anything irreversible | Full flow + migration contract + recovery plan | Checks + inspector team + council with mixed models; max 6 helper agents at once |
 
 The before-tool hook reads `tier.json`: a T0 entry unlocks only its listed files, and the commit hook rejects the commit if the line count is exceeded. Exceeding any limit escalates the tier automatically. A no-GUI project gets no prototype; its "experience" is API, CLI or event behavior.
+
+Before T1+ dependent implementation, the agent drafts `docs/slices/SLICE-NNN-*.start.json` with observable outcomes, acceptance and rejection examples, exclusions, evaluation methods, implementation coverage, design targets where needed, prerequisites, and future human checkpoints. The human approves the definition and evaluation together through a fresh approval; an agent cannot approve its own definition. `start ready` executes the approved, safe readiness probes and records results without raw probe output. `start begin` activates only eligible outcomes. The lifecycle is Draft → Agreed → Ready → In progress; a material definition change returns to Draft and needs new approval/readiness. A failed prerequisite blocks only its covered outcomes, while independent approved outcomes can continue. Editor, staged-commit, and CI checks enforce the same candidate record. Tests, research, design, and setup remain available before implementation readiness.
+
+Mocks are labelled development aids, never real-integration proof. `CGSPEC_ALLOW_MOCKS=0` (the default) disables mock-based development substitution; `1` permits it without relaxing the agreed final evaluation. Local probe scripts and configuration must be listed as inputs and hash-bound to the candidate; external runner/environment attestation and candidate replay remain separate work. Readiness establishes that agreed validation can run, not that the outcome is complete; outcome-based completion is enforced separately.
 
 `project.json` lists path classes as globs set at install (schema, api, auth, deps, code, tests, docs); the hook uses them to recognize forbidden T0 changes. **Small-project profile** (one page, landing site, single script): a new product is T2, not T3; design layers 1–2 and 5–7 are merged; no council and no inspector.
 
@@ -160,7 +164,7 @@ stateDiagram-v2
 | 2 Design | Layers 0–7 locked for the screens in scope (section 6). Headless profile: API draft, examples and error model instead | ui-ux |
 | 3 Architecture | ADR for every consequential choice; data model; contracts; feasibility spikes done | council |
 | 4 Milestones | Ordered slices, each with file scope, interfaces and acceptance tests | slice |
-| 5 Coding | Code inside slice scope; a failing test recorded before each change; unit tests pass | slice |
+| 5 Coding | Code inside slice scope and active ready outcome coverage; a failing test recorded before each change; unit tests pass | slice |
 | 6 Testing | All test kinds the profile requires pass at a named revision (section 7) | slice |
 | 7 CI/CD | The same tests run automatically on every push (set up with the first slice); release, rollback or forward-fix plan | operate |
 | 8 Follow-up | Observation period, incidents triaged, learnings in the ledger | operate |
