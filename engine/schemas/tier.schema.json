@@ -16,6 +16,7 @@
         "id": {"type": "string", "pattern": "^T-\\d{8}-[0-9a-f]{4}$"},
         "tier": {"enum": ["T0", "T1", "T2", "T3"]},
         "reason": {"type": "string", "minLength": 3},
+        "verification": {"type": "string", "minLength": 3},
         "files": {"type": "array", "items": {"type": "string", "minLength": 1}},
         "slice": {"type": "string", "pattern": "^([a-z0-9-]+:)?SLICE-(\\d{3}|draft-[a-z0-9-]+)$"},
         "run_id": {"type": "string", "pattern": "^R-\\d{8}-[0-9a-f]{4}$"},

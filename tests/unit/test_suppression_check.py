@@ -94,7 +94,7 @@ class RegisteredRatchetTests(unittest.TestCase):
 
     def tier(self):
         result = run_script("cgspec_hook.py", "tier", "set", "--tier", "T0", "--reason", "baseline change",
-                            "--files", BASELINE, "--root", str(self.root))
+                            "--files", BASELINE, "--verify", "ratchet check", "--root", str(self.root))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def grow(self):

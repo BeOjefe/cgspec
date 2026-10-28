@@ -354,7 +354,7 @@ class GitHookRelocationTests(unittest.TestCase):
             # one run under the test helper's core.hooksPath=/dev/null override).
             (main / "file.txt").write_text("content" + chr(10))  # modifies the tracked file
             tier = run_script("cgspec_hook.py", "tier", "set", "--tier", "T0", "--reason", "verify hooks",
-                              "--files", "file.txt", "--root", str(main))
+                              "--files", "file.txt", "--verify", "hook relocation check", "--root", str(main))
             self.assertEqual(tier.returncode, 0, tier.stdout + tier.stderr)
             git_live(main, "add", "file.txt", "docs/_cgspec/07-state/tier.json")
             git_live(main, "commit", "-m", "verify hooks intact")
@@ -435,7 +435,7 @@ class GitHookRelocationTests(unittest.TestCase):
             # Commit without override succeeds, with hooks active (finding 5)
             (root / "change.txt").write_text("valid" + chr(10))  # modifies the tracked file
             tier = run_script("cgspec_hook.py", "tier", "set", "--tier", "T0", "--reason", "verify commit",
-                              "--files", "change.txt", "--root", str(root))
+                              "--files", "change.txt", "--verify", "commit hook check", "--root", str(root))
             self.assertEqual(tier.returncode, 0, tier.stdout + tier.stderr)
             git_live(root, "add", "change.txt", "docs/_cgspec/07-state/tier.json")
             git_live(root, "commit", "-m", "commit succeeds because engine is preserved")

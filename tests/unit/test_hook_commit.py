@@ -8,7 +8,7 @@ import os
 import unittest
 from pathlib import Path
 
-from tests.helpers import TempDir, approve, git, git_project, hook, make_slice, run_script, set_test_command, write_json
+from tests.helpers import TempDir, approve, git, git_project, hook, make_ready_start, make_slice, run_script, set_test_command, write_json
 
 
 def tier(root, *args):
@@ -48,6 +48,7 @@ class PreCommitTests(unittest.TestCase):
 
     def slice(self, status="Approved", scope="src/login/**, tests/**", approval=None):
         make_slice(self.root, status, scope, approval)
+        make_ready_start(self.root)
         git(self.root, "add", "-A")
 
     def add_test_pair(self, covers=("src/login/form.ts",), failed_at=None):
@@ -73,21 +74,21 @@ class PreCommitTests(unittest.TestCase):
         self.assertBlocked("no change tier")
 
     def test_t0_within_limits_passes(self):
-        tier(self.root, "set", "--tier", "T0", "--reason", "fix a constant", "--files", "src/a.ts")
+        tier(self.root, "set", "--tier", "T0", "--reason", "fix a constant", "--files", "src/a.ts", "--verify", "unit check")
         self.stage("src/a.ts", "export const a = 2;\n")
         self.assertAllowed()
 
     def test_t0_line_limit(self):
-        tier(self.root, "set", "--tier", "T0", "--reason", "fix a constant", "--files", "src/a.ts")
+        tier(self.root, "set", "--tier", "T0", "--reason", "fix a constant", "--files", "src/a.ts", "--verify", "unit check")
         self.stage("src/a.ts", "".join(f"export const a{i} = {i};\n" for i in range(45)))
         self.assertBlocked("40")
 
     def test_t0_unlisted_file_and_new_file_blocked(self):
-        tier(self.root, "set", "--tier", "T0", "--reason", "fix a constant", "--files", "src/a.ts")
+        tier(self.root, "set", "--tier", "T0", "--reason", "fix a constant", "--files", "src/a.ts", "--verify", "unit check")
         self.stage("src/login/form.ts", "export const f = 2;\n")
         self.assertBlocked("not in the T0 file list")
         git(self.root, "reset", "-q", "--hard")
-        tier(self.root, "set", "--tier", "T0", "--reason", "fix a constant", "--files", "src/a.ts")
+        tier(self.root, "set", "--tier", "T0", "--reason", "fix a constant", "--files", "src/a.ts", "--verify", "unit check")
         self.stage("src/new.ts", "export const n = 1;\n")
         self.assertBlocked("T0 cannot create")
 

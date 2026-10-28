@@ -336,7 +336,7 @@ def cmd_tier(root: Path, args: argparse.Namespace) -> int:
         raise CgspecError("tier set needs --tier and --reason")
     ctx = Context.load(root)
     files = [f.strip() for f in (args.files or "").split(",") if f.strip()]
-    entry = tiers.set_tier(root, args.tier, args.reason, files, args.slice, ctx.classes, ctx.protected)
+    entry = tiers.set_tier(root, args.tier, args.reason, files, args.slice, ctx.classes, ctx.protected, args.verify)
     from memlog import main as memlog_main
     detail = ", ".join(files) if files else entry.get("slice", "")
     memlog_main(["--root", str(root), "add", "--tags", "tier", "--summary",
@@ -361,7 +361,7 @@ def build_parser() -> argparse.ArgumentParser:
     for f in ("--file", "--applies-to", "--description", "--approval", "--command", "--guide", "--release-dir"):
         parser.add_argument(f)
     parser.add_argument("--no-rerun", action="store_true")
-    for f in ("--criteria", "--tests", "--units", "--run-id", "--by", "--status", "--unit", "--unit-status"):
+    for f in ("--criteria", "--tests", "--units", "--run-id", "--by", "--status", "--unit", "--unit-status", "--outcome", "--verify"):
         parser.add_argument(f)
     parser.add_argument("--review-rounds", type=int)
     return parser
@@ -372,6 +372,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         root = resolve_root(args.root)
         if args.event == "tier": return cmd_tier(root, args)
+        if args.event == "start": from _lib import start; return start.cli(root, args)
         if args.event == "run": from _lib import runs; return runs.cli(root, args)
         if args.event == "pre-tool": return pre_tool(root, args.tool, sys.stdin.read())
         if args.event == "pre-commit": return pre_commit(root)

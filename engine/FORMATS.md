@@ -1,5 +1,5 @@
 # CGSpec engine: file formats and hook contract
-Created: unknown · Last edited: 2026-10-24T20:52:07Z
+Created: unknown · Last edited: 2026-10-28T17:22:30Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
@@ -15,7 +15,8 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | File (in a project) | Schema | Written by | Notes |
 | --- | --- | --- | --- |
 | `docs/_cgspec/project.json` | `project` | `install.py` | Version marker. `path_classes` globs drive T0 detection (spec 3). Optional `visual_drift_threshold` (default 0.5% of pixels) sets the threshold between W-DRIFT and E-DRIFT. |
-| `docs/_cgspec/07-state/tier.json` | `tier` | main agent via `cgspec_hook.py tier set` | Declared before editing. `files` required for T0; `slice` required for T1+. |
+| `docs/_cgspec/07-state/tier.json` | `tier` | main agent via `cgspec_hook.py tier set` | Declared before editing. `files` and `verification` required for new T0 declarations; `slice` required for T1+. |
+| `docs/slices/SLICE-NNN-*.start.json` | `start` | main agent via `cgspec_hook.py start` | Versioned success/evaluation definition, fresh approval, executable readiness, active outcomes and mock-switch state. Definition edits invalidate readiness and require renewed approval. |
 | `docs/_cgspec/05-runs/<run-id>/run.json` | `run` | inspector | `criteria` and `tests` hold sha256 of each file; once `frozen_at` is set they may not change. `approval` is written only by the message hook or read from a commit trailer, never by the agent. |
 | `docs/_cgspec/07-state/frozen.json` | `frozen` | `bundle_prototype.py`, `cgspec_hook.py freeze`, `visual_audit.py --approve-baseline` | Append-only. CI rejects any change to an existing entry (spec 8, trust root). |
 | `docs/_cgspec/04-checks/manifest.json` | `checks-manifest` | registration flow | Append-only for the same reason. A check runs as a gate only when listed here with a matching hash. Written only by `cgspec_hook.py check register` (script and optional Markdown guide must be regular files under `.cgspec-scratch/checks/`). Optional `guide` and `guide_sha256` pin the approved fix guidance beside the script; a missing or changed guide blocks execution. |
@@ -117,8 +118,18 @@ Browser runs: `CGSPEC_BROWSER=none` forces BLOCKED; `CGSPEC_CHROMIUM` names a Ch
 
 Document dates: `cgspec_hook.py doc sync` dates new documents, advances `Last edited` on edited ones, reverts date-only edits and labels edited legacy documents `Created: unknown`; the `stop` hook runs it at the end of each turn.
 
-Tier declarations: `cgspec_hook.py tier set --tier T0 --reason "..." --files a,b` (T0) or
+Tier declarations: `cgspec_hook.py tier set --tier T0 --reason "..." --files a,b --verify "..."` (T0) or
 `--slice SLICE-NNN` (T1+); `tier show`; `tier clear`. CI: `cgspec_hook.py ci --base <sha>`.
+
+Success/readiness: `cgspec_hook.py start set --slice SLICE-NNN --file <draft.json>` writes a Draft sidecar;
+`start agree --approval A-...` binds a fresh user approval (or `trailer` after the exact Draft is committed with a trusted signature in HEAD);
+`start ready` executes approved probes; `start begin --outcome OUT-ID[,OUT-ID]` activates eligible outcomes; `start show`
+prints the record, eligible outcomes and blockers. `CGSPEC_ALLOW_MOCKS=0` (default) blocks mock-based substitution;
+`1` allows labelled development mocks; final evaluation remains separate and may still require real proof.
+List local probe scripts/configuration in `check.inputs` (besides executable file arguments): readiness hashes them,
+and staged/CI checks reject changed inputs. Inline/external commands still depend on the approved runner/environment;
+trusted runner attestations and replay are later work. Probe stdout/stderr is not persisted. Message approvals must
+follow the Draft; signed-trailer approval binds the exact signed Draft commit even across unrelated later commits.
 
 Per-tool payloads: `--tool claude` reads Claude Code hook JSON (`tool_name`, `tool_input`);
 `--tool antigravity` reads `toolCall.name` / `toolCall.args` (`TargetFile`, `CommandLine`,

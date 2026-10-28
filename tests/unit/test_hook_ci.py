@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from tests.helpers import TempDir, git, git_project, hook, make_slice, run_script, set_test_command, write_json
+from tests.helpers import TempDir, git, git_project, hook, make_ready_start, make_slice, run_script, set_test_command, write_json
 
 CHECK = ["python3", "-c", "import pathlib,sys; sys.exit(0 if pathlib.Path('src/login/fixed.txt').exists() else 1)"]
 
@@ -26,6 +26,7 @@ class CiTests(unittest.TestCase):
         self.base = head(self.root)
         set_test_command(self.root, ["python3", "{test_file}"])
         make_slice(self.root, scope="src/login/**, tests/**")
+        make_ready_start(self.root)
         git(self.root, "add", "-A")
         git(self.root, "commit", "-q", "-m", "slice and test command")
         self.tier_t1()

@@ -125,7 +125,7 @@ class RegisteredCheckTests(unittest.TestCase):
         git(self.root, "add", "-A")
         git(self.root, "commit", "-q", "--no-verify", "-m", "register check")
         run_script("cgspec_hook.py", "tier", "set", "--tier", "T0", "--reason", "change a color", "--files",
-                   "src/a.ts", "--root", str(self.root))
+                   "src/a.ts", "--verify", "registered project checks", "--root", str(self.root))
         (self.root / "src/a.ts").write_text("export const color = '#ff0000';\n")
         git(self.root, "add", "-A")
         result = hook(self.root, "pre-commit", None, "--tool", "git")
@@ -160,7 +160,7 @@ class RegisteredCheckTests(unittest.TestCase):
         git(self.root, "commit", "-q", "--no-verify", "-m", "register check")
         base = git(self.root, "rev-parse", "HEAD").stdout.strip()
         run_script("cgspec_hook.py", "tier", "set", "--tier", "T0", "--reason", "change a color", "--files",
-                   "src/a.ts", "--root", str(self.root))
+                   "src/a.ts", "--verify", "registered project checks", "--root", str(self.root))
         (self.root / "src/a.ts").write_text("export const color = '#ff0000';\n")
         git(self.root, "add", "-A")
         git(self.root, "commit", "-q", "--no-verify", "-m", "raw hex")

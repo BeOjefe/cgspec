@@ -4,6 +4,11 @@ All notable changes, architectural invariants, and skill evolutions to `cgspec` 
 
 ---
 
+## [Unreleased]
+
+### Added
+- Slice success/readiness agreements now bind explicit outcomes and evaluation to fresh approval, executable probes, per-outcome coverage, and editor/staged/CI enforcement. T0 declarations require lightweight verification. `CGSPEC_ALLOW_MOCKS=0` disables mock substitution by default without changing real-proof requirements.
+
 ## [v0.2.3] — 2026-10-24
 
 ### Added

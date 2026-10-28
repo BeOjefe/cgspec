@@ -127,7 +127,11 @@ def citation_counts(view: View) -> dict[str, int]:
         if ref and ref != TRAILER_REF:
             counts[ref] = counts.get(ref, 0) + 1
     for rel in view.files_new("docs/slices"):
-        add(slice_fields((view.read_new(rel) or b"").decode("utf-8", "replace"))[2])
+        raw = view.read_new(rel) or b""
+        if rel.endswith(".start.json"):
+            add(str(approval.get("ref", "")) if isinstance((approval := load(raw).get("approval")), dict) else "")
+        elif rel.endswith(".md"):
+            add(slice_fields(raw.decode("utf-8", "replace"))[2])
     for check in load(view.read_new(CHECKS)).get("checks", []):
         if isinstance(check, dict):
             add(str((check.get("approval") or {}).get("ref", "")))
@@ -265,7 +269,7 @@ def slice_approvals(view: View, changes) -> list[str]:
     """Approved slices must cite a real approval; a changed Scope needs a new one."""
     reasons = []
     for change in changes:
-        if not change.path.startswith("docs/slices/") or change.status == "D":
+        if not change.path.startswith("docs/slices/") or not change.path.endswith(".md") or change.status == "D":
             continue
         new = slice_fields((view.read_new(change.path) or b"").decode("utf-8", "replace"))
         if new[0] not in ("Approved", "In progress", "Done"):
@@ -309,11 +313,8 @@ def ledger_approvals(view: View) -> list[str]:
 
 def staged_trailer_refs(view: View) -> bool:
     """True when the staged change cites the commit trailer anywhere (commit-msg must then see one)."""
-    for path, lines in view.added_lines().items():
-        if path.startswith("docs/slices/") or path == "docs/_memlog.md":
-            if any((m := APPROVAL_FIELD.match(l)) and m.group(1).strip().strip("`") == TRAILER_REF for l in lines):
-                return True
-    return False
+    from .start_gate import staged_trailer_refs as check
+    return check(view)
 
 
 def is_bootstrap(view: View) -> bool:

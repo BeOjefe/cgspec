@@ -41,13 +41,13 @@ def _slice(view: View, slice_id: str) -> tuple[str, list[str], str] | None:
     """(status, scope globs, approval id) of SLICE-NNN in the new tree."""
     bare = slice_id.split(":")[-1]
     for rel in view.files_new("docs/slices"):
-        if Path(rel).name.startswith(bare + "-"):
+        if rel.endswith(".md") and Path(rel).name.startswith(bare + "-"):
             status, scope, approval = trust.slice_fields((view.read_new(rel) or b"").decode("utf-8", "replace"))
             return status, [g.strip().strip("`") for g in scope.split(",") if g.strip()], approval
     return None
 
 
-def _tier_rules(view: View, code_changes, tier: dict | None) -> list[str]:
+def _tier_rules(view: View, code_changes, tier: dict | None, classes: dict) -> list[str]:
     if not code_changes:
         return []
     paths = {c.path for c in code_changes}
@@ -62,6 +62,8 @@ def _tier_rules(view: View, code_changes, tier: dict | None) -> list[str]:
             reasons.append(f"T0 allows {tiers.T0_MAX_FILES} files, this commit changes {len(paths)}")
         if lines > tiers.T0_MAX_LINES:
             reasons.append(f"T0 allows {tiers.T0_MAX_LINES} changed lines, this commit changes {lines}")
+        from . import start_gate
+        reasons += start_gate.commit_implementation(view, tier, set())
         return reasons
     found = _slice(view, tier.get("slice", ""))
     if not found or found[0] not in tiers.WORKING_SLICE:
@@ -71,6 +73,9 @@ def _tier_rules(view: View, code_changes, tier: dict | None) -> list[str]:
     reasons = [f"{p} is outside the scope of {tier.get('slice')}" for p in sorted(paths) if not match_any(p, found[1])]
     if tier.get("tier") == "T1" and lines > tiers.T1_MAX_LINES:
         reasons.append(f"T1 allows {tiers.T1_MAX_LINES} changed lines, this commit changes {lines}")
+    from . import start_gate
+    implementation_paths = {p for p in paths if start_gate.is_implementation(p, classes)}
+    reasons += start_gate.commit_implementation(view, tier, implementation_paths)
     return reasons
 
 
@@ -194,6 +199,8 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     exempt = trust.install_exempt(view)
     reasons = trust.append_only(view) + trust.frozen_touched(view, changes)
     reasons += runs.check_run_commit(view)
+    from . import start_gate
+    reasons += start_gate.commit_records(view, changes)
     reasons += _governance_reasons(root, view, changes)
     reasons += trust.engine_changes(view, changes, release_dir, strict)
     reasons += trust.approvals_have_inbox_lines(view) + trust.check_approvals(view)
@@ -204,7 +211,7 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     code_changes = [c for c in changes if (needs_tier(c.path) or (c.old_path and needs_tier(c.old_path)))
                     and c.path not in exempt
                     and not trust.engine_file(c.path) and not c.path.startswith(trust.ENGINE)]
-    reasons += _tier_rules(view, code_changes, tier)
+    reasons += _tier_rules(view, code_changes, tier, classes)
     reasons += _test_pairs(view, code_changes, tier, classes, project)
     reasons += _evidence_rules(view, changes)
     reasons += _document_dates(view, changes)

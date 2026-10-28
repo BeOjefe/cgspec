@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 import re
 from pathlib import Path
 
@@ -107,17 +108,20 @@ def record(root: Path, prompt: str, session_id: str | None = None) -> tuple[str,
         except (OSError, ValueError):
             data = {"schema": 1, "approvals": []}
         approval_id = new_id("A")
-        data.setdefault("approvals", []).append({"id": approval_id, "at": utc_now(), "excerpt": one_line[:200],
+        data.setdefault("approvals", []).append({"id": approval_id, "at": utc_now(), "captured_ns": time.time_ns(), "excerpt": one_line[:200],
                                                  "sha256": sha256_text(prompt)})
         write_json(approvals_path, data)
     return inbox_id, approval_id
 
 
-def approval_exists(root: Path, approval_id: str, target: str | None = None) -> bool:
+def approval_record(root: Path, approval_id: str, target: str | None = None) -> dict | None:
     try:
         data = json.loads((root / APPROVALS).read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return False
-    return any(isinstance(a, dict) and a.get("id") == approval_id and
-               (target is None or approval_target(str(a.get("excerpt", ""))) == target)
-               for a in data.get("approvals", []))
+        return None
+    return next((a for a in data.get("approvals", []) if isinstance(a, dict) and a.get("id") == approval_id and
+                 (target is None or approval_target(str(a.get("excerpt", ""))) == target)), None)
+
+
+def approval_exists(root: Path, approval_id: str, target: str | None = None) -> bool:
+    return approval_record(root, approval_id, target) is not None
