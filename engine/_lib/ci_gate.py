@@ -66,6 +66,13 @@ def prove_failed(root: Path, record: dict) -> str | None:
         return f"{name}: test file {test_file} was modified after failed_at {failed_at[:10]}; a failing test cannot be weakened to make it pass"
     if any(field in record for field in ("runner_id", "runner_hash", "selector")):
         return prove_named(root, record)
+    shown = git(root, "show", "HEAD:docs/_cgspec/project.json")
+    try:
+        project = json.loads(shown.stdout) if shown.returncode == 0 else {}
+    except ValueError:
+        project = {}
+    if isinstance(project, dict) and project.get("test_runners"):
+        return f"{name}: named runner and assertion-aware proof are required after migration"
     before = _run_at(root, record.get("failed_at", ""), command)
     if isinstance(before, str):
         return f"{name}: {before}"

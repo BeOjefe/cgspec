@@ -137,10 +137,13 @@ class AssertionAdapterTests(unittest.TestCase):
     def test_vitest_failure_is_assertion_not_infrastructure(self):
         from _lib.runner_execution import classify
         report = {"numTotalTests": 1, "numFailedTests": 1,
-                  "testResults": [{"assertionResults": [{"status": "failed"}]}]}
+                  "testResults": [{"assertionResults": [{"status": "failed", "failureMessages": [
+                      "AssertionError: expected 0 to be 1"]}]}]}
         self.assertEqual(classify("vitest-json", report, 1), "ASSERTION_FAILED")
         self.assertEqual(classify("vitest-json", report, 0), "INFRASTRUCTURE_ERROR")
         self.assertEqual(classify("vitest-json", {"testResults": []}, 1), "INFRASTRUCTURE_ERROR")
+        report["testResults"][0]["assertionResults"][0]["failureMessages"] = ["TypeError: undefined is not a function"]
+        self.assertEqual(classify("vitest-json", report, 1), "INFRASTRUCTURE_ERROR")
 
     def test_playwright_failure_is_assertion_not_infrastructure(self):
         from _lib.runner_execution import classify
@@ -265,6 +268,25 @@ class NamedRunnerIntegrationTests(unittest.TestCase):
         self.assertTrue(any("configuration hash" in reason for reason in
                             _test_pairs(View.staged(self.root), [], tier, classes, project)))
 
+    def test_post_migration_legacy_pair_cannot_cover_a_later_code_commit(self):
+        from _lib.ci_gate import prove_failed
+        from _lib.commit_gate import _test_pairs
+        from _lib.gitview import Change
+        legacy = {key: self.record[key] for key in ("test_file", "failed_at", "covers", "slice")}
+        legacy.update(_file="docs/_cgspec/06-evidence/tests/legacy.json", test_id="legacy",
+                      command=["python3", "tests/check.py", "legacy-report.json"])
+        write_json(self.root / legacy["_file"], {key: value for key, value in legacy.items() if key != "_file"})
+        git(self.root, "add", "docs")
+        git(self.root, "commit", "-q", "-m", "docs-only legacy pair")
+        self.assertIn("named runner", prove_failed(self.root, legacy))
+        (self.root / "src/login/other.txt").write_text("other\n")
+        git(self.root, "add", "src")
+        project = json.loads((self.root / "docs/_cgspec/project.json").read_text())
+        tier = {"tier": "T1", "slice": "SLICE-001"}
+        reasons = _test_pairs(View.staged(self.root), [Change("M", "src/login/other.txt")], tier,
+                              project["path_classes"], project)
+        self.assertTrue(any("named runner" in reason for reason in reasons))
+
     def test_completion_record_must_match_bound_test_pair(self):
         from _lib.commit_gate import _evidence_rules
         from _lib.gitview import Change
@@ -281,6 +303,12 @@ class NamedRunnerIntegrationTests(unittest.TestCase):
         write_json(self.root / path, completion)
         git(self.root, "add", "docs")
         self.assertTrue(any("does not match" in reason for reason in
+                            _evidence_rules(View.staged(self.root), [Change("A", path)])))
+        for field in ("runner_id", "runner_hash", "selector", "test_id"):
+            completion.pop(field)
+        write_json(self.root / path, completion)
+        git(self.root, "add", "docs")
+        self.assertTrue(any("needs runner_id" in reason for reason in
                             _evidence_rules(View.staged(self.root), [Change("A", path)])))
 
 

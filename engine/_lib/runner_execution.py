@@ -20,6 +20,11 @@ def _vitest(report: dict) -> tuple[int, int] | None:
         return None
     if report.get("numTotalTests") != len(statuses) or report.get("numFailedTests") != statuses.count("failed"):
         return None
+    for assertion in assertions:
+        if assertion["status"] == "failed" and not any(
+                isinstance(message, str) and "AssertionError" in message
+                for message in assertion.get("failureMessages", [])):
+            return None
     return statuses.count("passed"), statuses.count("failed")
 
 

@@ -102,8 +102,8 @@ def _test_pairs(view: View, code_changes, tier: dict | None, classes: dict, proj
             reasons.append(f"test-pair {record.get('test_id')}: test_file {test_file!r} must be an existing file in the tests path class")
         if any(field in record for field in ("runner_id", "runner_hash", "selector")):
             reasons += [f"{rel}: {reason}" for reason in runner_contracts.pair_errors(project, record, view.read_new)]
-        elif project.get("test_runners") and view.read_new(rel) != view.read_old(rel):
-            reasons.append(f"{rel}: new proof needs an approved named runner and configuration hash")
+        elif project.get("test_runners") and (code or view.read_new(rel) != view.read_old(rel)):
+            reasons.append(f"{rel}: proof after migration needs an approved named runner and configuration hash")
         elif not isinstance(command, list) or not command:
             reasons.append("no project test_command in project.json; set one (with your approval) so failing tests can be proven")
         elif record.get("command") != [test_file if part == "{test_file}" else part for part in command]:
@@ -148,6 +148,7 @@ def _evidence_rules(view: View, changes) -> list[str]:
     honestly. Project checks and independently run integration tests supply that proof.
     """
     prefix = "docs/_cgspec/06-evidence/"
+    project = trust.load(view.read_new(PROJECT_FILE.as_posix()))
     reasons = []
     for change in changes:
         if change.status == "D" or not change.path.startswith(prefix) or not change.path.endswith(".json"):
@@ -164,7 +165,9 @@ def _evidence_rules(view: View, changes) -> list[str]:
         elif claim == "integration" and source != "real_backend":
             reasons.append(f"{change.path}: {source} cannot prove integration with a real backend")
         fields = ("runner_id", "runner_hash", "selector", "test_id")
-        if any(field in record for field in fields):
+        test_backed = (any(field in record for field in fields) or
+                       (project.get("test_runners") and claim in ("integration", "ui_behavior")))
+        if test_backed:
             if not all(record.get(field) for field in fields):
                 reasons.append(f"{change.path}: runner completion needs runner_id, runner_hash, selector and test_id")
                 continue
