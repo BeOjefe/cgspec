@@ -8,7 +8,7 @@ import os
 import unittest
 from pathlib import Path
 
-from tests.helpers import TempDir, claude_payload, hook, install, make_slice, write_json
+from tests.helpers import TempDir, claude_payload, hook, install, make_ready_start, make_slice, write_json
 
 BLOCK = 2
 
@@ -59,7 +59,7 @@ class PreToolTests(unittest.TestCase):
 
     # --- tier declarations -----------------------------------------------------------------
     def test_tier_set_t0_writes_state_and_ledger(self):
-        result = tier(self.root, "set", "--tier", "T0", "--reason", "fix typo", "--files", "src/a.ts")
+        result = tier(self.root, "set", "--tier", "T0", "--reason", "fix typo", "--files", "src/a.ts", "--verify", "unit check")
         self.assertEqual(result.returncode, 0, result.stderr)
         state = json.loads((self.root / "docs/_cgspec/07-state/tier.json").read_text())
         self.assertEqual(state["active"]["tier"], "T0")
@@ -70,7 +70,7 @@ class PreToolTests(unittest.TestCase):
         for files, why in (("src/a.ts,src/b.ts,src/c.ts,src/d.ts", "3 files"),
                            ("src/new.ts", "new file"), ("package.json", "deps")):
             with self.subTest(why=why):
-                result = tier(self.root, "set", "--tier", "T0", "--reason", "test change", "--files", files)
+                result = tier(self.root, "set", "--tier", "T0", "--reason", "test change", "--files", files, "--verify", "unit check")
                 self.assertEqual(result.returncode, 1, why)
 
     def test_t1_needs_an_approved_slice(self):
@@ -85,7 +85,7 @@ class PreToolTests(unittest.TestCase):
         self.assertEqual(tier(self.root, "set", "--tier", "T1", "--reason", "test change", "--slice", "SLICE-001").returncode, 0)
 
     def test_tier_clear(self):
-        tier(self.root, "set", "--tier", "T0", "--reason", "test change", "--files", "src/a.ts")
+        tier(self.root, "set", "--tier", "T0", "--reason", "test change", "--files", "src/a.ts", "--verify", "unit check")
         self.assertEqual(tier(self.root, "clear").returncode, 0)
         self.assertIsNone(json.loads((self.root / "docs/_cgspec/07-state/tier.json").read_text())["active"])
 
@@ -99,13 +99,14 @@ class PreToolTests(unittest.TestCase):
         self.assertEqual(self.edit("docs/spines/01-INTENT.md").returncode, 0)
 
     def test_t0_allows_only_listed_existing_files(self):
-        tier(self.root, "set", "--tier", "T0", "--reason", "test change", "--files", "src/a.ts")
+        tier(self.root, "set", "--tier", "T0", "--reason", "test change", "--files", "src/a.ts", "--verify", "unit check")
         self.assertEqual(self.edit("src/a.ts").returncode, 0)
         self.assertEqual(self.edit("src/login/form.ts").returncode, BLOCK)
         self.assertEqual(self.write("src/brand_new.ts").returncode, BLOCK)
 
     def test_t1_allows_only_slice_scope(self):
         self.slice()
+        make_ready_start(self.root)
         tier(self.root, "set", "--tier", "T1", "--reason", "test change", "--slice", "SLICE-001")
         self.assertEqual(self.edit("src/login/form.ts").returncode, 0)
         self.assertEqual(self.write("src/login/new.ts").returncode, 0)
@@ -113,6 +114,7 @@ class PreToolTests(unittest.TestCase):
 
     def test_slice_downgraded_after_tier_set_blocks(self):
         self.slice()
+        make_ready_start(self.root)
         tier(self.root, "set", "--tier", "T1", "--reason", "test change", "--slice", "SLICE-001")
         self.slice(status="Blocked")
         self.assertEqual(self.edit("src/login/form.ts").returncode, BLOCK)
@@ -157,14 +159,14 @@ class PreToolTests(unittest.TestCase):
         self.assertEqual(self.write(".cgspec-scratch/probe.py", "print('x')\n").returncode, 0)
 
     def test_emojis_in_written_content_are_blocked(self):
-        tier(self.root, "set", "--tier", "T0", "--reason", "test change", "--files", "src/a.ts")
+        tier(self.root, "set", "--tier", "T0", "--reason", "test change", "--files", "src/a.ts", "--verify", "unit check")
         result = hook(self.root, "pre-tool", claude_payload(self.root, "Edit", file_path="src/a.ts",
                                                             old_string="1", new_string="2 \U0001F680"), "--tool", "claude")
         self.assertEqual(result.returncode, BLOCK)
         self.assertIn("emoji", result.stderr)
 
     def test_secret_in_written_content_is_blocked(self):
-        tier(self.root, "set", "--tier", "T0", "--reason", "test change", "--files", "src/a.ts")
+        tier(self.root, "set", "--tier", "T0", "--reason", "test change", "--files", "src/a.ts", "--verify", "unit check")
         result = hook(self.root, "pre-tool", claude_payload(self.root, "Edit", file_path="src/a.ts",
                                                             old_string="1", new_string="2 AKIAABCDEFGHIJKLMN12"), "--tool", "claude")
         self.assertEqual(result.returncode, BLOCK)
@@ -201,4 +203,4 @@ class TierReasonTests(unittest.TestCase):
             install(root)
             (root / "src").mkdir()
             (root / "src/a.ts").write_text("x\n")
-            self.assertEqual(tier(root, "set", "--tier", "T0", "--reason", "x", "--files", "src/a.ts").returncode, 1)
+            self.assertEqual(tier(root, "set", "--tier", "T0", "--reason", "x", "--files", "src/a.ts", "--verify", "unit check").returncode, 1)

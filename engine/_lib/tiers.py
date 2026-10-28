@@ -42,11 +42,14 @@ def classes_of(rel: str, path_classes: dict) -> list[str]:
 
 
 def set_tier(root: Path, tier: str, reason: str, files: list[str], slice_id: str | None,
-             path_classes: dict, protected) -> dict:
+             path_classes: dict, protected, verification: str | None = None) -> dict:
     entry = {"id": new_id("T"), "tier": tier, "reason": reason.strip(), "created": utc_now()}
     if len(entry["reason"]) < 3:
         raise CgspecError("--reason must say why (at least 3 characters)")
     if tier == "T0":
+        if not verification or not verification.strip():
+            raise CgspecError("T0 needs --verify describing how the outcome will be checked")
+        entry["verification"] = verification.strip()
         if not 1 <= len(files) <= T0_MAX_FILES:
             raise CgspecError(f"T0 lists 1 to {T0_MAX_FILES} files; this change is bigger, use T1 with a slice")
         for rel in files:

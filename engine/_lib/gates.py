@@ -94,6 +94,8 @@ class Context:
             return "this state file is written only by the engine"
         if rel.startswith("docs/_cgspec/05-runs/"):
             return "run records are created and managed only through cgspec_hook.py run commands"
+        if rel.startswith("docs/slices/") and rel.endswith(".start.json"):
+            return "success agreements are created and managed only through cgspec_hook.py start commands"
         if rel in GUARD_FILES or any(rel.startswith(d) or rel + "/" == d for d in GUARD_DIRS):
             return ("CGSpec's hooks and skills are installed here; an agent never changes its own guards or method. "
                     "The user changes them with install.py upgrade or uninstall")
@@ -137,7 +139,8 @@ def git_tracked(root: Path, rel: str) -> bool:
 
 
 def protected_list(ctx: "Context") -> list[str]:
-    return sorted(ctx.frozen | ctx.checks | set(ALWAYS_PROTECTED) | set(GUARD_FILES) |
+    starts = {p.relative_to(ctx.root).as_posix() for p in (ctx.root / "docs/slices").glob("*.start.json")}
+    return sorted(ctx.frozen | ctx.checks | starts | set(ALWAYS_PROTECTED) | set(GUARD_FILES) |
                   GOVERNANCE_FILES) + [ENGINE_DIR.as_posix() + "/"] + GUARD_DIRS + list(GOVERNANCE_DIRS)
 
 
@@ -172,13 +175,15 @@ def _tier_reason(ctx: Context, rel: str, is_new: bool) -> str | None:
             return f"T0 cannot create files ({rel}); use T1 with a slice"
         if rel not in tier.get("files", []):
             return f"{rel} is not in the T0 file list {tier.get('files', [])}; widen the tier"
-        return None
+        from .start_gate import editor_reason
+        return editor_reason(ctx.root, tier, rel, ctx.classes)
     found = tiers.find_slice(ctx.root, tier.get("slice", ""))
     if not found or found[1] not in tiers.WORKING_SLICE:
         return f"slice {tier.get('slice')} is missing or not Approved/In progress"
     if not match_any(rel, found[2]):
         return f"{rel} is outside the scope of {tier.get('slice')} ({', '.join(found[2])})"
-    return None
+    from .start_gate import editor_reason
+    return editor_reason(ctx.root, tier, rel, ctx.classes)
 
 
 def _hygiene_reasons(ctx: Context, rel: str, content: str) -> list[str]:

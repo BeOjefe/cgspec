@@ -139,6 +139,58 @@ class TrailerApprovalTests(unittest.TestCase):
                             "--slice", "SLICE-001", "--root", str(self.root))
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_start_trailer_binds_the_signed_draft_and_covers_readiness(self):
+        import json
+        from tests.unit.test_start_gate import draft
+        from _lib.commit_gate import evaluate
+        from _lib.gitview import View
+
+        key, pub = self.signing_key()
+        self.trust_key(pub)
+        slice_path = make_slice(self.root, approval="trailer")
+        self.signed_commit(key, "Approve slice\n\nApproved-by: Ojefe <me@example.com>")
+        source = self.root / ".cgspec-scratch/start.json"
+        source.parent.mkdir(exist_ok=True)
+        source.write_text(json.dumps(draft()))
+
+        def start(action, *args):
+            return run_script("cgspec_hook.py", "start", action, "--slice", "SLICE-001",
+                              "--root", str(self.root), *args)
+
+        self.assertEqual(start("set", "--file", str(source)).returncode, 0)
+        self.assertNotEqual(start("agree", "--approval", "trailer").returncode, 0)
+        self.signed_commit(key, "Approve exact start draft\n\nApproved-by: Ojefe <me@example.com>")
+        self.assertEqual(start("agree", "--approval", "trailer").returncode, 0)
+        git(self.root, "commit", "--allow-empty", "-q", "--no-verify", "-m", "unrelated work")
+        self.assertEqual(start("ready").returncode, 0)
+        self.assertEqual(start("begin", "--outcome", "OUT-login").returncode, 0)
+        start_path = slice_path.with_suffix(".start.json")
+        git(self.root, "add", str(start_path))
+        from _lib.commit_trust import commit_msg_problem
+        self.assertIsNone(commit_msg_problem(self.root, "readiness after signed Draft"))
+        git(self.root, "commit", "-q", "--no-verify", "-m", "readiness after approved draft")
+        self.assertEqual(evaluate(self.root, View.commit(self.root, "HEAD")), [])
+
+    def test_new_json_trailer_claim_requires_commit_message(self):
+        import json
+        from tests.unit.test_start_gate import draft
+        from _lib.commit_trust import commit_msg_problem
+
+        path = make_slice(self.root).with_suffix(".start.json")
+        source = self.root / ".cgspec-scratch/start.json"
+        source.parent.mkdir(exist_ok=True)
+        source.write_text(json.dumps(draft()))
+        run_script("cgspec_hook.py", "start", "set", "--slice", "SLICE-001", "--root", str(self.root),
+                   "--file", str(source))
+        record = json.loads(path.read_text())
+        from _lib.start import definition_hash
+        record["status"] = "Agreed"
+        record["approval"] = {"ref": "trailer", "at": record["updated"],
+                              "definition_hash": definition_hash(record), "commit": "0" * 40}
+        path.write_text(json.dumps(record))
+        git(self.root, "add", str(path))
+        self.assertIn("Approved-by", commit_msg_problem(self.root, "unsigned claim"))
+
     def test_ledger_approved_entry_needs_valid_approval_in_ci(self):
         log = self.root / "docs/_memlog.md"
         log.write_text(log.read_text() + "\n### [M-20261018-beef] 2026-10-18T00:00:00Z | tags: decision | owner: @agent | perms: public\n"

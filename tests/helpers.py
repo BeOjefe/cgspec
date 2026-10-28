@@ -132,6 +132,40 @@ def make_slice(root: Path, status: str = "Approved", scope: str = "src/login/**"
     return path
 
 
+def make_ready_start(root: Path, slice_id: str = "SLICE-001", outcome_id: str = "OUT-work") -> None:
+    """Give legacy gate fixtures a valid approved outcome; #30 tests exercise the workflow explicitly."""
+    from _lib import tiers
+    found = tiers.find_slice(root, slice_id)
+    if not found:
+        raise AssertionError(f"missing slice fixture {slice_id}")
+    definition = {
+        "goal": "Exercise the declared behavior with explicit proof",
+        "outcomes": [{
+            "id": outcome_id, "statement": "The scoped behavior is demonstrated",
+            "covers": found[2], "accept": ["The declared check passes"],
+            "reject": ["Unrelated or failing behavior is not accepted"],
+            "evaluation": {"method": "Run the scoped project checks", "requires_real": True,
+                           "data_source": "real_backend", "proof": ["logs"]},
+            "development": {"uses_mocks": False, "data_source": "real_backend"},
+        }],
+        "exclusions": [], "constraints": [],
+        "design": {"required": False, "target": None, "states": []}, "prerequisites": [],
+    }
+    source = root / ".cgspec-scratch/legacy-start.json"
+    source.parent.mkdir(exist_ok=True)
+    write_json(source, definition)
+    base = ("cgspec_hook.py", "start", "--root", str(root), "--slice", slice_id)
+    for args in (("set", "--file", str(source)),):
+        result = run_script(*base, *args)
+        if result.returncode:
+            raise AssertionError(result.stderr)
+    ref = approve(root, f"approve {slice_id.split(':')[-1]}")
+    for args in (("agree", "--approval", ref), ("ready",), ("begin", "--outcome", outcome_id)):
+        result = run_script(*base, *args)
+        if result.returncode:
+            raise AssertionError(result.stderr)
+
+
 def set_test_command(root: Path, command: list[str]) -> None:
     """Set project.json test_command with a fresh approval from the user, ready to commit."""
     import json as _json

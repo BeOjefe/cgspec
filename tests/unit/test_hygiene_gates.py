@@ -21,7 +21,7 @@ class WriteHygieneGateTests(unittest.TestCase):
         (self.root / "src").mkdir(exist_ok=True)
         (self.root / "src/a.ts").write_text("export const a = 1;\n")
         run_script("cgspec_hook.py", "tier", "set", "--tier", "T0", "--reason", "test hygiene",
-                   "--files", "src/a.ts", "--root", str(self.root))
+                   "--files", "src/a.ts", "--verify", "hygiene checks", "--root", str(self.root))
 
     def tearDown(self):
         self._tmp.__exit__(None, None, None)
@@ -85,7 +85,7 @@ class CommitHygieneGateTests(unittest.TestCase):
         self.root = self._tmp.__enter__()
         git_project(self.root)
         run_script("cgspec_hook.py", "tier", "set", "--tier", "T0", "--reason", "test commit hygiene",
-                   "--files", "src/a.ts", "--root", str(self.root))
+                   "--files", "src/a.ts", "--verify", "hygiene checks", "--root", str(self.root))
 
     def tearDown(self):
         self._tmp.__exit__(None, None, None)

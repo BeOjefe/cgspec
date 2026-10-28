@@ -93,6 +93,12 @@ def state_files(root: Path) -> Iterator[Finding]:
     manifest = root / "docs/_cgspec/04-checks/manifest.json"
     if manifest.is_file():
         yield from load_json(manifest, root, "checks-manifest")[1]
+    for path in sorted((root / "docs/slices").glob("*.start.json")):
+        data, findings = load_json(path, root, "start")
+        yield from findings
+        if not findings and isinstance(data, dict):
+            from .start import validate_record
+            yield from (Finding("E-SCHEMA", _rel(path, root), error) for error in validate_record(data))
     runs = root / "docs/_cgspec/05-runs"
     if not runs.is_dir():
         return
@@ -188,7 +194,7 @@ def records(root: Path) -> Iterator[Finding]:
         base = root / folder
         numbers: dict[str, str] = {}
         for path in sorted(base.iterdir()) if base.is_dir() else []:
-            if path.name == ".gitkeep" or not path.is_file():
+            if path.name == ".gitkeep" or not path.is_file() or path.name.endswith(".start.json"):
                 continue
             name = re.match(pattern, path.name)
             if not name:

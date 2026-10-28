@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from tests.helpers import (
-    TempDir, approve, claude_payload, git, git_project, hook, make_slice, run_script,
+    TempDir, approve, claude_payload, git, git_project, hook, make_ready_start, make_slice, run_script,
     set_test_command, write_json,
 )
 
@@ -29,8 +29,9 @@ class PrototypeScopeTests(unittest.TestCase):
         if kind == "T0":
             return run_script("cgspec_hook.py", "tier", "set", "--root", str(self.root),
                               "--tier", kind, "--reason", "correct prototype style",
-                              "--files", "docs/prototypes/files/style.css")
+                              "--files", "docs/prototypes/files/style.css", "--verify", "visual check")
         make_slice(self.root, scope=scope)
+        make_ready_start(self.root)
         return run_script("cgspec_hook.py", "tier", "set", "--root", str(self.root),
                           "--tier", kind, "--reason", "prototype behavior", "--slice", "SLICE-001")
 

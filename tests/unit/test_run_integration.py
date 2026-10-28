@@ -8,7 +8,7 @@ import os
 import unittest
 from pathlib import Path
 
-from tests.helpers import TempDir, approve, claude_payload, git, git_project, hook, install, make_slice, run_script, write_json
+from tests.helpers import TempDir, approve, claude_payload, git, git_project, hook, install, make_ready_start, make_slice, run_script, write_json
 from _lib import runs
 
 
@@ -41,6 +41,7 @@ class RunIntegrationTests(unittest.TestCase):
 
         # Set up an approved slice covering src/** and tests/**
         make_slice(self.root, number="001", scope="src/**, tests/**")
+        make_ready_start(self.root)
         git(self.root, "add", "-A")
         git(self.root, "commit", "-q", "-m", "initial baseline with slice")
         base_commit = git(self.root, "rev-parse", "HEAD").stdout.strip()

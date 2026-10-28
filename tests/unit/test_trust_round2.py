@@ -7,7 +7,7 @@ import json
 import os
 import unittest
 
-from tests.helpers import (TempDir, approve, claude_payload, git, git_project, hook, make_slice, run_script,
+from tests.helpers import (TempDir, approve, claude_payload, git, git_project, hook, make_ready_start, make_slice, run_script,
                            write_json)
 
 
@@ -109,6 +109,7 @@ class Round2Tests(unittest.TestCase):
     def prepare_fix(self, command):
         ref = approve(self.root, "approve SLICE-001")
         make_slice(self.root, scope="src/login/**, tests/**", approval=ref)
+        make_ready_start(self.root)
         commit(self.root, "slice")
         run_script("cgspec_hook.py", "tier", "set", "--tier", "T1", "--reason", "login fix", "--slice", "SLICE-001",
                    "--root", str(self.root))
@@ -157,6 +158,7 @@ class Round2Tests(unittest.TestCase):
         failed_at = head(self.root)  # test file does not exist yet here
         ref2 = approve(self.root, "approve SLICE-001")
         make_slice(self.root, scope="src/login/**, tests/**", approval=ref2)
+        make_ready_start(self.root)
         run_script("cgspec_hook.py", "tier", "set", "--tier", "T1", "--reason", "login fix", "--slice", "SLICE-001",
                    "--root", str(self.root))
         (self.root / "tests").mkdir()
