@@ -33,6 +33,7 @@ APPROVAL = re.compile(
     r")\b(?!.*\?\s*$)")
 DIRECT_TARGET = re.compile(r"((?:SLICE|ADR|CHK)-\d{3})\s*[.!]?", re.I)
 TEST_COMMAND = re.compile(r"test[ -]command\s*[.!]?", re.I)
+TEST_RUNNERS = re.compile(r"test[ -]runners\s*[.!]?", re.I)
 DECISION = re.compile(r"decision\s*:\s*(\S.*)", re.I)
 
 
@@ -75,6 +76,8 @@ def approval_target(text: str) -> str | None:
         return match.group(1).upper()
     if TEST_COMMAND.fullmatch(rest):
         return "test_command"
+    if TEST_RUNNERS.fullmatch(rest):
+        return "test_runners"
     if match := DECISION.fullmatch(rest):
         summary = " ".join(match.group(1).split()).casefold()
         return f"decision:{summary}"

@@ -1,0 +1,9 @@
+{
+  "name": "cgspec-named-runner-fixture",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "vitest": "5.0.5"
+  }
+}

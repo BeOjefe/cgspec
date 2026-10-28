@@ -64,6 +64,8 @@ def prove_failed(root: Path, record: dict) -> str | None:
         return f"{name}: test file {test_file} did not exist at {failed_at[:10]}, so it cannot have failed there"
     if git(root, "diff", "--quiet", failed_at, "HEAD", "--", test_file).returncode != 0:
         return f"{name}: test file {test_file} was modified after failed_at {failed_at[:10]}; a failing test cannot be weakened to make it pass"
+    if any(field in record for field in ("runner_id", "runner_hash", "selector")):
+        return prove_named(root, record)
     before = _run_at(root, record.get("failed_at", ""), command)
     if isinstance(before, str):
         return f"{name}: {before}"
@@ -74,6 +76,37 @@ def prove_failed(root: Path, record: dict) -> str | None:
         return f"{name}: {after}"
     if after != 0:
         return f"{name}: test {record.get('test_id')} still fails at HEAD"
+    return None
+
+
+def prove_named(root: Path, record: dict) -> str | None:
+    from . import runner_contracts, runner_execution
+    from .common import CgspecError
+    name = record["_file"]
+    definitions = []
+    for rev in (record["failed_at"], "HEAD"):
+        result = git(root, "show", f"{rev}:docs/_cgspec/project.json")
+        try:
+            project = json.loads(result.stdout) if result.returncode == 0 else {}
+        except ValueError:
+            project = {}
+        if not isinstance(project, dict) or not project.get("test_runners"):
+            return f"{name}: approved runner was not present at {rev[:10]}"
+        reader = lambda rel: (result.stdout if (result := git(root, "show", f"{rev}:{rel}", binary=True)).returncode == 0 else None)
+        problems = runner_contracts.pair_errors(project, record, reader)
+        if problems:
+            return f"{name}: {', '.join(problems)} at {rev[:10]}"
+        try:
+            runner, environment, _ = runner_contracts.resolve(project, record["runner_id"], reader)
+        except CgspecError as exc:
+            return f"{name}: {exc}"
+        definitions.append((runner, environment))
+    before = runner_execution.run_at(root, record["failed_at"], *definitions[0], record["test_file"])
+    if before != "ASSERTION_FAILED":
+        return f"{name}: red run was {before}, not an assertion failure at {record['failed_at'][:10]}"
+    after = runner_execution.run_at(root, "HEAD", *definitions[1], record["test_file"])
+    if after != "PASS":
+        return f"{name}: green run was {after}, not passing assertions at HEAD"
     return None
 
 

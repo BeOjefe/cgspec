@@ -133,6 +133,48 @@
     "test_command_approval": {
       "type": "string"
     },
+    "test_runners_approval": {
+      "type": "string",
+      "minLength": 1
+    },
+    "test_environments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "cwd", "setup", "readiness", "inputs", "timeout_seconds"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+          "cwd": {"$ref": "#/definitions/relativePath"},
+          "setup": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "readiness": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "inputs": {"type": "array", "items": {"$ref": "#/definitions/relativePath"}},
+          "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 900}
+        }
+      }
+    },
+    "test_runners": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "adapter", "command", "cwd", "selection", "applies_to", "environment", "timeout_seconds", "isolation", "report", "artifacts"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+          "adapter": {"enum": ["cgspec-json", "vitest-json", "playwright-json", "legacy-exit"]},
+          "command": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "cwd": {"$ref": "#/definitions/relativePath"},
+          "selection": {"enum": ["test_file"]},
+          "applies_to": {"type": "array", "minItems": 1, "items": {"$ref": "#/definitions/relativePath"}},
+          "environment": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+          "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 900},
+          "isolation": {"enum": ["per-run-worktree"]},
+          "report": {"enum": ["json", "stdout-json"]},
+          "artifacts": {"type": "array", "items": {"$ref": "#/definitions/relativePath"}}
+        }
+      }
+    },
     "approver_keys": {
       "type": "array",
       "items": {
@@ -147,6 +189,10 @@
     }
   },
   "definitions": {
+    "relativePath": {
+      "type": "string",
+      "pattern": "^(?![/\\\\])(?![A-Za-z]:)(?!.*(^|[/\\\\])\\.\\.([/\\\\]|$)).+$"
+    },
     "globs": {
       "type": "array",
       "items": {
