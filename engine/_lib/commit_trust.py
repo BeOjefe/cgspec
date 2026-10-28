@@ -139,6 +139,7 @@ def citation_counts(view: View) -> dict[str, int]:
         match = APPROVAL_FIELD.match(line)
         add(match.group(1).strip().strip("`") if match else "")
     add(load(view.read_new(PROJECT_FILE.as_posix())).get("test_command_approval", ""))
+    add(load(view.read_new(PROJECT_FILE.as_posix())).get("test_runners_approval", ""))
     return counts
 
 
@@ -314,7 +315,8 @@ def ledger_approvals(view: View) -> list[str]:
 def staged_trailer_refs(view: View) -> bool:
     """True when the staged change cites the commit trailer anywhere (commit-msg must then see one)."""
     from .start_gate import staged_trailer_refs as check
-    return check(view)
+    from .runner_trust import staged_trailer_ref
+    return check(view) or staged_trailer_ref(view)
 
 
 def is_bootstrap(view: View) -> bool:

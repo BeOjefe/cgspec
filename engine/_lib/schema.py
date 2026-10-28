@@ -96,4 +96,8 @@ def validate(value: Any, schema: dict, root: dict | None = None, at: str = "$") 
 
 
 def validate_named(value: Any, name: str) -> list[str]:
-    return validate(value, load_schema(name))
+    errors = validate(value, load_schema(name))
+    if name == "project" and not errors:
+        from .runner_contracts import errors as runner_errors
+        errors += runner_errors(value)
+    return errors

@@ -88,21 +88,27 @@ def _test_pairs(view: View, code_changes, tier: dict | None, classes: dict, proj
             and not (prototype_journey(c.path) or match_any(c.path, classes.get("tests", [])))
             and not _preserved_prototype(view, c)]
     paths = [p for p in view.files_new("docs/_cgspec/06-evidence/tests") if p.endswith(".json")]
-    records = [r for r in (trust.load(view.read_new(p)) for p in paths) if r.get("slice") == tier.get("slice")]
+    records = [(p, trust.load(view.read_new(p))) for p in paths]
+    records = [(p, r) for p, r in records if r.get("slice") == tier.get("slice")]
     head = "HEAD" if view.new == ":" else view.new
     reasons = []
-    for record in records:
+    from . import runner_contracts
+    for rel, record in records:
         rev, test_file = record.get("failed_at", ""), record.get("test_file", "")
         if not (view.commit_exists(rev) and view.is_ancestor(rev, head)):
             reasons.append(f"test-pair {record.get('test_id')}: failed_at {rev!r} is not a commit in this history")
         if (not test_file or not (prototype_journey(test_file) or match_any(test_file, classes.get("tests", [])))
                 or view.read_new(test_file) is None):
             reasons.append(f"test-pair {record.get('test_id')}: test_file {test_file!r} must be an existing file in the tests path class")
-        if not isinstance(command, list) or not command:
+        if any(field in record for field in ("runner_id", "runner_hash", "selector")):
+            reasons += [f"{rel}: {reason}" for reason in runner_contracts.pair_errors(project, record, view.read_new)]
+        elif project.get("test_runners") and (code or view.read_new(rel) != view.read_old(rel)):
+            reasons.append(f"{rel}: proof after migration needs an approved named runner and configuration hash")
+        elif not isinstance(command, list) or not command:
             reasons.append("no project test_command in project.json; set one (with your approval) so failing tests can be proven")
         elif record.get("command") != [test_file if part == "{test_file}" else part for part in command]:
             reasons.append(f"test-pair {record.get('test_id')}: command must be the project test_command run on its test_file")
-    covered = {p for r in records for p in r.get("covers", [])}
+    covered = {p for _, r in records for p in r.get("covers", [])}
     reasons += [f"{p} changed without a failing-test record for {tier.get('slice')} in 06-evidence/tests (spec 7)"
                 for p in code if p not in covered]
     return reasons
@@ -142,6 +148,7 @@ def _evidence_rules(view: View, changes) -> list[str]:
     honestly. Project checks and independently run integration tests supply that proof.
     """
     prefix = "docs/_cgspec/06-evidence/"
+    project = trust.load(view.read_new(PROJECT_FILE.as_posix()))
     reasons = []
     for change in changes:
         if change.status == "D" or not change.path.startswith(prefix) or not change.path.endswith(".json"):
@@ -157,6 +164,17 @@ def _evidence_rules(view: View, changes) -> list[str]:
                            "state whether it used fixtures, a real backend, static checks or an unknown source")
         elif claim == "integration" and source != "real_backend":
             reasons.append(f"{change.path}: {source} cannot prove integration with a real backend")
+        fields = ("runner_id", "runner_hash", "selector", "test_id")
+        test_backed = (any(field in record for field in fields) or
+                       (project.get("test_runners") and claim in ("integration", "ui_behavior")))
+        if test_backed:
+            if not all(record.get(field) for field in fields):
+                reasons.append(f"{change.path}: runner completion needs runner_id, runner_hash, selector and test_id")
+                continue
+            pairs = [trust.load(view.read_new(path)) for path in view.files_new(prefix + "tests")
+                     if path.endswith(".json")]
+            if not any(all(pair.get(field) == record[field] for field in fields) for pair in pairs):
+                reasons.append(f"{change.path}: runner completion does not match a bound test-pair")
     return reasons
 
 
@@ -205,7 +223,9 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     reasons += trust.engine_changes(view, changes, release_dir, strict)
     reasons += trust.approvals_have_inbox_lines(view) + trust.check_approvals(view)
     reasons += trust.slice_approvals(view, changes) + trust.ledger_approvals(view)
-    reasons += trust.test_command_change(view) + trust.approver_key_change(view) + trust.single_use(view)
+    from . import runner_trust
+    reasons += trust.test_command_change(view) + runner_trust.check(view)
+    reasons += trust.approver_key_change(view) + trust.single_use(view)
     reasons += [f"{c.path}: cache files may not be committed (__pycache__/.pyc)" for c in changes
                 if c.status != "D" and ("__pycache__/" in c.path or c.path.endswith(".pyc"))]
     code_changes = [c for c in changes if (needs_tier(c.path) or (c.old_path and needs_tier(c.old_path)))
