@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from . import git_protocol, tiers
+from . import git_protocol, proof_seals, tiers
 from .common import ENGINE_DIR, PROJECT_FILE, STATE_DIR
 from . import commit_trust as trust
 from .gates import EMOJI, HOST_PATH, Context, _is_script_name, _script_allowed
@@ -98,7 +98,9 @@ def _test_pairs(view: View, code_changes, tier: dict | None, classes: dict, proj
     for rel, record in records:
         rev, test_file = record.get("failed_at", ""), record.get("test_file", "")
         if not (view.commit_exists(rev) and view.is_ancestor(rev, head)):
-            reasons.append(f"test-pair {record.get('test_id')}: failed_at {rev!r} is not a commit in this history")
+            from .proof_seals import historical_pair_error
+            if problem := historical_pair_error(view, rel, record):
+                reasons.append(f"test-pair {record.get('test_id')}: {problem}")
         if (not test_file or not (prototype_journey(test_file) or match_any(test_file, classes.get("tests", [])))
                 or view.read_new(test_file) is None):
             reasons.append(f"test-pair {record.get('test_id')}: test_file {test_file!r} must be an existing file in the tests path class")
@@ -217,7 +219,7 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     ctx = Context.load(root)
     ctx.project = project  # the view may see a staged project.json the disk copy doesn't have yet
     exempt = trust.install_exempt(view)
-    reasons = trust.append_only(view) + trust.frozen_touched(view, changes)
+    reasons = trust.append_only(view) + trust.frozen_touched(view, changes) + proof_seals.record_errors(view, changes)
     reasons += runs.check_run_commit(view)
     from . import start_gate
     reasons += start_gate.commit_records(view, changes)
@@ -230,7 +232,7 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     reasons += trust.slice_approvals(view, changes) + trust.ledger_approvals(view)
     from . import runner_trust
     reasons += trust.test_command_change(view) + runner_trust.check(view)
-    reasons += trust.approver_key_change(view) + trust.single_use(view)
+    reasons += trust.approver_key_change(view) + proof_seals.signer_policy_errors(view) + trust.single_use(view)
     reasons += [f"{c.path}: cache files may not be committed (__pycache__/.pyc)" for c in changes
                 if c.status != "D" and ("__pycache__/" in c.path or c.path.endswith(".pyc"))]
     code_changes = [c for c in changes if (needs_tier(c.path) or (c.old_path and needs_tier(c.old_path)))

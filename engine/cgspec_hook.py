@@ -342,8 +342,6 @@ def cmd_tier(root: Path, args: argparse.Namespace) -> int:
     memlog_main(["--root", str(root), "add", "--tags", "tier", "--summary",
                  f"tier {entry['tier']} {entry['id']}: {entry['reason']} ({detail})"])
     return EXIT_OK
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cgspec_hook.py", description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -365,6 +363,8 @@ def build_parser() -> argparse.ArgumentParser:
         parser.add_argument(f)
     parser.add_argument("--review-rounds", type=int)
     parser.add_argument("--checks-passed", action="store_true")
+    from _lib.proof_commands import add_arguments as add_proof_arguments
+    add_proof_arguments(parser)
     return parser
 
 
@@ -376,6 +376,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.event == "start": from _lib import start; return start.cli(root, args)
         if args.event == "run": from _lib import runs; return runs.cli(root, args)
         if args.event == "git-plan": from _lib import git_protocol; return git_protocol.cli(root, args)
+        if args.event == "proof": from _lib import proof_commands; return proof_commands.cli(root, args)
         if args.event == "pre-tool": return pre_tool(root, args.tool, sys.stdin.read())
         if args.event == "pre-commit": return pre_commit(root)
         if args.event == "post-tool": return post_tool(root, args.tool, sys.stdin.read())

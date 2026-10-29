@@ -1,0 +1,39 @@
+{
+  "title": "docs/_cgspec/06-evidence/integrations/<map-id>.json — seal-to-integration mapping",
+  "type": "object",
+  "required": ["schema", "map_id", "seal", "seal_sha256", "strategy", "integrated_revision", "pull_request", "differences", "mapped_at", "attestation"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "map_id": {"type": "string", "pattern": "^MAP-[A-Za-z0-9_.-]+$"},
+    "seal": {"type": "string", "pattern": "^docs/_cgspec/06-evidence/seals/.+\\.json$"},
+    "seal_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "strategy": {"enum": ["merge", "squash", "rebase", "merge-queue"]},
+    "integrated_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "pull_request": {"type": "string", "minLength": 1},
+    "differences": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["path", "sealed_sha256", "integrated_sha256", "revalidation"], "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sealed_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "integrated_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "revalidation": {"type": "string", "pattern": "^docs/_cgspec/06-evidence/seals/.+\\.json$"}
+        }
+      }
+    },
+    "mapped_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+    "attestation": {
+      "type": "object", "required": ["identity", "provider", "workflow", "run_id", "signed_at", "signature"], "additionalProperties": false,
+      "properties": {
+        "identity": {"type": "string", "minLength": 1},
+        "provider": {"type": "string", "minLength": 1},
+        "workflow": {"type": "string", "minLength": 1},
+        "run_id": {"type": "string", "minLength": 1},
+        "signed_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+        "signature": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

@@ -383,12 +383,12 @@ def memlog(root: Path, parse) -> Iterator[Finding]:
             yield Finding("E-MEMLOG", MEMLOG_FILE.as_posix(), f"line {entry.line}: duplicate id {entry.id}")
         seen.add(entry.id)
 
-
 def blocked(root: Path) -> Iterator[Finding]:
     evidence = root / "docs/_cgspec/06-evidence"
     count = 0
     for path in sorted(evidence.rglob("*.json")) if evidence.is_dir() else []:
-        data, findings = load_json(path, root, "test-pair" if path.parent.name == "tests" else "evidence")
+        schema = {"tests": "test-pair", "seals": "proof-seal", "integrations": "proof-map"}.get(path.parent.name, "evidence")
+        data, findings = load_json(path, root, schema)
         yield from findings
         if (isinstance(data, dict) and data.get("verdict") == "PASS"
                 and data.get("claim") == "integration" and data.get("data_source") != "real_backend"):
