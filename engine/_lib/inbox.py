@@ -129,8 +129,9 @@ def record(root: Path, *, tool: str) -> tuple[str, str | None]:
         except (OSError, ValueError):
             data = {"schema": 1, "approvals": []}
         approval_id = new_id("A")
-        data.setdefault("approvals", []).append({"id": approval_id, "at": utc_now(), "captured_ns": time.time_ns(), "excerpt": one_line[:200],
-                                                 "sha256": sha256_text(prompt)})
+        entry = {"id": approval_id, "at": utc_now(), "captured_ns": time.time_ns(), "excerpt": one_line[:200],
+                 "sha256": sha256_text(prompt), "session_id": session_id}
+        data.setdefault("approvals", []).append(entry)
         write_json(approvals_path, data)
     return inbox_id, approval_id
 

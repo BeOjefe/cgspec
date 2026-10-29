@@ -27,6 +27,8 @@ class GitHookRelocationTests(unittest.TestCase):
         path = root / self.OWNED
         owned = json.loads(path.read_text())
         owned["adapters"].pop("git_hooks", None)
+        # Old installations predate the local signature gate.
+        (root / ".git/hooks/pre-push").unlink(missing_ok=True)
         owned["adapters"]["git_abs"] = [str(root / ".git/hooks" / name)
                                            for name in ("pre-commit", "commit-msg")]
         path.write_text(json.dumps(owned))
@@ -47,7 +49,7 @@ class GitHookRelocationTests(unittest.TestCase):
             root = self.project(tmp / "original")
             record = json.loads((root / self.OWNED).read_text())["adapters"]
             self.assertNotIn("git_abs", record)
-            self.assertEqual(record["git_hooks"], ["pre-commit", "commit-msg"])
+            self.assertEqual(record["git_hooks"], ["pre-commit", "commit-msg", "pre-push"])
 
     def test_uninstall_after_move_does_not_touch_reused_old_location(self):
         for legacy in (False, True):
@@ -74,7 +76,7 @@ class GitHookRelocationTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             record = json.loads((moved / self.OWNED).read_text())["adapters"]
             self.assertNotIn("git_abs", record)
-            self.assertEqual(record["git_hooks"], ["pre-commit", "commit-msg"])
+            self.assertEqual(record["git_hooks"], ["pre-commit", "commit-msg", "pre-push"])
 
     def test_uninstall_keeps_user_modified_hook(self):
         with TempDir() as tmp:
@@ -247,7 +249,7 @@ class GitHookRelocationTests(unittest.TestCase):
             res = run_script("install.py", "upgrade", "--root", str(root))
             self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
             record = json.loads((root / self.OWNED).read_text())["adapters"]
-            self.assertEqual(record.get("git_hooks"), ["pre-commit", "commit-msg"])
+            self.assertEqual(record.get("git_hooks"), ["pre-commit", "commit-msg", "pre-push"])
             # A modified owned hook might still call CGSpec: the whole uninstall is refused,
             # both hooks and the engine stay in place (finding 3).
             engine_file = root / "docs/_cgspec/01-engine/cgspec_hook.py"
@@ -267,7 +269,7 @@ class GitHookRelocationTests(unittest.TestCase):
             res = run_script("install.py", "upgrade", "--root", str(root))
             self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
             record = json.loads((root / self.OWNED).read_text())["adapters"]
-            self.assertEqual(record.get("git_hooks"), ["pre-commit", "commit-msg"])
+            self.assertEqual(record.get("git_hooks"), ["pre-commit", "commit-msg", "pre-push"])
 
     def test_f4_crlf_modified_hook_preserved_on_uninstall(self):
         with TempDir() as tmp:

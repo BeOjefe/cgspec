@@ -261,7 +261,7 @@ def _wire_git(root: Path, record: dict) -> list[str]:
         return [f"cannot prepare git hooks directory ({exc}): add the CGSpec call yourself"]
     notes, claimed_any = [], False
     try:
-        for event in ("pre-commit", "commit-msg"):
+        for event in git_hooks.EVENTS:
             note, claimed = _wire_one(fd, event, owns_already)
             notes.append(note)
             if claimed:
@@ -317,6 +317,8 @@ def refresh(root: Path, owned: dict) -> list[str]:
     """Refresh installed AI-host adapters without changing unrelated user hooks."""
     record, notes = owned.get("adapters", {}), []
     notes += git_hooks.migrate(root, record, GIT_HOOK, HOOK)
+    if git_hooks.owned_names(record):
+        notes += _wire_git(root, record)
     if "claude" in record:
         path = root / ".claude/settings.json"
         try:

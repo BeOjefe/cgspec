@@ -290,12 +290,12 @@ class UpgradeV1Tests(unittest.TestCase):
             git(root, "init", "-q")
             result, report = upgrade(root, "--tools", "git", "--apply")
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-            for event in ("pre-commit", "commit-msg"):
+            for event in ("pre-commit", "commit-msg", "pre-push"):
                 path = root / ".git/hooks" / event
                 self.assertTrue(path.is_file(), event)
                 self.assertIn("cgspec_hook.py", path.read_text())
             owned = json.loads((root / "docs/_cgspec/01-engine/owned-files.json").read_text())
-            self.assertEqual(owned["adapters"]["git_hooks"], ["pre-commit", "commit-msg"])
+            self.assertEqual(owned["adapters"]["git_hooks"], ["pre-commit", "commit-msg", "pre-push"])
 
     def test_modes_and_empty_legacy_dirs_survive_upgrade_rollback(self):
         with TempDir() as root:

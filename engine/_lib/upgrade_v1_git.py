@@ -22,7 +22,7 @@ def plan(root: Path, tools: str) -> tuple[list[dict], list[str]]:
     if hooks is None:
         return [], ["git hooks unavailable: require a Git repository rooted here without custom hooksPath"]
     out, issues = [], []
-    for event in ("pre-commit", "commit-msg"):
+    for event in git_hooks.EVENTS:
         target = hooks / event
         desired = git_hooks.expected_hook_bytes(GIT_HOOK, HOOK, event)
         if target.is_symlink() or (target.exists() and not target.is_file()):
