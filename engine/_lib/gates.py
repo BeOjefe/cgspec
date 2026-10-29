@@ -57,6 +57,66 @@ def credential_read_reasons(command: str) -> list[str]:
             "instead of reading secrets from disk" for hint in CREDENTIAL_STORE_HINTS if hint in lowered]
 
 
+def protected_command_reasons(command: str) -> list[str]:
+    """Approval capture is a host hook, never an agent-invoked engine writer.
+
+    Keep this in the shell guard even for engine commands otherwise exempted
+    from protected-path checks. Inspect argv/inline code, not quoted prose.
+    """
+    import shlex
+    from .shellparse import SHELLS, _segments, _strip_prefixes, split_heredocs
+    reason = "user-message/inbox.record capture is reserved for the host's UserPromptSubmit hook; never replay approvals"
+    lines, bodies = split_heredocs(command)
+    for body in bodies:
+        if re.search(r"\binbox\s*\.\s*record\s*\(|from\s+[\w.]*inbox\s+import\s+.*\brecord\b", body):
+            return [reason]
+    for line in lines:
+        lexer = shlex.shlex(line, posix=True, punctuation_chars=";&|<>()")
+        lexer.whitespace_split, lexer.commenters = True, ""
+        try:
+            tokens = list(lexer)
+        except ValueError:
+            tokens = line.split()
+        for seg in _segments([";" if t in {"(", ")"} else t for t in tokens]):
+            args = _strip_prefixes(seg)
+            while args and _strip_prefixes(args) != args:
+                args = _strip_prefixes(args)
+            if not args:
+                continue
+            name = Path(args[0]).name
+            if name in SHELLS:
+                code = next((args[i + 1] for i, arg in enumerate(args[:-1])
+                             if arg.startswith("-") and "c" in arg), "")
+                if code and protected_command_reasons(code):
+                    return [reason]
+            # An interpreter, env/xargs wrapper, module launch or executable script
+            # can all put the hook in argv. echo/printf/rg prose cannot invoke it.
+            if name in {"echo", "printf", "rg", "grep", "cat", "head", "tail"}:
+                continue
+            if any(re.search(r"\binbox\s*\.\s*record\s*\(|from\s+[\w.]*inbox\s+import\s+.*\brecord\b", arg)
+                   for arg in args):
+                return [reason]
+            for i, arg in enumerate(args):
+                if Path(arg).name == "cgspec_hook.py" or arg in {"engine.cgspec_hook", "cgspec_hook"}:
+                    rest = args[i + 1:]
+                    j = 0
+                    while j < len(rest):
+                        if rest[j] == "--":
+                            j += 1
+                            if rest[j:j + 1] == ["user-message"]:
+                                return [reason]
+                            break
+                        if rest[j] in {"--no-rerun", "--checks-passed"} or "=" in rest[j] and rest[j].startswith("-"):
+                            j += 1
+                        elif rest[j].startswith("-"):
+                            j += 2  # remaining engine options take a value
+                        else:
+                            if rest[j] == "user-message":
+                                return [reason]
+                            break
+    return []
+
+
 @dataclass
 class Context:
     root: Path

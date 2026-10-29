@@ -5,7 +5,7 @@ import json
 import unittest
 from unittest.mock import patch
 
-from tests.helpers import TempDir, git, git_project, hook, install, run_script, write_json
+from tests.helpers import TempDir, git, git_project, hook, install, run_script, user_message, write_json
 from _lib import session
 from _lib.common import STATE_DIR
 
@@ -216,7 +216,8 @@ class SourceRecoveryTests(unittest.TestCase):
 
     def test_hook_activity_does_not_create_false_drift(self):
         self.assertEqual(self.capture().returncode, 0)
-        hook(self.root, "user-message", {"prompt": "hello"}, "--tool", "claude")
+        self.assertEqual(user_message(self.root, "hello").returncode, 0)
+        self.assertIn("hello", (self.root / "docs/00-INBOX.md").read_text())
         write_json(self.root / STATE_DIR / "budget.json", {"schema": 1})
         session.stop_decision(self.root, [])
         self.assertNotIn("changed since capture", session.pack(self.root, "0 errors"))

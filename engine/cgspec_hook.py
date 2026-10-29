@@ -68,12 +68,12 @@ def normalize(payload: dict, tool: str) -> dict:
 
 
 def shell_reasons(ctx: Context, command: str, cwd: str | None) -> list[str]:
-    from _lib.gates import credential_read_reasons, git_tracked, protected_list
+    from _lib.gates import credential_read_reasons, git_tracked, protected_command_reasons, protected_list
     from _lib.shellparse import WRITE_HINTS, destructive_git_reasons, mentions
     import posixpath
     targets, deletes, inline, broad = write_targets(command, cwd or str(ctx.root))
     guarded = protected_list(ctx)
-    reasons = credential_read_reasons(command) + destructive_git_reasons(command)
+    reasons = credential_read_reasons(command) + destructive_git_reasons(command) + protected_command_reasons(command)
     if re.search(r"\binstall\.py\b[^;&|]*\b(uninstall|upgrade|install)\b", command):
         reasons.append("installing, upgrading or uninstalling CGSpec is done by the user, not the agent; "
                        "tell the user the exact install.py command to run")
@@ -206,14 +206,6 @@ def ci(root: Path, base: str | None, rerun: bool, args: argparse.Namespace) -> i
     return EXIT_OK
 
 
-def read_payload(raw: str) -> dict:
-    try:
-        data = json.loads(raw) if raw.strip() else {}
-        return data if isinstance(data, dict) else {}
-    except ValueError:
-        return {}
-
-
 def doctor_state(root: Path) -> tuple[int, str]:
     import doctor
     findings = doctor.run_checks(root)
@@ -224,14 +216,11 @@ def doctor_state(root: Path) -> tuple[int, str]:
     return len(errors), summary
 
 
-def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str) -> int:
+def lifecycle(root: Path, event: str, args: argparse.Namespace) -> int:
     from _lib import inbox, session
     if event == "user-message":
         try:
-            payload = read_payload(raw)
-            prompt = payload.get("prompt") or ""
-            if prompt:
-                inbox.record(root, prompt, session_id=payload.get("session_id"))
+            inbox.record(root, tool=args.tool)
         except Exception as exc:  # never block the user's message
             print(f"cgspec_hook: inbox capture failed: {exc!r}", file=sys.stderr)
         return EXIT_OK
@@ -388,7 +377,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"checkpoint updated: next: {cp['next_action'] or '(none)'}; in flight: {cp['in_flight'] or 'nothing'}")
             return EXIT_OK
         if args.event in ("user-message", "session-start", "session-check", "pre-compact", "stop", "commit-msg"):
-            return lifecycle(root, args.event, args, sys.stdin.read() if args.event == "user-message" else "")
+            return lifecycle(root, args.event, args)
         raise CgspecError(f"unknown event: {args.event}")
     except CgspecError as exc:
         print(f"cgspec_hook: {exc}", file=sys.stderr)
