@@ -52,6 +52,13 @@ VALID = {
                   "covers": ["src/login/form.ts"], "slice": "SLICE-004", "recorded": NOW},
     "evidence": {"schema": 1, "check": "doctor", "revision": "abc1234", "verdict": "PASS", "ran_at": NOW, "ran_by": "ci"},
     "legacy-baseline": {"schema": 1, "created": NOW, "files": {"src/old.js": {"sha256": H64, "lines": 900}}},
+    "capabilities": {"schema": 1, "capabilities": [{"id": "CAP-github-browser", "kind": "account_access",
+                                                    "summary": "Authenticated GitHub browser session",
+                                                    "usage": "Use the open session; never handle credentials",
+                                                    "owner": "user", "assistance": "Sign in, then rerun the check",
+                                                    "check": {"argv": ["python3", "probe.py"], "cwd": ".",
+                                                              "timeout_seconds": 10, "inputs": ["probe.py"]}}],
+                     "approval": None, "drafted_at": NOW, "drafted_ns": 1, "updated": NOW},
 }
 
 # (schema, mutation description, function producing an invalid doc)
@@ -78,6 +85,11 @@ INVALID = [
     ("test-pair", "non-sha revision", lambda d: d.update(failed_at="yesterday")),
     ("evidence", "made-up verdict", lambda d: d.update(verdict="LGTM")),
     ("legacy-baseline", "negative lines", lambda d: d["files"]["src/old.js"].update(lines=-1)),
+    ("capabilities", "capability without a check", lambda d: d["capabilities"][0].update(check=None)),
+    ("capabilities", "unknown capability kind", lambda d: d["capabilities"][0].update(kind="anything")),
+    ("start", "malformed capability reference", lambda d: d["prerequisites"].append(
+        {"id": "REQ-browser", "need": "Browser session", "owner": "user", "when": "before_start",
+         "outcomes": ["OUT-login"], "assistance": "Sign in", "capability": "browser", "check": None})),
 ]
 
 

@@ -34,6 +34,7 @@ APPROVAL = re.compile(
 DIRECT_TARGET = re.compile(r"((?:SLICE|ADR|CHK)-\d{3})\s*[.!]?", re.I)
 TEST_COMMAND = re.compile(r"test[ -]command\s*[.!]?", re.I)
 TEST_RUNNERS = re.compile(r"test[ -]runners\s*[.!]?", re.I)
+CAPABILITIES = re.compile(r"capabilities\s*[.!]?", re.I)
 SUPERSESSION = re.compile(r"supersession\s+(R-\d{8}-[0-9a-f]{4})\s+(?:to|by)\s+"
                          r"(R-\d{8}-[0-9a-f]{4})\s*[.!]?", re.I)
 DECISION = re.compile(r"decision\s*:\s*(\S.*)", re.I)
@@ -80,6 +81,8 @@ def approval_target(text: str) -> str | None:
         return "test_command"
     if TEST_RUNNERS.fullmatch(rest):
         return "test_runners"
+    if CAPABILITIES.fullmatch(rest):
+        return "capabilities"
     if match := SUPERSESSION.fullmatch(rest):
         return f"supersession:R-{match.group(1)[2:].lower()}:R-{match.group(2)[2:].lower()}"
     if match := DECISION.fullmatch(rest):

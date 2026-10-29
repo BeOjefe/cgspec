@@ -31,7 +31,8 @@ class StartCommitTests(unittest.TestCase):
         self.slice_path = make_slice(self.root, scope="src/login/**,tests/**,docs/prototypes/**")
         source = self.root / ".cgspec-scratch/start.json"
         source.parent.mkdir(exist_ok=True)
-        source.write_text(json.dumps(draft()))
+        self.before_start()
+        source.write_text(json.dumps(self.definition()))
         self.start("set", "--file", str(source))
         ref = approve(self.root, "approve SLICE-001")
         self.start("agree", "--approval", ref)
@@ -88,6 +89,12 @@ class StartCommitTests(unittest.TestCase):
 
     def tearDown(self):
         self._tmp.__exit__(None, None, None)
+
+    def before_start(self) -> None:
+        """Hook for subclasses that prepare project state before the agreement is drafted."""
+
+    def definition(self) -> dict:
+        return draft()
 
     def start(self, action: str, *args: str):
         result = run_script(

@@ -71,6 +71,9 @@ def validate_record(data: dict) -> list[str]:
         missing = set(item["outcomes"]) - known
         if missing:
             errors.append(f"{item['id']}: unknown outcomes {sorted(missing)}")
+        if item.get("capability") and item["check"] is not None:
+            errors.append(f"{item['id']}: a capability-backed prerequisite takes its check from "
+                          "docs/_cgspec/capabilities.json; set check to null")
     if data["design"]["required"] and not (data["design"]["target"] and data["design"]["states"]):
         errors.append("design.target and design.states are required before implementation")
     missing_active = set(data["active_outcomes"]) - known
@@ -283,12 +286,19 @@ def run_probe(root: Path, req: dict) -> dict:
     return probe_result(req, "BLOCKED", detail, now, hashes)
 
 
+def probe_requirement(root: Path, req: dict) -> dict:
+    if req.get("capability"):
+        from .capabilities import probe_prerequisite
+        return probe_prerequisite(root, req)
+    return run_probe(root, req)
+
+
 def ready(root: Path, slice_id: str) -> int:
     path, data = load(root, slice_id)
     if data["status"] not in ("Agreed", "Ready", "In progress"):
         raise CgspecError("approve the success definition before readiness")
     allow_mocks = mocks_enabled()
-    checks = [run_probe(root, req) for req in data["prerequisites"] if req["when"] == "before_start"]
+    checks = [probe_requirement(root, req) for req in data["prerequisites"] if req["when"] == "before_start"]
     data["readiness"] = {"definition_hash": definition_hash(data), "mocks_allowed": allow_mocks,
                          "ran_at": utc_now(), "checks": checks}
     eligible = [o["id"] for o in data["outcomes"] if not eligibility_errors(data, o["id"], allow_mocks, root_reader(root))]

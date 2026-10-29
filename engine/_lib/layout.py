@@ -59,7 +59,7 @@ ALLOWED_IN_DOCS = {
     "spines", "adrs", "slices", "prototypes", "_cgspec",
 }
 ALLOWED_IN_CGSPEC = {
-    "project.json", "01-engine", "02-research", "03-councils", "04-checks",
+    "project.json", "capabilities.json", "01-engine", "02-research", "03-councils", "04-checks",
     "05-runs", "06-evidence", "07-state", "_archive",
 }
 ALLOWED_STATE_FILES = {

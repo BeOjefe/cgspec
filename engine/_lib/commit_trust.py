@@ -140,8 +140,8 @@ def citation_counts(view: View) -> dict[str, int]:
         add(match.group(1).strip().strip("`") if match else "")
     add(load(view.read_new(PROJECT_FILE.as_posix())).get("test_command_approval", ""))
     add(load(view.read_new(PROJECT_FILE.as_posix())).get("test_runners_approval", ""))
-    from .run_supersession import approval_refs
-    for ref in approval_refs(view): add(ref)
+    from . import capabilities, run_supersession
+    for ref in (*run_supersession.approval_refs(view), capabilities.approval_ref(view)): add(ref)
     return counts
 
 

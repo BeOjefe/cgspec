@@ -93,7 +93,8 @@ def staged_trailer_refs(view) -> bool:
             if any((m := trust.APPROVAL_FIELD.match(line)) and m.group(1).strip().strip("`") == trust.TRAILER_REF
                    for line in lines):
                 return True
-    return False
+    from .capabilities import staged_trailer_ref
+    return staged_trailer_ref(view)
 
 
 def _approval_reason(view, rel: str, data: dict) -> str | None:
@@ -170,6 +171,28 @@ def _candidate_plan(view, slice_id: str) -> dict | None:
     return None
 
 
+def _probe_binding(view, req: dict, hashes: dict) -> list[str]:
+    """Readiness must hash every probe input, and the candidate must hold the checked bytes."""
+    reasons, check = [], req["check"]
+    if req.get("capability"):
+        from .capabilities import REGISTRY_REL, candidate_check
+        check = candidate_check(view, req["capability"])
+        if REGISTRY_REL not in hashes:
+            reasons.append(f"{req['id']}: readiness did not bind the capability registry; rerun start ready")
+    if check is None:
+        return reasons
+    if not set(check["inputs"]).issubset(hashes):
+        reasons.append(f"{req['id']}: readiness missing declared probe input hashes")
+    for arg in check["argv"]:
+        if view.read_new(arg) is not None and arg not in hashes:
+            reasons.append(f"{req['id']}: executable probe input {arg} was not bound to readiness")
+    for input_path, digest in hashes.items():
+        raw = view.read_new(input_path)
+        if raw is None or hashlib.sha256(raw).hexdigest() != digest:
+            reasons.append(f"{req['id']}: staged readiness input {input_path} differs from checked version")
+    return reasons
+
+
 def commit_implementation(view, tier: dict, paths: set[str]) -> list[str]:
     if tier.get("tier") == "T0":
         return [] if tier.get("verification") else ["T0 needs explicit verification in 07-state/tier.json"]
@@ -198,19 +221,8 @@ def commit_implementation(view, tier: dict, paths: set[str]) -> list[str]:
         reasons.append("commit combines implementation for unrelated outcomes; split it into logical behavior commits")
     results = {result["id"]: result for result in data["readiness"]["checks"]}
     for req in data["prerequisites"]:
-        if req["when"] != "before_start" or req["check"] is None or not touched_outcomes.intersection(req["outcomes"]):
-            continue
-        hashes = results[req["id"]]["input_hashes"]
-        declared = set(req["check"]["inputs"])
-        if not declared.issubset(hashes):
-            reasons.append(f"{req['id']}: readiness missing declared probe input hashes")
-        for arg in req["check"]["argv"]:
-            if view.read_new(arg) is not None and arg not in hashes:
-                reasons.append(f"{req['id']}: executable probe input {arg} was not bound to readiness")
-        for input_path, digest in hashes.items():
-            raw = view.read_new(input_path)
-            if raw is None or hashlib.sha256(raw).hexdigest() != digest:
-                reasons.append(f"{req['id']}: staged readiness input {input_path} differs from checked version")
+        if req["when"] == "before_start" and touched_outcomes.intersection(req["outcomes"]):
+            reasons += _probe_binding(view, req, results[req["id"]]["input_hashes"])
     for path in sorted(paths):
         matched = _matching(data, path)
         if not matched:
