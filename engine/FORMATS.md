@@ -18,17 +18,35 @@ Removing named runners is not a silent downgrade.
 
 Each runner declares its ID, adapter, argument vector, working directory, test selection,
 `applies_to` source globs, environment reference, timeout, isolation, report, and artifacts.
-An environment declares setup/readiness argument vectors, working directory, timeout, and
-literal input files. The hash covers runner and environment definitions plus the bytes of
-those inputs at the checked revision. Missing inputs and changed definitions or inputs block
-proof; changing runner configuration requires renewed approval.
+An environment declares setup/readiness argument vectors, working directory, timeout,
+literal input files and `network` (`online` by default, or `offline-cache`). Optional `build`
+and `services` are arrays of argument vectors; `cleanup` is one argument vector.
+Optional `variables` hold non-secret values, and `secrets` list required environment variable
+names, never their values. Offline-cache requires a lockfile in `inputs`, and the operator
+must provide its dependency cache and use a locked installer. A setup or build step that
+resolves dependencies with an unlocked command (`npm install`, `pip install` without `-r`,
+`yarn add`, `poetry add`, and similar) is rejected for every network mode. The engine sets
+npm and pip offline flags but does not sandbox arbitrary network clients. The hash covers
+runner and environment definitions plus the bytes of those inputs at the checked revision.
+Missing inputs and changed definitions or inputs block proof; changing configuration requires
+renewed approval.
 
 Commands run directly as argument vectors, never through a shell, in a separate disposable
 Git worktree and report directory for each run. `{test_file}` occurs exactly once; `{report}`
 is supplied only for file reports. Structured `cgspec-json`, `vitest-json`, and
 `playwright-json` reports distinguish assertions from setup, runtime, and malformed-report
-failures. New `legacy-exit` definitions are rejected. Artifact patterns declare conventions;
-CI currently removes run output with its worktree and does not upload runner artifacts.
+failures; a concurrent runtime or unhandled error is never a valid red assertion. New
+`legacy-exit` definitions are rejected. Every run checks out the full pinned commit,
+installs/builds in that worktree, and verifies that setup did not add, modify, or delete any
+file under the runner's `applies_to` scope or the selected test. Commands run in their own
+process group, killed with descendants on timeout. Setup, build, readiness, test, service and
+cleanup logs and outcomes survive worktree removal; cleanup failure overrides either test
+verdict. The result records full revision, runner/environment/input fingerprints, test and
+report hashes, commands, logs, and hashes of declared artifacts. Local proof JSON lives under
+`.cgspec-scratch/ci-proof/`; the generated CI workflow instead writes to `$RUNNER_TEMP/cgspec-proof`
+and uploads the engine-written red/green JSON after an attempted governance step, whether it
+passes or fails. The proof directory is hidden from the candidate's own processes, and a
+skipped step uploads nothing. Artifact patterns hash files but do not persist their bytes.
 
 The real-tool fixture is `tests/fixtures/named-web/`; run its opt-in check with
 `CGSPEC_RUN_WEB_INTEGRATION=1 python3 -m unittest tests.integration.test_named_web -v`.
@@ -50,7 +68,7 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | `docs/_cgspec/07-state/checkpoint.json` | `checkpoint` | main agent via checkpoint command | `in_flight` is written before each batch and cleared after; clearing it is not project completion. Optional source observations and unresolved-stop diagnostics support recovery. |
 | `docs/_cgspec/07-state/budget.json` | `budget` | hooks | Counts helpers, review rounds and research passes against limits. |
 | `docs/_cgspec/07-state/quota.json` | `quota` | Host quota adapter; no collector/writer is included in this checkout | `quota.py --root <project> [--json]` and session packs validate freshness (five minutes), windows and thresholds. Missing or invalid readings give bounded advice; the command does not collect usage or enforce a task gate (spec 9). |
-| `docs/_cgspec/06-evidence/tests/<test-id>.json` | `test-pair` | slice workflow | `failed_at` is the commit where the test failed. Legacy `test_command` proof replays the command. A new named proof additionally records `runner_id`, `runner_hash`, and `selector`; CI re-runs the approved runner at both revisions and checks structured assertion results. |
+| `docs/_cgspec/06-evidence/tests/<test-id>.json` | `test-pair` | slice workflow | `failed_at` is the commit where the test failed. Unchanged legacy `test_command` proof replays exit codes and is labelled `legacy exit-code-only proof`; it does not meet the new strict assertion-aware contract. A new named proof additionally records `runner_id`, `runner_hash`, and `selector`; CI re-runs the approved runner at both revisions and checks structured assertion results. |
 | `docs/_cgspec/06-evidence/<scope>/<check>.json` | `evidence` | whoever ran the check | New PASS records name `claim` and `data_source`. A fixture or unknown source cannot support `claim: integration`; use `data_source: real_backend` only after exercising the real backend. When present, `runner_id`, `runner_hash`, `selector`, and `test_id` must all match a test-pair. `state` becomes `Stale` when a covered file changes. A label does not authenticate the runner or prove the backend was real. |
 | `docs/prototypes/_baselines/<screen>-<viewport>.png` | baseline | `visual_audit.py --approve-baseline` | Approved visual baseline screenshot; read-only and recorded with sha256 in `frozen.json` (kind `baseline`). Protected against overwrite by write and commit gates. |
 | `docs/prototypes/<screen>/journeys/<name>.json` | journey (checked by `journey.py`) | main agent at layer 4 | `name`, `url` (file next to the screen, or `http://` for the real frontend), optional `viewports` (`desktop`, `mobile`) and `covers`, and `steps`. Each step has one action on a `data-testid` (`click`, `fill`+`value`, `press`+`key`, `select`+`value`, `check`, `hover`, `goto`, `screenshot`) or `expect` with `visible`, `hidden`, `text`+`equals`/`contains`, `value`+`equals`, `count`+`equals`, `enabled`, `disabled`, `url`; a `state` label may go with any step. Evidence goes to `06-evidence/journeys/`, visual audits to `06-evidence/visual/`, registered checks to `06-evidence/checks/`. Journey names (and screen names) must be non-empty with no newlines or control characters. `visual_audit.py` compares current renders against approved baselines in `docs/prototypes/_baselines/` inside Chromium (reporting `W-DRIFT` or `E-DRIFT` when exceeding `visual_drift_threshold`, diff image in `.cgspec-scratch/visual/`), and renders in dark mode (`colorScheme: "dark"`, reporting info if identical to light or labeling dark contrast/focus failures `(dark)`). `verify.py` runs doctor, journeys and visual audit in one pass and prints a summary table. `journey.py` and `visual_audit.py` take `--json-out FILE` (`{"schema": 1, "tool", "records": [{"item", "verdict", "detail"}]}`); `visual_summary.py` turns those into the CI `evidence.json` and step summary. |
