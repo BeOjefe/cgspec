@@ -1,5 +1,5 @@
 # CGSpec implementation status
-Created: 2026-10-20T17:46:07Z · Last edited: 2026-10-29T13:37:17Z
+Created: 2026-10-20T17:46:07Z · Last edited: 2026-10-29T17:06:58Z
 
 This is the current status reference. The method describes required behavior; this page identifies limits of its implementation. Historical audit results are tied to their source revision and do not automatically apply to later changes.
 
@@ -25,6 +25,7 @@ The source tree is a plugin package, not an installed consumer layout. Run the p
 - `quota.py --root <project> [--json]` reads an existing quota file. Session packs use the same evaluator. Missing, malformed, future, older-than-five-minute and reset-window readings cannot be presented as current full quota. At 25% remaining the advice is frugal work; at 15% finish an atomic unit, checkpoint and pause; at 5% only save logs/state without new code. The ladder uses the lowest valid remaining window conservatively. Weekly quota at 10% or less blocks automatic wake-up advice; missing weekly data leaves that advice unknown. This is agent guidance, not a hard task gate, provider telemetry collector or scheduler.
 - Model-fit advice, reference-led design, IMAGE-WORD alignment, exact media-prompt relay and independent architecture challenges are workflow requirements. They are not automatic routing or proof of design quality.
 - This repository's squash-only merge setting, local main-push guard and post-push PR-origin workflow are in place. They do not prevent direct upstream pushes with the current owner credentials. See [ADR-006](adr/ADR-006-main-branch-governance.md).
+- Agent-side capabilities (issue #53, source-tested): `docs/_cgspec/capabilities.json` declares once, per project, what the agent may use beyond the repository, each with an executable check and a single approval naming capabilities. Slice prerequisites reference a `CAP-` ID; `start ready` runs the registry check, binds the registry hash and fails closed on a missing, unapproved, undeclared or failing capability. A check proves only that its probe passed when run; whether a probe meaningfully exercises a browser session, model or messaging channel depends on the project's own script. No host adapter runs `capability check` automatically at session start, and no consumer project has been upgraded.
 - Release classification is engine-backed: `cgspec_hook.py release check --target VERSION` reads the declared `release` policy from `project.json` and each included slice's `Release:` field, computes the highest required bump (treating backward-compatible deprecations as at least minor and never guessing a policy for undocumented projects), and rejects undersized targets. The trusted-installation bootstrap and a live installed-CI rehearsal remain unproven and out of scope for this gate.
 
 ## Remaining release and adoption limits

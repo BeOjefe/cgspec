@@ -221,8 +221,8 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     exempt = trust.install_exempt(view)
     reasons = trust.append_only(view) + trust.frozen_touched(view, changes) + proof_seals.record_errors(view, changes)
     reasons += runs.check_run_commit(view)
-    from . import start_gate
-    reasons += start_gate.commit_records(view, changes)
+    from . import capabilities, start_gate
+    reasons += start_gate.commit_records(view, changes) + capabilities.commit_records(view, changes)
     from . import parity_manifest
     reasons += parity_manifest.gate(view, [c for c in changes if c.path not in exempt
                                and not c.path.startswith(trust.ENGINE)], project)

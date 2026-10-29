@@ -19,6 +19,7 @@ sys.dont_write_bytecode = True  # never leave caches in the vendored engine
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import doctor_checks as C  # noqa: E402
 from _lib import layout as L  # noqa: E402
+from _lib.capabilities import doctor_findings as capability_findings  # noqa: E402
 from _lib.document_dates import STAMP, touch  # noqa: E402
 from _lib.common import (  # noqa: E402
     ENGINE_DIR, EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, PROJECT_FILE, STATE_DIR, CgspecError, atomic_write_text, resolve_root,
@@ -69,6 +70,7 @@ def run_checks(root: Path) -> list[C.Finding]:
         ("layout", lambda: C.layout(root, profile)),
         ("symlinks", lambda: C.symlinks(root)),
         ("state", lambda: C.state_files(root)),
+        ("capabilities", lambda: capability_findings(root)),
         ("spines", lambda: C.spines(root, load_stages(root))),
         ("document_dates", lambda: C.document_dates(root)),
         ("links", lambda: C.links(root)),

@@ -1,5 +1,5 @@
 # CGSpec engine: file formats and hook contract
-Created: unknown · Last edited: 2026-10-29T11:47:57Z
+Created: unknown · Last edited: 2026-10-29T17:06:58Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
@@ -141,6 +141,7 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | --- | --- | --- | --- |
 | `docs/_cgspec/project.json` | `project` | `install.py` | Version marker. `path_classes` globs drive T0 detection (spec 3). Optional `visual_drift_threshold` (default 0.5% of pixels) sets the threshold between W-DRIFT and E-DRIFT. Optional named `test_runners` and shared `test_environments` require targeted `test_runners_approval`. `proof_signers` lists protected CI SSH public keys with provider/workflow constraints. Optional `release` block declares the Semantic Versioning policy: `enabled` (true or false; false is an explicit opt-out), `pre_1_0` (`0.major.0`, `0.minor.0`, `0.patch.0`; default `0.minor.0`) and `current_version` (required while enabled). |
 | `docs/_cgspec/07-state/tier.json` | `tier` | main agent via `cgspec_hook.py tier set` | Declared before editing. `files` and `verification` required for new T0 declarations; `slice` required for T1+. |
+| `docs/_cgspec/capabilities.json` | `capabilities` | main agent via `cgspec_hook.py capability` | Optional. Declare-once agent-side capabilities (`CAP-...` IDs; `kind` `account_access`, `model_delegation`, `human_contact`, `tool_access`, `other`; `summary`, `usage`, `owner`, `assistance` and a required executable `check`). `approval` binds `registry_hash` (sha256 of the canonical `capabilities` list) to a fresh message naming capabilities or a signed trailer commit; editing the list makes the approval stale. Probe results are never stored here. |
 | `docs/slices/SLICE-NNN-*.start.json` | `start` | main agent via `cgspec_hook.py start` | Versioned success/evaluation definition, fresh approval, executable readiness, active outcomes and mock-switch state. Definition edits invalidate readiness and require renewed approval. |
 | `docs/_cgspec/05-runs/<run-id>/run.json` | `run` | inspector | `criteria`, `tests` and `proofs` hold sha256 values. Frozen inventories, outcomes and supersession mappings are immutable. New runs start active; retirement requires validated replacement links and approval. |
 | `docs/_cgspec/07-state/frozen.json` | `frozen` | `bundle_prototype.py`, `cgspec_hook.py freeze`, `visual_audit.py --approve-baseline` | Append-only. CI rejects any change to an existing entry (spec 8, trust root). |
@@ -290,6 +291,20 @@ List local probe scripts/configuration in `check.inputs` (besides executable fil
 and staged/CI checks reject changed inputs. Inline/external commands still depend on the approved runner/environment;
 trusted runner attestations and replay are later work. Probe stdout/stderr is not persisted. Message approvals must
 follow the Draft; signed-trailer approval binds the exact signed Draft commit even across unrelated later commits.
+
+Capabilities: `cgspec_hook.py capability set --file <draft.json>` writes the registry from a draft holding only
+`{"capabilities": [...]}` and clears any approval; `capability agree --approval A-...` binds a fresh approval whose
+message names capabilities (`approve capabilities`), or `trailer` after the exact draft is committed with a trusted
+signature in HEAD; `capability check [--id CAP-a,CAP-b]` runs the checks now, prints per-capability `PASS`/`BLOCKED`
+with the declared `usage`, and exits 2 when any is BLOCKED; it refuses an unapproved or invalid registry and persists
+nothing. `capability show` prints the registry and whether it is approved. The registry is editor-protected, and
+staged/CI checks validate it and its approval exactly like a slice agreement approval (single-use, fresh, targeted).
+A start prerequisite may carry `capability: "CAP-..."`; it must then have `check: null`. `start ready` resolves the
+capability from the approved registry and runs its check (cwd and inputs relative to the project root); the result's
+`input_hashes` include `docs/_cgspec/capabilities.json` and the check's inputs, so registry edits after readiness
+block `start begin` and staged implementation until readiness is rerun. A missing registry, invalid or unapproved
+registry, or undeclared ID records a BLOCKED result naming the reason. Prerequisites without `capability` behave as
+before.
 
 Release governance: `cgspec_hook.py release policy|plan|check --target VERSION [--slices SLICE-...]`.
 `policy` prints the declared release block and its problems; `plan` prints the policy, every included

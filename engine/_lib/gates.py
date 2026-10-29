@@ -94,6 +94,8 @@ class Context:
             return "this state file is written only by the engine"
         if rel.startswith("docs/_cgspec/05-runs/"):
             return "run records are created and managed only through cgspec_hook.py run commands"
+        if rel == "docs/_cgspec/capabilities.json":
+            return "the capability registry is managed only through cgspec_hook.py capability commands"
         if rel.startswith("docs/slices/") and rel.endswith(".start.json"):
             return "success agreements are created and managed only through cgspec_hook.py start commands"
         if rel in GUARD_FILES or any(rel.startswith(d) or rel + "/" == d for d in GUARD_DIRS):

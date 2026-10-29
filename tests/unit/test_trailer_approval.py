@@ -171,6 +171,30 @@ class TrailerApprovalTests(unittest.TestCase):
         git(self.root, "commit", "-q", "--no-verify", "-m", "readiness after approved draft")
         self.assertEqual(evaluate(self.root, View.commit(self.root, "HEAD")), [])
 
+    def test_capability_registry_trailer_binds_the_signed_draft(self):
+        import json
+        from tests.unit.test_capabilities import capability
+        from _lib.commit_gate import evaluate
+        from _lib.gitview import View
+
+        key, pub = self.signing_key()
+        self.trust_key(pub)
+        source = self.root / ".cgspec-scratch/capabilities.json"
+        source.parent.mkdir(exist_ok=True)
+        source.write_text(json.dumps({"capabilities": [capability()]}))
+
+        def cap(action, *args):
+            return run_script("cgspec_hook.py", "capability", action, "--root", str(self.root), *args)
+
+        self.assertEqual(cap("set", "--file", str(source)).returncode, 0)
+        self.assertNotEqual(cap("agree", "--approval", "trailer").returncode, 0)
+        self.signed_commit(key, "Approve capability registry\n\nApproved-by: Ojefe <me@example.com>")
+        self.assertEqual(cap("agree", "--approval", "trailer").returncode, 0)
+        self.assertEqual(cap("check").returncode, 0)
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "--no-verify", "-m", "record trailer approval")
+        self.assertEqual(evaluate(self.root, View.commit(self.root, "HEAD")), [])
+
     def test_new_json_trailer_claim_requires_commit_message(self):
         import json
         from tests.unit.test_start_gate import draft

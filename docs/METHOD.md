@@ -1,5 +1,5 @@
 # CGSpec Method — Current Specification
-Created: unknown · Last edited: 2026-10-29T13:37:17Z
+Created: unknown · Last edited: 2026-10-29T17:06:58Z
 
 Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". The method specification evolves independently of package release numbers; Git history and the changelog identify exact revisions. Built in this repository; there is no second development checkout (see `AGENTS.md`).
 
@@ -70,6 +70,7 @@ How the agent talks to you:
 | `docs/prototypes/_vision/` | Shared vision board: references, your images and videos, captions | Main agent |
 | `docs/_memlog.md` | Append-only ledger | `memlog.py` only |
 | `docs/_cgspec/project.json` | Version marker: method version, profile, topology | Install and upgrade |
+| `docs/_cgspec/capabilities.json` | Optional declare-once registry of approved agent-side capabilities and their checks | `cgspec_hook.py capability` |
 | `docs/_cgspec/01-engine/` | Vendored engine scripts, pinned version, hash manifest | Install only |
 | `docs/_cgspec/02-research/RES-NNN-<slug>.md` | Research with sources | Any, via main agent |
 | `docs/_cgspec/03-councils/COUNCIL-NNN-<slug>/` | One folder per council: `00-brief`, one file per round, `99-outcome` | Council |
@@ -131,6 +132,8 @@ A doctor failure leads to repair, never to an upgrade; only the version marker t
 The before-tool hook reads `tier.json`: a T0 entry unlocks only its listed files, and the commit hook rejects the commit if the line count is exceeded. Exceeding any limit escalates the tier automatically. A no-GUI project gets no prototype; its "experience" is API, CLI or event behavior.
 
 Before T1+ dependent implementation, the agent drafts `docs/slices/SLICE-NNN-*.start.json` with observable outcomes, acceptance and rejection examples, exclusions, evaluation methods, implementation coverage, design targets where needed, prerequisites, and future human checkpoints. The human approves the definition and evaluation together through a fresh approval; an agent cannot approve its own definition. `start ready` executes the approved, safe readiness probes and records results without raw probe output. `start begin` activates only eligible outcomes. The lifecycle is Draft → Agreed → Ready → In progress; a material definition change returns to Draft and needs new approval/readiness. A failed prerequisite blocks only its covered outcomes, while independent approved outcomes can continue. Editor, staged-commit, and CI checks enforce the same candidate record. Tests, research, design, and setup remain available before implementation readiness.
+
+Agent-side capabilities are declared once per project rather than re-explained per slice. `docs/_cgspec/capabilities.json` lists what the agent may use beyond the repository — an authenticated browser or account session (`account_access`), a way to delegate to another model (`model_delegation`), a channel to reach the human and how to use it (`human_contact`), another tool (`tool_access`) or `other` — each with a plain-language `usage`, an `owner`, `assistance` for when it fails, and the same executable `check` shape as a prerequisite. The registry is host-neutral data, not one agent's configuration file. The agent drafts it with `capability set`; the user approves it with a fresh message naming capabilities ("approve capabilities"), or the signed commit trailer; any change returns it to unapproved. `capability check` probes declared capabilities on demand and reports results without caching them. A slice prerequisite names `capability: CAP-...` with `check: null` instead of restating the probe; `start ready` then runs the registry's check and hash-binds the registry to readiness, so a later registry change blocks the outcome until readiness is rerun. A missing, invalid, unapproved, undeclared or failing capability is BLOCKED for the outcomes that need it; it is never assumed to work. A passing check shows that the probe succeeded at that moment, not that the session will stay valid or that the agent is allowed to do more than the `usage` states.
 
 Mocks are labelled development aids, never real-integration proof. `CGSPEC_ALLOW_MOCKS=0` (the default) disables mock-based development substitution; `1` permits it without relaxing the agreed final evaluation. Local probe scripts and configuration must be listed as inputs and hash-bound to the candidate; external runner/environment attestation and candidate replay remain separate work. Readiness establishes that agreed validation can run, not that the outcome is complete; outcome-based completion is enforced separately.
 
