@@ -30,6 +30,28 @@
     "runner_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
     "runner_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "selector": {"type": "string", "minLength": 1},
+    "test_semantics": {
+      "type": "object",
+      "required": ["adapter", "fingerprint", "dependencies"],
+      "additionalProperties": false,
+      "properties": {
+        "adapter": {"enum": ["command-json-v1"]},
+        "fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "kind", "sha256"],
+            "additionalProperties": false,
+            "properties": {
+              "path": {"type": "string", "pattern": "^(?![/\\\\])(?![A-Za-z]:)(?!.*(^|[/\\\\])\\.\\.([/\\\\]|$)).+$"},
+              "kind": {"enum": ["helper", "fixture", "import", "snapshot", "config"]},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+            }
+          }
+        }
+      }
+    },
     "failed_at": {
       "type": "string",
       "pattern": "^[0-9a-f]{7,40}$"

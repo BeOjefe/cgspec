@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import copy
 import json
+import shutil
 import unittest
 
 from tests.unit.test_schemas import VALID
 from _lib.schema import validate_named
-from _lib import runner_contracts
+from _lib import runner_contracts, test_evolution
 from _lib.common import CgspecError
 from _lib.gitview import View
 from _lib.runner_trust import check as runner_change
-from tests.helpers import TempDir, approve, git, git_project, write_json
+from tests.helpers import REPO, TempDir, approve, git, git_project, write_json
 
+
+SEMANTICS = {"adapter": "command-json-v1", "fingerprint": "b" * 64, "dependencies": []}
 
 def runner_project() -> dict:
     project = copy.deepcopy(VALID["project"])
@@ -24,10 +27,10 @@ def runner_project() -> dict:
     project["test_runners"] = [
         {"id": "unit", "adapter": "vitest-json", "command": ["npm", "exec", "--", "vitest", "run", "{test_file}", "--reporter=json", "--outputFile={report}"],
          "cwd": ".", "selection": "test_file", "applies_to": ["src/**"], "environment": "node-tests", "timeout_seconds": 120,
-         "isolation": "per-run-worktree", "report": "json", "artifacts": []},
+         "isolation": "per-run-worktree", "report": "json", "artifacts": [], "semantics": {"adapter": "command-json-v1", "command": ["node", "tools/semantic-adapter.js", "{test_file}", "{test_id}"], "inputs": ["tools/semantic-adapter.js"]}},
         {"id": "browser", "adapter": "playwright-json", "command": ["npm", "exec", "--", "playwright", "test", "{test_file}", "--reporter=json"],
          "cwd": ".", "selection": "test_file", "applies_to": ["src/**"], "environment": "node-tests", "timeout_seconds": 180,
-         "isolation": "per-run-worktree", "report": "stdout-json", "artifacts": ["test-results/**"]},
+         "isolation": "per-run-worktree", "report": "stdout-json", "artifacts": ["test-results/**"], "semantics": {"adapter": "command-json-v1", "command": ["node", "tools/semantic-adapter.js", "{test_file}", "{test_id}"], "inputs": ["tools/semantic-adapter.js"]}},
     ]
     project["test_runners_approval"] = "trailer"
     return project
@@ -52,13 +55,14 @@ class NamedRunnerSchemaTests(unittest.TestCase):
 
     def test_hash_binds_runner_and_shared_environment(self):
         project = runner_project()
-        original = runner_contracts.resolve(project, "browser")[2]
+        original = runner_contracts.resolve(project, "browser", lambda _: b"adapter")[2]
         changed = copy.deepcopy(project)
         changed["test_environments"][0]["setup"] = ["npm", "ci", "--ignore-scripts"]
         self.assertNotEqual(original, runner_contracts.resolve(changed, "browser")[2])
+        self.assertNotEqual(original, runner_contracts.resolve(changed, "browser", lambda _: b"adapter")[2])
         changed = copy.deepcopy(project)
         changed["test_runners"][1]["command"].append("--grep=only-one")
-        self.assertNotEqual(original, runner_contracts.resolve(changed, "browser")[2])
+        self.assertNotEqual(original, runner_contracts.resolve(changed, "browser", lambda _: b"adapter")[2])
 
     def test_hash_binds_declared_input_bytes(self):
         project = runner_project()
@@ -108,11 +112,11 @@ class NamedRunnerSchemaTests(unittest.TestCase):
 
     def test_new_proof_cannot_substitute_runner_command_or_selector(self):
         project = runner_project()
-        runner, _, digest = runner_contracts.resolve(project, "unit")
+        runner, _, digest = runner_contracts.resolve(project, "unit", lambda _: b"adapter")
         record = copy.deepcopy(VALID["test-pair"])
         record.update(runner_id="unit", runner_hash=digest, selector=record["test_file"],
-                      command=runner_contracts.selected_command(runner, record["test_file"]))
-        self.assertEqual(runner_contracts.pair_errors(project, record), [])
+                      command=runner_contracts.selected_command(runner, record["test_file"]), test_semantics=SEMANTICS)
+        self.assertEqual(runner_contracts.pair_errors(project, record, lambda _: b"adapter"), [])
         changed = copy.deepcopy(record)
         changed["command"] = ["true", changed["test_file"]]
         self.assertTrue(runner_contracts.pair_errors(project, changed))
@@ -223,17 +227,21 @@ class NamedRunnerIntegrationTests(unittest.TestCase):
         project_path = self.root / "docs/_cgspec/project.json"
         project = json.loads(project_path.read_text())
         project["test_environments"] = [{"id": "python", "cwd": ".", "setup": ["python3", "-c", "pass"],
-                                         "readiness": ["python3", "--version"], "inputs": [], "network": "online", "timeout_seconds": 10}]
+                                         "readiness": ["python3", "--version"], "inputs": ["tools/semantic_adapter.py"], "network": "online", "timeout_seconds": 10}]
         project["test_runners"] = [{"id": "unit", "adapter": "cgspec-json",
                                     "command": ["python3", "{test_file}", "{report}"], "cwd": ".",
                                     "selection": "test_file", "applies_to": ["src/**"], "environment": "python", "timeout_seconds": 10,
-                                    "isolation": "per-run-worktree", "report": "json", "artifacts": []}]
+                                    "isolation": "per-run-worktree", "report": "json", "artifacts": [], "semantics": {"adapter": "command-json-v1", "command": ["python3", "tools/semantic_adapter.py", "{test_file}", "{test_id}"], "inputs": ["tools/semantic_adapter.py"]}}]
         write_json(project_path, project)
+        tools = self.root / "tools"
+        tools.mkdir()
+        shutil.copy2(REPO / "tests/fixtures/semantic-python-adapter.py", tools / "semantic_adapter.py")
         tests = self.root / "tests"
         tests.mkdir(exist_ok=True)
         (tests / "check.py").write_text(
             "import json, pathlib, sys\n"
-            "ok = pathlib.Path('src/login/fixed.txt').exists()\n"
+            "def test_check():\n    return pathlib.Path('src/login/fixed.txt').exists()\n"
+            "ok = test_check()\n"
             "pathlib.Path(sys.argv[1]).write_text(json.dumps({'selector': 'tests/check.py', 'assertions': {'passed': int(ok), 'failed': int(not ok)}, 'infrastructure': {'status': 'ok'}}))\n"
             "raise SystemExit(0 if ok else 1)\n")
         git(self.root, "add", "-A")
@@ -242,12 +250,14 @@ class NamedRunnerIntegrationTests(unittest.TestCase):
         (self.root / "src/login/fixed.txt").write_text("fixed\n")
         git(self.root, "add", "-A")
         git(self.root, "commit", "-q", "-m", "fix")
-        runner, _, digest = runner_contracts.resolve(project, "unit")
-        self.record = {"_file": "docs/_cgspec/06-evidence/tests/check.json", "test_id": "check",
+        runner, environment, digest = runner_contracts.resolve(project, "unit", lambda rel: (self.root / rel).read_bytes())
+        identity, problem = test_evolution.capture_at(self.root, self.failed_at, runner, environment, "tests/check.py", "tests/check.py::test_check")
+        self.assertIsNone(problem)
+        self.record = {"_file": "docs/_cgspec/06-evidence/tests/check.json", "test_id": "tests/check.py::test_check",
                        "test_file": "tests/check.py", "failed_at": self.failed_at, "runner_id": "unit",
                        "runner_hash": digest, "selector": "tests/check.py",
                        "command": runner_contracts.selected_command(runner, "tests/check.py"),
-                       "covers": ["src/login/fixed.txt"], "slice": "SLICE-001"}
+                       "covers": ["src/login/fixed.txt"], "slice": "SLICE-001", "test_semantics": identity}
 
     def tearDown(self):
         self.tmp.__exit__(None, None, None)
@@ -272,14 +282,15 @@ class NamedRunnerIntegrationTests(unittest.TestCase):
         git(self.root, "add", "docs")
         git(self.root, "commit", "-q", "-m", "broken setup")
         from _lib.runner_execution import run_at
-        runner, environment, _ = runner_contracts.resolve(project, "unit")
+        runner, environment, _ = runner_contracts.resolve(project, "unit", lambda rel: (self.root / rel).read_bytes())
+        runner, environment, _ = runner_contracts.resolve(project, "unit", lambda rel: (self.root / rel).read_bytes())
         self.assertEqual(run_at(self.root, "HEAD", runner, environment, "tests/check.py"), "BLOCKED")
 
     def test_parallel_runs_have_separate_worktrees_and_reports(self):
         from concurrent.futures import ThreadPoolExecutor
         from _lib.runner_execution import run_at
         project = json.loads((self.root / "docs/_cgspec/project.json").read_text())
-        runner, environment, _ = runner_contracts.resolve(project, "unit")
+        runner, environment, _ = runner_contracts.resolve(project, "unit", lambda rel: (self.root / rel).read_bytes())
         with ThreadPoolExecutor(max_workers=2) as pool:
             results = list(pool.map(lambda _: run_at(self.root, "HEAD", runner, environment, "tests/check.py"), range(2)))
         self.assertEqual(results, ["PASS", "PASS"])

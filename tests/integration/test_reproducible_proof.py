@@ -34,6 +34,7 @@ class ReproducibleProofTests(unittest.TestCase):
         git(self.root, "add", "docs/_cgspec/project.json")
         git(self.root, "commit", "-q", "-m", "configure environment")
         runner, environment, _ = resolve(project, "unit")
+        runner, environment, _ = resolve(project, "unit", lambda rel: (self.root / rel).read_bytes())
         return runner, environment
 
     def test_red_green_persists_full_revision_and_phase_logs(self):
@@ -175,6 +176,14 @@ class ReproducibleProofTests(unittest.TestCase):
                                                setup=["npm", "ci", "--offline", "--ignore-scripts", "--no-audit"],
                                                readiness=["node", "--version"])
         project["test_runners"][0]["command"] = ["node", "{test_file}", "{report}"]
+
+        adapter = self.root / "tools/js-semantic.py"
+        adapter.write_text("import hashlib,json,pathlib,sys\nprint(json.dumps({'schema':1,'test_id':sys.argv[2],"
+                           "'semantic_fingerprint':hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest(),"
+                           "'closure_complete':True,'dependencies':[]}))\n")
+        project["test_runners"][0]["semantics"] = {
+            "adapter": "command-json-v1", "command": ["python3", "tools/js-semantic.py", "{test_file}", "{test_id}"],
+            "inputs": ["tools/js-semantic.py"]}
         write_json(self.project_path, project)
         git(self.root, "add", "-A")
         git(self.root, "commit", "-q", "-m", "offline workspace red")
@@ -186,6 +195,11 @@ class ReproducibleProofTests(unittest.TestCase):
         from _lib.runner_contracts import selected_command
         record = dict(self.record, failed_at=red, test_file="tests/check.js", selector="tests/check.js",
                       runner_hash=digest, command=selected_command(runner, "tests/check.js"))
+
+        from _lib.test_evolution import capture_at
+        identity, problem = capture_at(self.root, red, runner, environment, record["test_file"], record["test_id"])
+        self.assertIsNone(problem)
+        record["test_semantics"] = identity
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, CGSPEC_PROOF_DIR=temp):
             self.assertIsNone(prove_failed(self.root, record))
 

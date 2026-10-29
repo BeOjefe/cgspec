@@ -140,6 +140,8 @@ def citation_counts(view: View) -> dict[str, int]:
         add(match.group(1).strip().strip("`") if match else "")
     add(load(view.read_new(PROJECT_FILE.as_posix())).get("test_command_approval", ""))
     add(load(view.read_new(PROJECT_FILE.as_posix())).get("test_runners_approval", ""))
+    from .run_supersession import approval_refs
+    for ref in approval_refs(view): add(ref)
     return counts
 
 
@@ -165,7 +167,6 @@ def engine_file(rel: str) -> str | None:
         return None
     return name
 
-
 def append_only(view: View) -> list[str]:
     reasons = []
     for rel, key, ident in ((FROZEN, "entries", "path"), (CHECKS, "checks", "id"), (APPROVALS, "approvals", "id")):
@@ -173,9 +174,9 @@ def append_only(view: View) -> list[str]:
         new = {e.get(ident): e for e in load(view.read_new(rel)).get(key, []) if isinstance(e, dict)}
         reasons += [f"{rel} is append-only: existing entry {k} was changed or removed"
                     for k, entry in old.items() if new.get(k) != entry]
+    from .run_supersession import immutable_proof_errors
+    reasons += immutable_proof_errors(view)
     return reasons
-
-
 def frozen_touched(view: View, changes) -> list[str]:
     frozen_old = {e.get("path") for e in load(view.read_old(FROZEN)).get("entries", [])}
     return [f"{rel} is frozen and was changed ({c.status})"

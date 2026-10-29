@@ -85,6 +85,41 @@
         "$ref": "#/definitions/hashed"
       }
     },
+    "proofs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/hashed"
+      }
+    },
+    "outcomes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "supersession": {
+      "type": "object",
+      "required": ["replaces", "reason", "approval", "links", "frozen_at"],
+      "additionalProperties": false,
+      "properties": {
+        "replaces": {"type": "string", "pattern": "^R-\\d{8}-[0-9a-f]{4}$"},
+        "reason": {"type": "string", "minLength": 3},
+        "approval": {"$ref": "#/definitions/approval"},
+        "frozen_at": {"type": "string", "minLength": 1},
+        "links": {
+          "type": "object",
+          "required": ["agreements", "outcomes", "tests", "proofs"],
+          "additionalProperties": false,
+          "properties": {
+            "agreements": {"$ref": "#/definitions/links"},
+            "outcomes": {"$ref": "#/definitions/links"},
+            "tests": {"$ref": "#/definitions/links"},
+            "proofs": {"$ref": "#/definitions/links"}
+          }
+        }
+      }
+    },
     "units": {
       "type": "array",
       "items": {
@@ -153,6 +188,18 @@
     }
   },
   "definitions": {
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["old", "new"],
+        "additionalProperties": false,
+        "properties": {
+          "old": {"type": "string", "minLength": 1},
+          "new": {"type": "string", "minLength": 1}
+        }
+      }
+    },
     "hashed": {
       "type": "object",
       "required": [

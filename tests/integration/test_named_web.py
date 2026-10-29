@@ -15,6 +15,7 @@ from tests.helpers import REPO, git, write_json
 from tests.unit.test_named_runners import runner_project
 from _lib.ci_gate import prove_failed
 from _lib.runner_contracts import resolve, selected_command
+from _lib.test_evolution import capture_at
 
 
 @unittest.skipUnless(os.environ.get("CGSPEC_RUN_WEB_INTEGRATION") == "1", "opt-in real browser/npm integration")
@@ -42,7 +43,8 @@ class NamedWebIntegrationTests(unittest.TestCase):
         shutil.rmtree(self.root / "node_modules")
         project = runner_project()
         project["test_environments"][0]["setup"] = ["npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"]
-        project["test_environments"][0]["inputs"] = ["package.json", "package-lock.json", "playwright.config.js"]
+        project["test_environments"][0]["inputs"] = [
+            "package.json", "package-lock.json", "playwright.config.js", "tools/semantic-adapter.js"]
         write_json(self.root / "docs/_cgspec/project.json", project)
         git(self.root, "init", "-q", "-b", "main")
         git(self.root, "add", "-A")
@@ -56,12 +58,15 @@ class NamedWebIntegrationTests(unittest.TestCase):
     def test_real_vitest_and_playwright_assertion_proof(self):
         for runner_id, test_file in (("unit", "tests/unit.test.js"), ("browser", "tests/browser.spec.js")):
             with self.subTest(runner=runner_id):
-                runner, _, digest = resolve(json.loads((self.root / "docs/_cgspec/project.json").read_text()),
-                                            runner_id, lambda rel: (self.root / rel).read_bytes())
+                runner, environment, digest = resolve(json.loads((self.root / "docs/_cgspec/project.json").read_text()),
+                                                       runner_id, lambda rel: (self.root / rel).read_bytes())
+                identity, problem = capture_at(self.root, self.red, runner, environment, test_file, runner_id)
+                self.assertIsNone(problem)
                 record = {"_file": f"docs/_cgspec/06-evidence/tests/{runner_id}.json", "test_id": runner_id,
                           "failed_at": self.red, "test_file": test_file, "selector": test_file,
                           "runner_id": runner_id, "runner_hash": digest,
-                          "command": selected_command(runner, test_file), "covers": ["src/widget.js"]}
+                          "command": selected_command(runner, test_file), "covers": ["src/widget.js"],
+                          "test_semantics": identity}
                 self.assertIsNone(prove_failed(self.root, record))
                 substituted = dict(record, command=["true", test_file])
                 self.assertIn("command or selection", prove_failed(self.root, substituted))

@@ -103,6 +103,12 @@ class View:
             out = git(self.root, "ls-tree", "-r", "-z", "--name-only", self.new, "--", prefix).stdout
         return [p for p in out.split("\0") if p]
 
+    def files_old(self, prefix: str) -> list[str]:
+        if not self.old:
+            return []
+        out = git(self.root, "ls-tree", "-r", "-z", "--name-only", self.old, "--", prefix).stdout
+        return [p for p in out.split("\0") if p]
+
     def commit_exists(self, rev: str) -> bool:
         return git(self.root, "cat-file", "-e", f"{rev}^{{commit}}").returncode == 0
 
