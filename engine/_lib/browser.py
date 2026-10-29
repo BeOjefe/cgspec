@@ -81,6 +81,8 @@ def proof_problems(item: dict, got: dict | None, shots: Path) -> list[str]:
         if vp is None:
             problems.append(f"{viewport}: browser driver returned no result for this viewport")
             continue
+        for error in vp.get("errors", []) + vp.get("darkErrors", []):
+            problems.append(f"{viewport}: runtime/console error: {error}")
         if item.get("kind") != "audit" and vp.get("ok") is not True:
             continue
         for path in expected_files(item, shots, viewport):
@@ -121,8 +123,9 @@ def run(root: Path, runs: list[dict], shots: Path, video: bool = False) -> dict:
     if shots_res == b_dir or shots_res.is_relative_to(b_dir) or shots_res == state_dir or shots_res.is_relative_to(state_dir):
         return {"blocked": "scratch directory resolves into baseline storage or state"}
     for item in runs:
-        b_map = item.get("baselines") or {}
-        for vp, b_file in b_map.items():
+        b_map = {**(item.get("baselines") or {}), **(item.get("darkBaselines") or {})}
+        files = list(b_map.values()) + ([item["baseline"]] if item.get("baseline") else [])
+        for b_file in files:
             bp = Path(b_file)
             if bp.is_symlink():
                 return {"blocked": f"baseline {bp.name} is a symlink"}

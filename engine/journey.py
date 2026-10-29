@@ -22,10 +22,10 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import browser, evidence  # noqa: E402
 from _lib.common import EXIT_BLOCKED, EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, CgspecError, resolve_root  # noqa: E402
-ACTIONS = {"click": (), "fill": ("value",), "press": ("key",), "select": ("value",), "check": (), "hover": (),
+ACTIONS = {"focus": (), "click": (), "fill": ("value",), "press": ("key",), "select": ("value",), "check": (), "hover": (),
            "goto": (), "state": (), "screenshot": (), "expect": ()}
 ASSERTIONS = {"visible", "hidden", "text", "value", "count", "enabled", "disabled", "url"}
-TARGETS = ("click", "fill", "press", "select", "check", "hover")
+TARGETS = ("focus", "click", "fill", "press", "select", "check", "hover")
 PROTOTYPES = "docs/prototypes"
 
 
@@ -156,7 +156,7 @@ def run(root: Path, targets: list[str], write: bool = True, video: bool = False,
                 evidence.write(root, "journeys", label, f"journey:{data['name']}", "FAIL", covers, detail, "journey.py")
             continue
         runs.append({"kind": "journey", "label": label, "url": url, "steps": data["steps"],
-                     "viewports": data["viewports"], "video": video})
+                     "viewports": data["viewports"], "video": video or any(k in s for s in data["steps"] for k in TARGETS)})
     if not runs:
         return (EXIT_FAIL if failed else EXIT_OK), lines
     shots = root / ".cgspec-scratch/journeys"
