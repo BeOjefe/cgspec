@@ -21,7 +21,7 @@ from _lib.shellparse import write_targets  # noqa: E402
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 AG_WRITE_TOOLS = {"write_to_file", "replace_file_content", "multi_replace_file_content"}
 AG_PATH_KEYS = {"TargetFile", "AbsolutePath", "Cwd"}
-CLI_MODULES = {"start": "start", "run": "runs", "git-plan": "git_protocol", "proof": "proof_commands", "adopt": "discover", "close": "closure"}
+CLI_MODULES = {"start": "start", "run": "runs", "git-plan": "git_protocol", "proof": "proof_commands", "adopt": "discover", "close": "closure", "release": "release"}
 
 
 def _strings(value, skip=frozenset()) -> list[str]:
@@ -358,7 +358,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base", help="ci: base commit of the range to check")
     from _lib.checkpoint_cmd import add_arguments
     add_arguments(parser)
-    for f in ("--file", "--applies-to", "--description", "--approval", "--command", "--guide", "--release-dir", "--repos", "--json-out"):
+    for f in ("--file", "--applies-to", "--description", "--approval", "--command", "--guide", "--release-dir", "--repos", "--json-out", "--target", "--slices"):
         parser.add_argument(f)
     parser.add_argument("--no-rerun", action="store_true")
     for f in ("--criteria", "--tests", "--proofs", "--outcomes", "--supersession", "--units", "--run-id", "--by", "--status", "--unit", "--unit-status", "--outcome", "--verify", "--commit-kind", "--pr"):
