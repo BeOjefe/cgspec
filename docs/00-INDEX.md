@@ -16,7 +16,7 @@ Created: unknown · Last edited: 2026-10-29T13:37:17Z
 | Workflow skills | [skills/](../skills/) | Nine skills plus pivot alias; runtime rehearsal pending |
 | Team roles | [agents/](../agents/) | Eight definitions; runtime rehearsal pending |
 | Project templates | [templates/](../templates/) | Packaged; consumer validation remains project-specific |
-| Current research | [02-research/](_cgspec/02-research/README.md) | [RES-005](_cgspec/02-research/RES-005-anthropic-design-plugin-structure-and-skills.md) design plugin and [RES-006](_cgspec/02-research/RES-006-scroll-craft-skill-standard-and-verification.md) scroll-craft concluded 2026-10-22; queued spikes in [RESEARCH-QUEUE.md](_cgspec/02-research/RESEARCH-QUEUE.md) |
+| Current research | [02-research/](_cgspec/02-research/README.md) | [RES-007](_cgspec/02-research/RES-007-claude-code-hooks-benchmark-and-hygiene-gates.md) hook taxonomy and [RES-008](_cgspec/02-research/RES-008-ostack-gstack-governance-philosophy-comparison.md) ostack/gstack comparison concluded 2026-10-30; queued spikes in [RESEARCH-QUEUE.md](_cgspec/02-research/RESEARCH-QUEUE.md) |
 
 ## Historical v0.1 records
 
