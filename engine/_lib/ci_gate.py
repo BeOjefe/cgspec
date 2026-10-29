@@ -137,6 +137,10 @@ def prove_failed(root: Path, record: dict) -> str | None:
         return f"{name}: no command to re-run"
     failed_at, test_file = str(record.get("failed_at", "")), str(record.get("test_file", ""))
     if git(root, "cat-file", "-e", f"{failed_at}:{test_file}").returncode != 0:
+        from .proof_seals import historical_pair_error
+        candidate = git(root, "rev-parse", "HEAD").stdout.strip()
+        if historical_pair_error(View.commit(root, candidate), record["_file"], record) is None:
+            return None
         return f"{name}: test file {test_file} did not exist at {failed_at[:10]}, so it cannot have failed there"
     if any(field in record for field in ("runner_id", "runner_hash", "selector")):
         return prove_named(root, record)

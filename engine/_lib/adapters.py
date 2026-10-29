@@ -147,6 +147,9 @@ GITHUB_STEPS = """To make the CGSpec check impossible to bypass, do this once on
   2. Require your review for changes to .github/, docs/_cgspec/ and docs/slices/
      (CODEOWNERS with your account, plus 'Require review from Code Owners').
   3. Do not give the AI agent your GitHub admin credentials.
+  4. For squash/rebase proof, configure a protected CI SSH signing identity in project.json
+     proof_signers and run `cgspec_hook.py proof seal|map` only in a trusted job after candidate
+     processes have ended. Keep the private key outside the checkout and never expose it to tests.
   Optional: sign approvals with a hardware key that needs your touch and list it in
   project.json approver_keys."""
 CURSOR_RULE = """---

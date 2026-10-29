@@ -1,5 +1,5 @@
 # CGSpec engine: file formats and hook contract
-Created: unknown · Last edited: 2026-10-29T10:33:08Z
+Created: unknown · Last edited: 2026-10-29T11:01:01Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
@@ -70,6 +70,34 @@ The real-tool fixture is `tests/fixtures/named-web/`; run its opt-in check with
 It uses pinned Vitest/Playwright packages and installed Chrome when available. Ordinary
 source tests skip this network/browser-dependent check.
 
+### Merge-resilient proof seals
+
+`docs/_cgspec/06-evidence/seals/<seal-id>.json` is a canonical signed envelope around one
+test-pair and its trusted pre-integration execution. It binds outcome IDs, exact test-pair
+bytes, reviewed base/head, assertion-failed and passing detail hashes, runner/environment/test
+fingerprints, independent review, and relevant source, test, dependency, project and runner-input
+hashes. `attestation` names a provider-independent identity, provider, protected workflow, run
+and signing time. Its detached SSH signature uses namespace `cgspec-proof`. Verification resolves
+that identity only from `proof_signers` at `reviewed_base`, never from candidate-added policy.
+After bootstrap, changing `proof_signers` requires a commit signature from an already trusted
+`approver_keys` key; the first signer policy requires the protected owner-reviewed baseline.
+
+`docs/_cgspec/06-evidence/integrations/<map-id>.json` maps a seal digest to one integrated
+revision, pull request and explicit strategy: `merge`, `squash`, `rebase` or `merge-queue`.
+Every sealed path is hashed at the integrated revision. A material difference must name both
+hashes and a second signed revalidation seal bound to that revision. Seal, revalidation and
+mapping trust all remain pinned to the original protected `reviewed_base` policy; a candidate
+cannot rotate authority during integration. Both record types are add-only; modification
+or deletion fails the commit gate. Canonical repository records are durable; uploaded CI details
+remain supplementary inputs.
+
+Trusted CI creates records with `cgspec_hook.py proof seal` and `proof map`. The seal command
+consumes engine-written red/green JSON plus a PASS review record bound to the green revision;
+the map command computes differences itself and requires a path-to-revalidation JSON object for
+any changed path. Both commands require a private SSH key path outside the checkout and verify
+the generated signature against protected policy before writing output. Run signing in a separate
+trusted job after candidate processes end; never make the key available to tests.
+
 ### Safe test evolution and architectural supersession
 
 New named pairs also record `test_semantics`: `adapter: command-json-v1`, a 64-character
@@ -111,7 +139,7 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 
 | File (in a project) | Schema | Written by | Notes |
 | --- | --- | --- | --- |
-| `docs/_cgspec/project.json` | `project` | `install.py` | Version marker. `path_classes` globs drive T0 detection (spec 3). Optional `visual_drift_threshold` (default 0.5% of pixels) sets the threshold between W-DRIFT and E-DRIFT. Optional named `test_runners` and shared `test_environments` require targeted `test_runners_approval`. |
+| `docs/_cgspec/project.json` | `project` | `install.py` | Version marker. `path_classes` globs drive T0 detection (spec 3). Optional `visual_drift_threshold` (default 0.5% of pixels) sets the threshold between W-DRIFT and E-DRIFT. Optional named `test_runners` and shared `test_environments` require targeted `test_runners_approval`. `proof_signers` lists protected CI SSH public keys with provider/workflow constraints. |
 | `docs/_cgspec/07-state/tier.json` | `tier` | main agent via `cgspec_hook.py tier set` | Declared before editing. `files` and `verification` required for new T0 declarations; `slice` required for T1+. |
 | `docs/slices/SLICE-NNN-*.start.json` | `start` | main agent via `cgspec_hook.py start` | Versioned success/evaluation definition, fresh approval, executable readiness, active outcomes and mock-switch state. Definition edits invalidate readiness and require renewed approval. |
 | `docs/_cgspec/05-runs/<run-id>/run.json` | `run` | inspector | `criteria`, `tests` and `proofs` hold sha256 values. Frozen inventories, outcomes and supersession mappings are immutable. New runs start active; retirement requires validated replacement links and approval. |
@@ -121,6 +149,8 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | `docs/_cgspec/07-state/budget.json` | `budget` | hooks | Counts helpers, review rounds and research passes against limits. |
 | `docs/_cgspec/07-state/quota.json` | `quota` | Host quota adapter; no collector/writer is included in this checkout | `quota.py --root <project> [--json]` and session packs validate freshness (five minutes), windows and thresholds. Missing or invalid readings give bounded advice; the command does not collect usage or enforce a task gate (spec 9). |
 | `docs/_cgspec/06-evidence/tests/<test-id>.json` | `test-pair` | slice workflow | `failed_at` is the commit where the test failed. Unchanged legacy `test_command` proof replays exit codes and is labelled `legacy exit-code-only proof`; it does not meet the new strict assertion-aware contract. A new named proof additionally records `runner_id`, `runner_hash`, and `selector`; CI re-runs the approved runner at both revisions and checks structured assertion results. |
+| `docs/_cgspec/06-evidence/seals/<seal-id>.json` | `proof-seal` | protected CI signing job | Immutable signed pre-integration proof. Trust is resolved at `reviewed_base`; candidate-added signers cannot authorize it. |
+| `docs/_cgspec/06-evidence/integrations/<map-id>.json` | `proof-map` | protected CI signing job | Immutable signed envelope around the integrated parent. Changed sealed content requires an exact mapping and signed revalidation seal. |
 | `docs/_cgspec/06-evidence/<scope>/<check>.json` | `evidence` | whoever ran the check | New PASS records name `claim` and `data_source`. A fixture or unknown source cannot support `claim: integration`; use `data_source: real_backend` only after exercising the real backend. When present, `runner_id`, `runner_hash`, `selector`, and `test_id` must all match a test-pair. `state` becomes `Stale` when a covered file changes. A label does not authenticate the runner or prove the backend was real. |
 | `docs/prototypes/_baselines/<screen>-<viewport>.png` | baseline | `visual_audit.py --approve-baseline` | Approved visual baseline screenshot; read-only and recorded with sha256 in `frozen.json` (kind `baseline`). Protected against overwrite by write and commit gates. |
 | `docs/prototypes/<screen>/journeys/<name>.json` | journey (checked by `journey.py`) | main agent at layer 4 | `name`, `url` (file next to the screen, or `http://` for the real frontend), optional `viewports` (`desktop`, `mobile`) and `covers`, and `steps`. Each step has one action on a `data-testid` (`click`, `fill`+`value`, `press`+`key`, `select`+`value`, `check`, `hover`, `goto`, `screenshot`) or `expect` with `visible`, `hidden`, `text`+`equals`/`contains`, `value`+`equals`, `count`+`equals`, `enabled`, `disabled`, `url`; a `state` label may go with any step. Evidence goes to `06-evidence/journeys/`, visual audits to `06-evidence/visual/`, registered checks to `06-evidence/checks/`. Journey names (and screen names) must be non-empty with no newlines or control characters. `visual_audit.py` compares current renders against approved baselines in `docs/prototypes/_baselines/` inside Chromium (reporting `W-DRIFT` or `E-DRIFT` when exceeding `visual_drift_threshold`, diff image in `.cgspec-scratch/visual/`), and renders in dark mode (`colorScheme: "dark"`, reporting info if identical to light or labeling dark contrast/focus failures `(dark)`). `verify.py` runs doctor, journeys and visual audit in one pass and prints a summary table. `journey.py` and `visual_audit.py` take `--json-out FILE` (`{"schema": 1, "tool", "records": [{"item", "verdict", "detail"}]}`); `visual_summary.py` turns those into the CI `evidence.json` and step summary. |
@@ -192,6 +222,7 @@ and `--tool` tells the hook how to read it. Events:
 | `pre-commit` | git pre-commit | yes |
 | `commit-msg` | git commit-msg | yes |
 | `ci` | CI governance stage | yes |
+| `proof seal`, `proof map` | protected CI signing stages before and after integration | yes; refuse missing/untrusted inputs |
 
 Registered checks: `pre-commit`, `ci`, `check run` and doctor verify every registered script and guide
 against its manifest hash on every run, whether or not the check applies to the changed files; a missing

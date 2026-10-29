@@ -198,6 +198,20 @@
         "minLength": 8
       }
     },
+    "proof_signers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["identity", "public_key", "provider", "workflow"],
+        "additionalProperties": false,
+        "properties": {
+          "identity": {"type": "string", "minLength": 1},
+          "public_key": {"type": "string", "minLength": 8},
+          "provider": {"type": "string", "minLength": 1},
+          "workflow": {"type": "string", "minLength": 1}
+        }
+      }
+    },
     "visual_drift_threshold": {
       "type": "number",
       "minimum": 0,
