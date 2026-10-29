@@ -19,7 +19,7 @@ def runner_project() -> dict:
     project = copy.deepcopy(VALID["project"])
     project["test_environments"] = [{
         "id": "node-tests", "cwd": ".", "setup": ["npm", "ci"],
-        "readiness": ["node", "--version"], "inputs": [], "timeout_seconds": 120,
+        "readiness": ["node", "--version"], "inputs": [], "network": "online", "timeout_seconds": 120,
     }]
     project["test_runners"] = [
         {"id": "unit", "adapter": "vitest-json", "command": ["npm", "exec", "--", "vitest", "run", "{test_file}", "--reporter=json", "--outputFile={report}"],
@@ -54,7 +54,7 @@ class NamedRunnerSchemaTests(unittest.TestCase):
         project = runner_project()
         original = runner_contracts.resolve(project, "browser")[2]
         changed = copy.deepcopy(project)
-        changed["test_environments"][0]["setup"] = ["npm", "install"]
+        changed["test_environments"][0]["setup"] = ["npm", "ci", "--ignore-scripts"]
         self.assertNotEqual(original, runner_contracts.resolve(changed, "browser")[2])
         changed = copy.deepcopy(project)
         changed["test_runners"][1]["command"].append("--grep=only-one")
@@ -79,6 +79,32 @@ class NamedRunnerSchemaTests(unittest.TestCase):
         project = runner_project()
         project["test_runners"][1]["command"].remove("{test_file}")
         self.assertTrue(runner_contracts.errors(project))
+
+    def test_offline_cache_requires_a_pinned_lockfile_input(self):
+        project = runner_project()
+        project["test_environments"][0]["network"] = "offline-cache"
+        self.assertTrue(runner_contracts.errors(project))
+        project["test_environments"][0]["inputs"] = ["package-lock.json"]
+        self.assertEqual(runner_contracts.errors(project), [])
+
+    def test_unlocked_dependency_resolution_is_rejected(self):
+        for setup in (["npm", "install"], ["npm", "install", "lodash"], ["npm", "i"], ["npm", "add", "lodash"],
+                      ["yarn", "upgrade"], ["pip3", "install", "flask"], ["poetry", "add", "requests"]):
+            project = runner_project()
+            project["test_environments"][0]["setup"] = setup
+            self.assertTrue(runner_contracts.errors(project), setup)
+        project = runner_project()
+        project["test_environments"][0]["setup"] = ["npm", "ci"]
+        self.assertEqual(runner_contracts.errors(project), [])
+        project = runner_project()
+        project["test_environments"][0]["cleanup"] = ["npm", "i", "lodash"]
+        self.assertTrue(runner_contracts.errors(project))
+
+    def test_network_defaults_to_online_for_existing_environments(self):
+        project = runner_project()
+        del project["test_environments"][0]["network"]
+        self.assertEqual(validate_named(project, "project"), [])
+        self.assertEqual(runner_contracts.errors(project), [])
 
     def test_new_proof_cannot_substitute_runner_command_or_selector(self):
         project = runner_project()
@@ -127,7 +153,7 @@ class NamedRunnerApprovalTests(unittest.TestCase):
         self.assertEqual(self.configure(ref), [])
         git(self.root, "commit", "-q", "-m", "approved runners")
         data = json.loads(self.path.read_text())
-        data["test_environments"][0]["setup"] = ["npm", "install"]
+        data["test_environments"][0]["setup"] = ["npm", "ci", "--ignore-scripts"]
         write_json(self.path, data)
         git(self.root, "add", "docs")
         self.assertTrue(runner_change(View.staged(self.root)))
@@ -143,6 +169,14 @@ class AssertionAdapterTests(unittest.TestCase):
         self.assertEqual(classify("vitest-json", report, 0), "INFRASTRUCTURE_ERROR")
         self.assertEqual(classify("vitest-json", {"testResults": []}, 1), "INFRASTRUCTURE_ERROR")
         report["testResults"][0]["assertionResults"][0]["failureMessages"] = ["TypeError: undefined is not a function"]
+        self.assertEqual(classify("vitest-json", report, 1), "INFRASTRUCTURE_ERROR")
+
+    def test_vitest_mixed_assertion_and_unhandled_error_is_infrastructure(self):
+        from _lib.runner_execution import classify
+        report = {"numTotalTests": 1, "numFailedTests": 1,
+                  "testResults": [{"assertionResults": [{"status": "failed", "failureMessages": [
+                      "AssertionError: expected 0 to be 1"]}]}],
+                  "unhandledErrors": [{"message": "worker crashed"}]}
         self.assertEqual(classify("vitest-json", report, 1), "INFRASTRUCTURE_ERROR")
 
     def test_playwright_failure_is_assertion_not_infrastructure(self):
@@ -189,7 +223,7 @@ class NamedRunnerIntegrationTests(unittest.TestCase):
         project_path = self.root / "docs/_cgspec/project.json"
         project = json.loads(project_path.read_text())
         project["test_environments"] = [{"id": "python", "cwd": ".", "setup": ["python3", "-c", "pass"],
-                                         "readiness": ["python3", "--version"], "inputs": [], "timeout_seconds": 10}]
+                                         "readiness": ["python3", "--version"], "inputs": [], "network": "online", "timeout_seconds": 10}]
         project["test_runners"] = [{"id": "unit", "adapter": "cgspec-json",
                                     "command": ["python3", "{test_file}", "{report}"], "cwd": ".",
                                     "selection": "test_file", "applies_to": ["src/**"], "environment": "python", "timeout_seconds": 10,
@@ -239,7 +273,7 @@ class NamedRunnerIntegrationTests(unittest.TestCase):
         git(self.root, "commit", "-q", "-m", "broken setup")
         from _lib.runner_execution import run_at
         runner, environment, _ = runner_contracts.resolve(project, "unit")
-        self.assertEqual(run_at(self.root, "HEAD", runner, environment, "tests/check.py"), "INFRASTRUCTURE_ERROR")
+        self.assertEqual(run_at(self.root, "HEAD", runner, environment, "tests/check.py"), "BLOCKED")
 
     def test_parallel_runs_have_separate_worktrees_and_reports(self):
         from concurrent.futures import ThreadPoolExecutor

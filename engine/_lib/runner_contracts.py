@@ -8,6 +8,55 @@ import json
 from .common import CgspecError
 from .globs import match_any
 
+_LOCKFILE_SUFFIXES = ("-lock.json", "lock.json", ".lock", "yarn.lock", "pnpm-lock.yaml",
+                      "poetry.lock", "Pipfile.lock", "Cargo.lock", "Gemfile.lock", "go.sum")
+
+
+def _is_lockfile(path: str) -> bool:
+    return any(path.endswith(suffix) for suffix in _LOCKFILE_SUFFIXES)
+
+
+# Resolving or lock-mutating verbs per package manager. Locked installs
+# (npm ci, yarn/pnpm/poetry/bundle install, uv sync, pipenv sync) are allowed.
+_UNLOCKED_ACTIONS = {
+    "npm": ("install", "i", "add", "update", "up", "uninstall", "remove"),
+    "yarn": ("add", "up", "upgrade", "update", "remove"),
+    "pnpm": ("add", "update", "up", "remove"),
+    "pip": ("install",), "pip3": ("install",),
+    "uv": ("add", "remove"),
+    "pipenv": ("install", "update"),
+    "poetry": ("add", "remove", "update"),
+    "bundle": ("update",),
+    "cargo": ("add", "update"),
+    "go": ("get",),
+}
+
+
+def _unlocked_install(environment: dict) -> str | None:
+    """Reject dependency resolution or lock mutation that can differ between revisions.
+
+    Scans every configured command phase (setup, build, readiness, services, cleanup) so a
+    resolver cannot be moved out of setup to evade the lock, and normalizes common aliases
+    (`npm i`/`npm add`, `yarn upgrade`, `uv add`, `pipenv install`) to the same verbs.
+    """
+    phases = [environment.get("setup", [])] + list(environment.get("build", []))
+    phases += [environment.get("readiness", [])] + list(environment.get("services", []))
+    if environment.get("cleanup"):
+        phases.append(environment["cleanup"])
+    for argv in phases:
+        if not isinstance(argv, list) or not argv:
+            continue
+        command = argv[0].split("/")[-1]
+        sub = argv[1] if len(argv) > 1 else ""
+        if command in ("python3", "python", "python2", "python2.7") and len(argv) > 2 and argv[1] == "-m":
+            command, sub = argv[2].split("/")[-1], (argv[3] if len(argv) > 3 else "")
+        if sub not in _UNLOCKED_ACTIONS.get(command, ()):
+            continue
+        if command in ("pip", "pip3") and ("-r" in argv or "--no-deps" in argv):
+            continue
+        return f"{command} {sub} resolves or mutates dependencies without a pinned install"
+    return None
+
 
 def errors(project: dict) -> list[str]:
     if not isinstance(project, dict):
@@ -47,6 +96,15 @@ def errors(project: dict) -> list[str]:
             reasons.append(f"runner {name}: environment inputs must be literal file paths")
         if runner.get("adapter") == "legacy-exit":
             reasons.append(f"runner {name}: exit-code-only proof remains legacy; use an assertion-aware adapter")
+    for environment in environments:
+        network = environment.get("network", "online")
+        if network not in ("online", "offline-cache"):
+            reasons.append(f"environment {environment['id']}: network must be online or offline-cache")
+        if network == "offline-cache" and not any(_is_lockfile(path) for path in environment.get("inputs", [])):
+            reasons.append(f"environment {environment['id']}: offline-cache needs a pinned lockfile input")
+        unlocked = _unlocked_install(environment)
+        if unlocked:
+            reasons.append(f"environment {environment['id']}: {unlocked}")
     return reasons
 
 
@@ -67,6 +125,14 @@ def resolve(project: dict, runner_id: str, reader=None) -> tuple[dict, dict, str
     raw = json.dumps({"runner": runner, "environment": environment, "inputs": input_hashes}, sort_keys=True,
                      separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     return runner, environment, hashlib.sha256(raw).hexdigest()
+
+
+def fingerprints(runner: dict, environment: dict, reader) -> dict:
+    """Revision-specific approved inputs; extend this when semantic adapters gain inputs."""
+    inputs = {rel: hashlib.sha256(reader(rel)).hexdigest() for rel in environment["inputs"]}
+    canonical = lambda value: json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    return {"runner": hashlib.sha256(canonical(runner)).hexdigest(),
+            "environment": hashlib.sha256(canonical(environment)).hexdigest(), "inputs": inputs}
 
 
 def selected_command(runner: dict, test_file: str) -> list[str]:

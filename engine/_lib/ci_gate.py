@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -90,8 +91,12 @@ def prove_named(root: Path, record: dict) -> str | None:
     from . import runner_contracts, runner_execution
     from .common import CgspecError
     name = record["_file"]
+    candidate = git(root, "rev-parse", "--verify", "HEAD^{commit}")
+    if candidate.returncode:
+        return f"{name}: cannot resolve candidate HEAD"
+    candidate_sha = candidate.stdout.strip()
     definitions = []
-    for rev in (record["failed_at"], "HEAD"):
+    for rev in (record["failed_at"], candidate_sha):
         result = git(root, "show", f"{rev}:docs/_cgspec/project.json")
         try:
             project = json.loads(result.stdout) if result.returncode == 0 else {}
@@ -108,12 +113,21 @@ def prove_named(root: Path, record: dict) -> str | None:
         except CgspecError as exc:
             return f"{name}: {exc}"
         definitions.append((runner, environment))
-    before = runner_execution.run_at(root, record["failed_at"], *definitions[0], record["test_file"])
-    if before != "ASSERTION_FAILED":
-        return f"{name}: red run was {before}, not an assertion failure at {record['failed_at'][:10]}"
-    after = runner_execution.run_at(root, "HEAD", *definitions[1], record["test_file"])
-    if after != "PASS":
-        return f"{name}: green run was {after}, not passing assertions at HEAD"
+    proof_dir = Path(os.environ.get("CGSPEC_PROOF_DIR", str(root / ".cgspec-scratch/ci-proof")))
+    for label, rev, definition, expected in (("red", record["failed_at"], definitions[0], "ASSERTION_FAILED"),
+                                              ("green", candidate_sha, definitions[1], "PASS")):
+        detail = runner_execution.run_detail(root, rev, *definition, record["test_file"])
+        detail.update(proof_file=name, test_id=record.get("test_id"), phase=label, candidate_revision=candidate_sha)
+        # Names are derived from trusted hashes rather than an untrusted test_id or filename.
+        import hashlib
+        key = hashlib.sha256(name.encode()).hexdigest()[:20]
+        try:
+            proof_dir.mkdir(parents=True, exist_ok=True)
+            (proof_dir / f"{key}-{label}.json").write_text(json.dumps(detail, indent=2, sort_keys=True) + "\n")
+        except OSError as exc:
+            return f"{name}: cannot retain structured proof: {exc}"
+        if detail["result"] != expected:
+            return f"{name}: {label} run was {detail['result']}, not {expected} at {rev[:10]}"
     return None
 
 
@@ -162,5 +176,6 @@ def run(root: Path, base: str | None, rerun_tests: bool = True,
             if problem:
                 problems.append(problem)
             else:
-                notes.append(f"proved: {record.get('test_id')} failed at {str(record.get('failed_at'))[:10]}")
+                label = "legacy exit-code-only proof" if "runner_id" not in record else "structured runner proof"
+                notes.append(f"proved ({label}): {record.get('test_id')} failed at {str(record.get('failed_at'))[:10]}")
     return problems, notes

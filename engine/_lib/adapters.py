@@ -88,7 +88,22 @@ jobs:
           fi
           CGSPEC_TRUST_BASE="$TRUSTED" sh "$RUNNER_TEMP/cgspec-select.sh"
       - name: CGSpec governance (cannot be skipped)
+        id: proof
+        env:
+          CGSPEC_PROOF_DIR: ${{{{ runner.temp }}}}/cgspec-proof
         run: python3 "$CGSPEC_RELEASE/engine/cgspec_hook.py" ci --root "$GITHUB_WORKSPACE" --base "$CGSPEC_BASE" --release-dir "$CGSPEC_RELEASE" --tool git
+      - name: Retain structured proof on success or failure
+        if: ${{{{ always() && steps.proof.outcome != 'skipped' }}}}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: cgspec-ci-proof
+          # Only engine-written red/green files; the proof directory is hidden from the
+          # candidate's own processes so a test cannot write a forged result beside them.
+          path: |
+            ${{{{ runner.temp }}}}/cgspec-proof/*-red.json
+            ${{{{ runner.temp }}}}/cgspec-proof/*-green.json
+          if-no-files-found: ignore
+          retention-days: 14
       # CGSPEC_VISUAL_JOB
 """
 SELECT = """#!/bin/sh

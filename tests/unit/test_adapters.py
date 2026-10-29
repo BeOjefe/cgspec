@@ -161,7 +161,7 @@ class WiringTests(unittest.TestCase):
         workflow = (self.root / ".github/workflows/cgspec.yml").read_text()
         proof_start = workflow.index('- name: CI visual proof (PR head)')
         self.assertIn(f"id: {PROOF_STEP_ID}", workflow[proof_start:])
-        upload_block = workflow[workflow.index("uses: actions/upload-artifact@"):]
+        upload_block = workflow[workflow.rindex("uses: actions/upload-artifact@"):]
         self.assertIn(f"steps.{PROOF_STEP_ID}.outcome == 'success'", upload_block)
         path_line = next(line for line in upload_block.splitlines() if line.strip().startswith("path:"))
         self.assertRegex(path_line, r"path:\s*\$\{\{\s*runner\.temp\s*\}\}/cgspec-visual-proof-")
@@ -174,8 +174,20 @@ class WiringTests(unittest.TestCase):
         self.assertEqual(self.do_install().returncode, 0)
         workflow = (self.root / ".github/workflows/cgspec.yml").read_text()
         pins = re.findall(r"uses: actions/upload-artifact@(\S+)", workflow)
-        self.assertEqual(pins, [UPLOAD_ARTIFACT_SHA])
+        self.assertEqual(pins, [UPLOAD_ARTIFACT_SHA, UPLOAD_ARTIFACT_SHA])
         self.assertIn(f"actions/upload-artifact@{UPLOAD_ARTIFACT_SHA}  # v{UPLOAD_ARTIFACT_VERSION}", workflow)
+
+    def test_governance_upload_keeps_only_generated_proof_after_attempt(self):
+        self.assertEqual(self.do_install().returncode, 0)
+        workflow = (self.root / ".github/workflows/cgspec.yml").read_text()
+        governance = workflow[workflow.index("- name: CGSpec governance (cannot be skipped)"):]
+        upload = governance[:governance.index("- name: Install pinned Playwright")]
+        self.assertIn("id: proof", upload)
+        self.assertIn("CGSPEC_PROOF_DIR: ${{ runner.temp }}/cgspec-proof", upload)
+        self.assertIn("steps.proof.outcome != 'skipped'", upload)
+        self.assertIn("cgspec-proof/*-red.json", upload)
+        self.assertIn("cgspec-proof/*-green.json", upload)
+        self.assertNotIn("cgspec-proof/*.json", upload)
 
     def test_headless_profile_has_no_visual_job(self):
         root = self.root
