@@ -58,6 +58,26 @@ def _unlocked_install(environment: dict) -> str | None:
     return None
 
 
+
+def _semantic_errors(runner: dict, name: str) -> list[str]:
+    """Validate a runner's optional semantic adapter."""
+    semantics = runner.get("semantics")
+    if semantics is None:
+        return []
+    if not isinstance(semantics, dict) or semantics.get("adapter") != "command-json-v1":
+        return [f"runner {name}: unknown semantic test adapter"]
+    reasons = []
+    command = semantics.get("command", [])
+    if (not isinstance(command, list) or
+            sum(arg.count("{test_file}") for arg in command if isinstance(arg, str)) != 1 or
+            sum(arg.count("{test_id}") for arg in command if isinstance(arg, str)) != 1):
+        reasons.append(f"runner {name}: semantic command must select exactly one {{test_file}} and {{test_id}}")
+    inputs = semantics.get("inputs", [])
+    if (not isinstance(inputs, list) or not inputs or
+            any(not isinstance(path, str) or any(char in path for char in "*?[") for path in inputs)):
+        reasons.append(f"runner {name}: semantic adapter inputs must be non-empty literal file paths")
+    return reasons
+
 def errors(project: dict) -> list[str]:
     if not isinstance(project, dict):
         return ["project configuration must be an object"]
@@ -96,6 +116,8 @@ def errors(project: dict) -> list[str]:
             reasons.append(f"runner {name}: environment inputs must be literal file paths")
         if runner.get("adapter") == "legacy-exit":
             reasons.append(f"runner {name}: exit-code-only proof remains legacy; use an assertion-aware adapter")
+
+        reasons.extend(_semantic_errors(runner, name))
     for environment in environments:
         network = environment.get("network", "online")
         if network not in ("online", "offline-cache"):
@@ -117,10 +139,11 @@ def resolve(project: dict, runner_id: str, reader=None) -> tuple[dict, dict, str
         raise CgspecError(f"unknown test runner {runner_id!r}")
     environment = next(e for e in project["test_environments"] if e["id"] == runner["environment"])
     input_hashes = {}
-    for rel in environment["inputs"]:
+    semantic_inputs = runner.get("semantics", {}).get("inputs", []) if reader else []
+    for rel in dict.fromkeys(environment["inputs"] + semantic_inputs):
         raw_input = reader(rel) if reader else None
         if raw_input is None:
-            raise CgspecError(f"runner {runner_id}: environment input {rel} is missing from the candidate")
+            raise CgspecError(f"runner {runner_id}: approved runner input {rel} is missing from the candidate")
         input_hashes[rel] = hashlib.sha256(raw_input).hexdigest()
     raw = json.dumps({"runner": runner, "environment": environment, "inputs": input_hashes}, sort_keys=True,
                      separators=(",", ":"), ensure_ascii=False).encode("utf-8")
@@ -128,8 +151,8 @@ def resolve(project: dict, runner_id: str, reader=None) -> tuple[dict, dict, str
 
 
 def fingerprints(runner: dict, environment: dict, reader) -> dict:
-    """Revision-specific approved inputs; extend this when semantic adapters gain inputs."""
-    inputs = {rel: hashlib.sha256(reader(rel)).hexdigest() for rel in environment["inputs"]}
+    """Hash revision-specific runner, environment and semantic-adapter inputs."""
+    inputs = {rel: hashlib.sha256(reader(rel)).hexdigest() for rel in dict.fromkeys(environment["inputs"] + runner.get("semantics", {}).get("inputs", []))}
     canonical = lambda value: json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
     return {"runner": hashlib.sha256(canonical(runner)).hexdigest(),
             "environment": hashlib.sha256(canonical(environment)).hexdigest(), "inputs": inputs}
@@ -155,6 +178,13 @@ def pair_errors(project: dict, record: dict, reader=None) -> list[str]:
         problems.append(f"runner {runner_id}: selector must equal the recorded test_file")
     if record.get("command") != selected_command(runner, record.get("test_file", "")):
         problems.append(f"runner {runner_id}: command or selection differs from approved configuration")
+    semantics, recorded = runner.get("semantics"), record.get("test_semantics")
+    if not semantics:
+        problems.append(f"runner {runner_id}: proof needs an approved semantic adapter; dependency impact is unknown")
+    elif not recorded:
+        problems.append(f"runner {runner_id}: proof needs a semantic fingerprint and complete dependency closure")
+    elif recorded and recorded.get("adapter") != semantics.get("adapter"):
+        problems.append(f"runner {runner_id}: proof semantic adapter differs from approved configuration")
     for path in record.get("covers", []):
         if not match_any(path, runner.get("applies_to", [])):
             problems.append(f"runner {runner_id}: {path} is outside its approved scope")

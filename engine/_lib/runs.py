@@ -16,7 +16,7 @@ RUN_ID_PATTERN = re.compile(r"^R-\d{8}-[0-9a-f]{4}$")
 UNIT_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 ALLOWED_RUN_STATUSES = {"active", "completed", "superseded"}
 ALLOWED_UNIT_STATUSES = {"todo", "in-progress", "PASS", "FAIL", "PARTIAL", "BLOCKED", "NOT_APPLICABLE"}
-FROZEN_FIELDS = ("run_id", "tier", "goal", "slice", "criteria", "tests", "frozen_at", "approval")
+FROZEN_FIELDS = ("run_id", "tier", "goal", "slice", "criteria", "tests", "proofs", "outcomes", "supersession", "frozen_at", "approval")
 
 def validate_contained_path(root: Path, rel_path: str) -> str:
     """Validate that rel_path is contained within root without symlink escape."""
@@ -218,8 +218,10 @@ def _check_old_run(view, path: str) -> list[str]:
         reasons.append(f"{path}: invalid run status '{new_status}'")
     if old_status in ("completed", "superseded") and new_status != old_status:
         reasons.append(f"{path}: run status '{old_status}' is terminal and cannot transition to '{new_status}'")
-    if new_status == "superseded" and not new_data.get("superseded_by"):
-        reasons.append(f"{path}: superseded run must specify superseded_by")
+    if old_status == "superseded" and any(old_data.get(k) != new_data.get(k) for k in ("superseded_by", "superseded_at")):
+        reasons.append(f"{path}: terminal supersession links are immutable")
+    if new_status == "superseded" and (not new_data.get("superseded_by") or not new_data.get("superseded_at")):
+        reasons.append(f"{path}: superseded run must specify superseded_by and superseded_at")
     return reasons
 
 def check_run_commit(view) -> list[str]:
@@ -238,15 +240,23 @@ def check_run_commit(view) -> list[str]:
         try: data = json.loads(raw.decode("utf-8", "replace"))
         except (ValueError, TypeError):
             reasons.append(f"{path}: run record is not valid JSON"); continue
+        if not isinstance(data, dict):
+            reasons.append(f"{path}: run record must be an object")
+            continue
         if path not in old_runs and (schema_errs := validate_named(data, "run")):
             reasons.append(f"{path}: schema error: {', '.join(schema_errs)}")
-        if data.get("frozen_at") and data.get("status", "completed") == "active":
-            for kind in ("criteria", "tests"):
+        if path not in old_runs and data.get("status", "completed") != "active":
+            reasons.append(f"{path}: newly added runs must start active; terminal state needs a validated transition")
+        if data.get("frozen_at"):
+            kinds = ("criteria", "tests", "proofs") if data.get("status", "completed") == "active" else ("proofs",)
+            for kind in kinds:
                 for entry in data.get(kind, []):
                     fpath = entry.get("path")
                     content = view.read_new(fpath)
                     if content is None or hashlib.sha256(content).hexdigest() != entry.get("sha256"):
                         reasons.append(f"run {data.get('run_id')}: frozen {kind} file {fpath} was modified or is missing")
+    from .run_supersession import commit_errors
+    reasons += commit_errors(view, old_runs, new_runs)
     return reasons
 
 def _clean_units(root: Path, units: list[dict]) -> list[dict]:
@@ -275,12 +285,15 @@ def _resolve_approval(root: Path, ref: str | None) -> dict | None:
             data = json.loads(appr_file.read_text(encoding="utf-8"))
             if ref not in {a.get("id") for a in data.get("approvals", []) if isinstance(a, dict)}:
                 raise CgspecError(f"approval ref '{ref}' is not registered in approvals.json")
-        except (OSError, ValueError): pass
+        except (OSError, ValueError, AttributeError) as exc:
+            raise CgspecError(f"cannot validate approval ref '{ref}': {exc}") from exc
     return {"source": "message-hook", "ref": ref, "at": utc_now()}
 
 def freeze_run(root: Path, goal: str, tier: str, criteria_paths: list[str],
                test_paths: list[str], units: list[dict], run_id: str | None = None,
-               slice_id: str | None = None, approval_ref: str | None = None) -> dict:
+               slice_id: str | None = None, approval_ref: str | None = None,
+               outcomes: list[str] | None = None, proof_paths: list[str] | None = None,
+               supersession: dict | None = None) -> dict:
     """Freeze a run record with SHA-256 hashes of criteria and tests."""
     run_id = run_id or new_id("R")
     if not RUN_ID_PATTERN.match(run_id):
@@ -290,12 +303,18 @@ def freeze_run(root: Path, goal: str, tier: str, criteria_paths: list[str],
         raise CgspecError(f"run {run_id} already exists; cannot overwrite existing run")
     crit = [{"path": validate_contained_path(root, p), "sha256": sha256_file(root / validate_contained_path(root, p))} for p in criteria_paths]
     tests = [{"path": validate_contained_path(root, p), "sha256": sha256_file(root / validate_contained_path(root, p))} for p in test_paths]
+    proofs = [{"path": validate_contained_path(root, p), "sha256": sha256_file(root / validate_contained_path(root, p))} for p in (proof_paths or [])]
     data = {
         "schema": 1, "run_id": run_id, "status": "active", "tier": tier, "goal": goal,
-        "criteria": crit, "tests": tests, "units": _clean_units(root, units),
+        "criteria": crit, "tests": tests, "proofs": proofs,
+        "units": _clean_units(root, units),
         "frozen_at": utc_now(), "approval": _resolve_approval(root, approval_ref),
     }
+    if outcomes is not None: data["outcomes"] = list(outcomes)
     if slice_id: data["slice"] = slice_id
+    if supersession is not None:
+        from .run_supersession import prepare
+        prepare(root, data, supersession, _resolve_approval, load_run_file)
     if errs := validate_named(data, "run"): raise CgspecError(f"invalid run.json: {', '.join(errs)}")
     write_json(target, data)
     print(f"frozen run {run_id} ({len(crit)} criteria, {len(tests)} tests, {len(data['units'])} units)")
@@ -319,16 +338,8 @@ def supersede_run(root: Path, run_id: str, superseded_by: str) -> dict:
     """Transition a run to superseded status, pointing to the replacing run ID."""
     if not RUN_ID_PATTERN.match(superseded_by):
         raise CgspecError(f"invalid superseded_by run_id '{superseded_by}'")
-    target = root / RUNS_DIR / run_id / "run.json"
-    if not target.is_file(): raise CgspecError(f"run {run_id} not found")
-    data, errs = load_run_file(target, root)
-    if errs or not data: raise CgspecError(f"cannot supersede malformed run {run_id}: {'; '.join(errs)}")
-    data["status"] = "superseded"
-    data["superseded_by"] = superseded_by
-    data["superseded_at"] = utc_now()
-    write_json(target, data)
-    print(f"superseded run {run_id} by {superseded_by}")
-    return data
+    from .run_supersession import transition
+    return transition(root, run_id, superseded_by, load_run_file)
 
 def update_unit_status(root: Path, run_id: str, unit_id: str, status: str,
                        review_rounds: int | None = None) -> dict:
@@ -345,48 +356,7 @@ def update_unit_status(root: Path, run_id: str, unit_id: str, status: str,
     write_json(target, data)
     return data
 
-def _cli_freeze(root: Path, args) -> int:
-    """Handle CLI run freeze command."""
-    goal = getattr(args, "goal", None) or (args.rest[1] if len(args.rest) > 1 else "Task run")
-    tier = getattr(args, "tier", None) or "T1"
-    crit = [p.strip() for p in (getattr(args, "criteria", "") or "").split(",") if p.strip()]
-    tests = [p.strip() for p in (getattr(args, "tests", "") or "").split(",") if p.strip()]
-    units_raw = getattr(args, "units", None)
-    units = json.loads(units_raw) if isinstance(units_raw, str) else (units_raw or [])
-    freeze_run(root, goal, tier, crit, tests, units,
-               run_id=getattr(args, "run_id", None),
-               slice_id=getattr(args, "slice", None),
-               approval_ref=getattr(args, "approval", None))
-    return 0
-
-def _cli_show(root: Path, args) -> int:
-    """Handle CLI run show command."""
-    runs, errors = load_runs_with_errors(root)
-    target = (args.rest[1:2] or [getattr(args, "run_id", None)])[0]
-    if target:
-        for _, data in runs:
-            if data.get("run_id") == target:
-                print(json.dumps(data, indent=2)); return 0
-        if any(target in e for e in errors): raise CgspecError(f"run {target} is malformed")
-        raise CgspecError(f"run {target} not found")
-    if runs: print(json.dumps([d for _, d in runs], indent=2)); return 0
-    if errors: raise CgspecError(f"runs directory contains errors: {'; '.join(errors)}")
-    print("no runs found"); return 0
-
 def cli(root: Path, args) -> int:
     """CLI dispatcher for run subcommands."""
-    action = (args.rest[:1] or [""])[0]
-    if action == "freeze": return _cli_freeze(root, args)
-    if action == "show": return _cli_show(root, args)
-    target = (args.rest[1:2] or [getattr(args, "run_id", None)])[0]
-    if action == "complete" and target: complete_run(root, target); return 0
-    if action == "supersede" and target:
-        by = getattr(args, "by", None) or (args.rest[2] if len(args.rest) > 2 else None)
-        if not by: raise CgspecError("usage: cgspec_hook.py run supersede <run_id> --by <new_run_id>")
-        supersede_run(root, target, by); return 0
-    if action == "update-unit" and target:
-        uid, status = getattr(args, "unit", None), getattr(args, "unit_status", None)
-        if not uid or not status: raise CgspecError("usage: cgspec_hook.py run update-unit <run_id> --unit <id> --unit-status <status>")
-        update_unit_status(root, target, uid, status, review_rounds=getattr(args, "review_rounds", None))
-        return 0
-    raise CgspecError("usage: cgspec_hook.py run freeze|show|complete|supersede|update-unit ...")
+    from .run_cli import dispatch
+    return dispatch(root, args)

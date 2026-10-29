@@ -361,7 +361,7 @@ def build_parser() -> argparse.ArgumentParser:
     for f in ("--file", "--applies-to", "--description", "--approval", "--command", "--guide", "--release-dir"):
         parser.add_argument(f)
     parser.add_argument("--no-rerun", action="store_true")
-    for f in ("--criteria", "--tests", "--units", "--run-id", "--by", "--status", "--unit", "--unit-status", "--outcome", "--verify"):
+    for f in ("--criteria", "--tests", "--proofs", "--outcomes", "--supersession", "--units", "--run-id", "--by", "--status", "--unit", "--unit-status", "--outcome", "--verify"):
         parser.add_argument(f)
     parser.add_argument("--review-rounds", type=int)
     return parser

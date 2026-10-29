@@ -89,7 +89,9 @@ def _test_pairs(view: View, code_changes, tier: dict | None, classes: dict, proj
             and not _preserved_prototype(view, c)]
     paths = [p for p in view.files_new("docs/_cgspec/06-evidence/tests") if p.endswith(".json")]
     records = [(p, trust.load(view.read_new(p))) for p in paths]
-    records = [(p, r) for p, r in records if r.get("slice") == tier.get("slice")]
+    from .run_supersession import retired_proofs
+    retired = retired_proofs(view)
+    records = [(p, r) for p, r in records if r.get("slice") == tier.get("slice") and p not in retired]
     head = "HEAD" if view.new == ":" else view.new
     reasons = []
     from . import runner_contracts

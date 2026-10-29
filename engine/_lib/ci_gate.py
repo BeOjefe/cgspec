@@ -39,6 +39,81 @@ def new_test_records(root: Path, base: str) -> list[dict]:
     return records
 
 
+def affected_test_records(root: Path, base: str) -> list[dict]:
+    """Existing proof whose selected test, closure, or approved adapter inputs changed."""
+    changed = set(git(root, "diff", "--name-only", base, "HEAD").stdout.splitlines())
+    paths = git(root, "ls-tree", "-r", "--name-only", "HEAD", "--",
+                "docs/_cgspec/06-evidence/tests").stdout.splitlines()
+    project_result = git(root, "show", "HEAD:docs/_cgspec/project.json")
+    try:
+        project = json.loads(project_result.stdout) if project_result.returncode == 0 else {}
+    except ValueError:
+        project = {}
+    if not isinstance(project, dict):
+        project = {}
+    runner_inputs = {}
+    raw_environments = project.get("test_environments", [])
+    environments = {item.get("id"): item for item in raw_environments if isinstance(item, dict)} \
+        if isinstance(raw_environments, list) else {}
+    raw_runners = project.get("test_runners", [])
+    for runner in raw_runners if isinstance(raw_runners, list) else []:
+        if not isinstance(runner, dict):
+            continue
+        environment = environments.get(runner.get("environment"), {})
+        semantics = runner.get("semantics") if isinstance(runner.get("semantics"), dict) else {}
+        environment_inputs = environment.get("inputs", []) if isinstance(environment.get("inputs"), list) else []
+        semantic_inputs = semantics.get("inputs", []) if isinstance(semantics.get("inputs"), list) else []
+        runner_inputs[runner.get("id")] = set(environment_inputs) | set(semantic_inputs)
+    records = []
+    for rel in paths:
+        shown = git(root, "show", f"HEAD:{rel}")
+        try:
+            record = json.loads(shown.stdout) if shown.returncode == 0 else None
+        except ValueError:
+            record = None
+        if not isinstance(record, dict):
+            continue
+        semantics = record.get("test_semantics") if isinstance(record.get("test_semantics"), dict) else {}
+        raw_dependencies = semantics.get("dependencies")
+        dependencies = {item.get("path") for item in raw_dependencies
+                        if isinstance(item, dict) and isinstance(item.get("path"), str)} if isinstance(raw_dependencies, list) else set()
+        watched = {record.get("test_file")} | dependencies | runner_inputs.get(record.get("runner_id"), set())
+        from .test_evolution import known_closure
+        unknown_closure = not known_closure(semantics)
+        if (unknown_closure and changed) or "docs/_cgspec/project.json" in changed or changed & watched:
+            record["_file"] = rel
+            records.append(record)
+    return records
+
+
+def _proof_superseded(root: Path, proof_path: str) -> bool:
+    """Retire proof only after an approved historical transition and fresh replacement replay."""
+    from . import run_supersession
+    candidate = git(root, "rev-parse", "--verify", "HEAD^{commit}").stdout.strip()
+    if not candidate:
+        return False
+    view = View.commit(root, candidate)
+    if proof_path not in run_supersession.retired_proofs(view):
+        return False
+    for path in view.files_new("docs/_cgspec/05-runs"):
+        if not path.endswith("/run.json"):
+            continue
+        old = run_supersession._data(view, path)
+        if not old or old.get("status") != "superseded" or proof_path not in (run_supersession._refs(old, "proofs") or []):
+            continue
+        replacement = run_supersession._data(view, f"docs/_cgspec/05-runs/{old.get('superseded_by')}/run.json")
+        if not replacement or run_supersession.errors(old, replacement) or run_supersession.proof_link_errors(old, replacement, view.read_new):
+            continue
+        targets = [link["new"] for link in replacement["supersession"]["links"]["proofs"] if link["old"] == proof_path]
+        if len(targets) != 1:
+            continue
+        record = run_supersession._data(view, targets[0])
+        record["_file"] = targets[0]
+        if prove_failed(root, record) is None and git(root, "rev-parse", "HEAD").stdout.strip() == candidate:
+            return True
+    return False
+
+
 def _run_at(root: Path, rev: str, command: list) -> int | str:
     """Exit code of command in a throwaway worktree at rev, or an error message."""
     tmp = Path(tempfile.mkdtemp(prefix="cgspec-proof-"))
@@ -63,10 +138,10 @@ def prove_failed(root: Path, record: dict) -> str | None:
     failed_at, test_file = str(record.get("failed_at", "")), str(record.get("test_file", ""))
     if git(root, "cat-file", "-e", f"{failed_at}:{test_file}").returncode != 0:
         return f"{name}: test file {test_file} did not exist at {failed_at[:10]}, so it cannot have failed there"
-    if git(root, "diff", "--quiet", failed_at, "HEAD", "--", test_file).returncode != 0:
-        return f"{name}: test file {test_file} was modified after failed_at {failed_at[:10]}; a failing test cannot be weakened to make it pass"
     if any(field in record for field in ("runner_id", "runner_hash", "selector")):
         return prove_named(root, record)
+    if git(root, "diff", "--quiet", failed_at, "HEAD", "--", test_file).returncode != 0:
+        return f"{name}: test file {test_file} was modified after failed_at {failed_at[:10]}; a failing test cannot be weakened to make it pass"
     shown = git(root, "show", "HEAD:docs/_cgspec/project.json")
     try:
         project = json.loads(shown.stdout) if shown.returncode == 0 else {}
@@ -113,6 +188,12 @@ def prove_named(root: Path, record: dict) -> str | None:
         except CgspecError as exc:
             return f"{name}: {exc}"
         definitions.append((runner, environment))
+
+    from .test_evolution import preservation_error
+    problem = preservation_error(root, record["failed_at"], *definitions[0], record["test_file"],
+                                 record["test_id"], record.get("test_semantics"), candidate_sha)
+    if problem:
+        return f"{name}: {problem}"
     proof_dir = Path(os.environ.get("CGSPEC_PROOF_DIR", str(root / ".cgspec-scratch/ci-proof")))
     for label, rev, definition, expected in (("red", record["failed_at"], definitions[0], "ASSERTION_FAILED"),
                                               ("green", candidate_sha, definitions[1], "PASS")):
@@ -171,11 +252,26 @@ def run(root: Path, base: str | None, rerun_tests: bool = True,
         problems.append("incomplete verification: --no-rerun skipped failing-test proof; "
                         "this result cannot satisfy the governance check")
     else:
-        for record in new_test_records(root, base):
+        new_records = new_test_records(root, base)
+        for record in new_records:
             problem = prove_failed(root, record)
             if problem:
                 problems.append(problem)
             else:
                 label = "legacy exit-code-only proof" if "runner_id" not in record else "structured runner proof"
                 notes.append(f"proved ({label}): {record.get('test_id')} failed at {str(record.get('failed_at'))[:10]}")
+                notes.append(f"proved: {record.get('test_id')} failed at {str(record.get('failed_at'))[:10]}")
+        new_paths = {record["_file"] for record in new_records}
+        for record in affected_test_records(root, base):
+            if record["_file"] in new_paths:
+                continue
+            if _proof_superseded(root, record["_file"]):
+                notes.append(f"historical proof superseded: {record.get('test_id')}")
+                continue
+            problem = (f"{record['_file']}: unknown dependency closure requires fresh semantic proof"
+                       if not record.get("test_semantics") else prove_failed(root, record))
+            if problem:
+                problems.append(problem)
+            else:
+                notes.append(f"preserved proof: {record.get('test_id')}")
     return problems, notes

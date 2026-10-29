@@ -1,5 +1,5 @@
 # CGSpec Method v0.2 — Specification
-Created: unknown · Last edited: 2026-10-28T17:22:30Z
+Created: unknown · Last edited: 2026-10-29T07:51:39Z
 
 Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Built in this repository; there is no second development checkout (see `AGENTS.md`).
 
@@ -305,9 +305,11 @@ For GUI profiles, pull request CI runs the proof in a fresh `git worktree` check
 
 **Criteria come first and are frozen.** Acceptance criteria and checks are written before work starts by someone other than the author, approved by you, and their hashes stored in `run.json`. The CI and commit hooks fail if they change during the run (section 8). Reviewers get the criteria and the artifact, never the author's explanation.
 
+**Replacement is a lifecycle, not an edit.** A changed test or architectural direction gets a new frozen run. Before dependent implementation, that replacement records its reason, fresh approval and explicit old/new links for every agreement, required outcome, test and proof. Only then may the old run move from active to the terminal `superseded` state. Both records and historical proof remain inspectable; missing inventories, unknown links and any unmapped required outcome fail closed. Independent outcomes that are not affected by the changed direction remain in their existing approved lifecycle.
+
 **Caps.** At most 3 review rounds per unit in total; after 2 rounds on the same defect the agent changes approach (smaller scope, spike, other builder). When the cap is hit the result is BLOCKED with the remaining defects listed, never PASS. Every BLOCKED or PARTIAL exit is written to the ledger with its reason and the missing input, shown in your report, and counted by the doctor until resolved.
 
-**Test-first, enforceably.** For T1 and above, every change to files in the `code` path class needs a test pair in `06-evidence/`: test ID, the revision where it failed, the files it covers. CI checks out the parent commit and re-runs the test to confirm it really failed, so the record cannot be faked. T0 is exempt. Test files are hashed into `run.json` and read-only to the code author once criteria are frozen, so a weakened test fails CI. The minimum checks per profile and tier are in the single table in section 7b.
+**Test-first, enforceably.** For T1 and above, every change to files in the `code` path class needs a test pair in `06-evidence/`: test ID, the revision where it failed, the files it covers. CI checks out the parent commit and re-runs the test to confirm it really failed, so the record cannot be faked. T0 is exempt. During an active run, its frozen test files remain read-only to builders. Later named proof may survive a formatting-only edit or unrelated test added to the same file only when an approved language adapter returns the same stable test identity, deterministic semantic fingerprint and complete relevant dependency closure at both revisions. The core hashes the adapter-reported helpers, fixtures, imports, snapshots and test configuration. A dependency change or any semantic edit to the selected test requires new red/green proof; unknown and ambiguous impact fails closed, with no guess that an assertion became stronger. The minimum checks per profile and tier are in the single table in section 7b.
 
 Never "zero defects": the claim is always "these checks passed at this revision; these were not run".
 

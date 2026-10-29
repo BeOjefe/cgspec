@@ -1,5 +1,5 @@
 # CGSpec engine: file formats and hook contract
-Created: unknown · Last edited: 2026-10-28T19:02:37Z
+Created: unknown · Last edited: 2026-10-29T07:51:39Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
@@ -53,6 +53,41 @@ The real-tool fixture is `tests/fixtures/named-web/`; run its opt-in check with
 It uses pinned Vitest/Playwright packages and installed Chrome when available. Ordinary
 source tests skip this network/browser-dependent check.
 
+### Safe test evolution and architectural supersession
+
+New named pairs also record `test_semantics`: `adapter: command-json-v1`, a 64-character
+selected-test `fingerprint`, and `dependencies` entries with `path`, `kind` and core-computed
+`sha256`. The approved runner declares `semantics.adapter`, an argument-vector `command`
+with exactly one `{test_file}` and `{test_id}`, and nonempty literal `inputs`. Both runner
+configuration hashes and persisted execution fingerprints include semantic-input bytes.
+The adapter emits exactly `schema: 1`, `test_id`, `semantic_fingerprint`,
+`closure_complete: true`, and `dependencies` with `path` and `kind` (`helper`, `fixture`,
+`import`, `snapshot`, `config`). The core checks containment and hashes dependency bytes.
+Language parsing is an adapter capability; the core contains no AST implementation.
+
+CI compares the recorded identity at red and the pinned candidate. Unrelated additions
+in the same file and adapter-established formatting changes may preserve identity; a
+selected-test semantic change or changed dependency requires fresh proof. Whole-file
+immutability applies only to legacy exit-code proof. Historical legacy and pre-semantic
+pairs have unknown dependency closure: any later file change selects them for revalidation
+and requires fresh semantic proof, or an approved replacement. Historical pair JSON is
+immutable; do not rewrite its identity to fit changed code.
+
+Freeze replacement runs with explicit `outcomes`, `proofs` paths, and `supersession` containing
+`replaces`, `reason`, `approval_ref`, and `links`. Each link group (`agreements`, `outcomes`,
+`tests`, `proofs`) is an array of `{old, new}` mappings covering the complete old inventory.
+Omitted inventories remain unknown; explicit empty inventories cannot omit required slice
+start outcomes. Slice-bound inventories must match their respective start record.
+Approval must name `approve supersession R-YYYYMMDD-xxxx to R-YYYYMMDD-yyyy` (or use the
+trusted commit-trailer approval path). Only a recorded active run may transition to
+`superseded`; newly introduced terminal runs are rejected. Frozen fields and historical
+proof hashes remain immutable after transition.
+
+Replacement proof links must identify distinct schema-valid semantic test-pairs belonging
+to the replacement run's tests and slice. Commit validation checks mappings and approval;
+CI additionally calls `prove_failed()` on the replacement at the candidate before retiring
+historical proof. Structurally approved retired pairs cannot cover later implementation.
+
 ## Files
 
 Human-readable CGSpec Markdown documents (except the append-only inbox and ledger, engine files, and archived originals) show `Created: ... · Last edited: ...` immediately below the title. New template documents get both dates at install. The v0.1 upgrader uses `Created: unknown` when source creation cannot be proven. The commit gate rejects missing or unchanged edit dates on changed documents, future dates, new documents dated before install or marked unknown outside install/upgrade, date-only edits, invented creation dates on pre-existing documents, and changed creation across renames; doctor warns about untouched legacy documents missing the line. Date metadata does not count as substantive spine content.
@@ -62,7 +97,7 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | `docs/_cgspec/project.json` | `project` | `install.py` | Version marker. `path_classes` globs drive T0 detection (spec 3). Optional `visual_drift_threshold` (default 0.5% of pixels) sets the threshold between W-DRIFT and E-DRIFT. Optional named `test_runners` and shared `test_environments` require targeted `test_runners_approval`. |
 | `docs/_cgspec/07-state/tier.json` | `tier` | main agent via `cgspec_hook.py tier set` | Declared before editing. `files` and `verification` required for new T0 declarations; `slice` required for T1+. |
 | `docs/slices/SLICE-NNN-*.start.json` | `start` | main agent via `cgspec_hook.py start` | Versioned success/evaluation definition, fresh approval, executable readiness, active outcomes and mock-switch state. Definition edits invalidate readiness and require renewed approval. |
-| `docs/_cgspec/05-runs/<run-id>/run.json` | `run` | inspector | `criteria` and `tests` hold sha256 of each file; once `frozen_at` is set they may not change. `approval` is written only by the message hook or read from a commit trailer, never by the agent. |
+| `docs/_cgspec/05-runs/<run-id>/run.json` | `run` | inspector | `criteria`, `tests` and `proofs` hold sha256 values. Frozen inventories, outcomes and supersession mappings are immutable. New runs start active; retirement requires validated replacement links and approval. |
 | `docs/_cgspec/07-state/frozen.json` | `frozen` | `bundle_prototype.py`, `cgspec_hook.py freeze`, `visual_audit.py --approve-baseline` | Append-only. CI rejects any change to an existing entry (spec 8, trust root). |
 | `docs/_cgspec/04-checks/manifest.json` | `checks-manifest` | registration flow | Append-only for the same reason. A check runs as a gate only when listed here with a matching hash. Written only by `cgspec_hook.py check register` (script and optional Markdown guide must be regular files under `.cgspec-scratch/checks/`). Optional `guide` and `guide_sha256` pin the approved fix guidance beside the script; a missing or changed guide blocks execution. |
 | `docs/_cgspec/07-state/checkpoint.json` | `checkpoint` | main agent via checkpoint command | `in_flight` is written before each batch and cleared after; clearing it is not project completion. Optional source observations and unresolved-stop diagnostics support recovery. |

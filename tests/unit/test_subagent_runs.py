@@ -7,7 +7,7 @@ import os
 import unittest
 from pathlib import Path
 
-from tests.helpers import TempDir, git, git_project, hook, run_script, set_test_command, write_json
+from tests.helpers import TempDir, approve, git, git_project, hook, run_script, set_test_command, write_json
 from _lib import ci_gate, post_tool, runs
 from _lib.common import CgspecError, sha256_file
 from _lib.gitview import View
@@ -312,15 +312,224 @@ class SubagentRunsTests(unittest.TestCase):
             test_paths=["tests/test_feature.py"],
             units=[{"id": "u1", "owner": "builder", "allowed_paths": ["src/**"], "status": "in-progress"}],
             run_id="R-20261024-0002",
+            outcomes=[],
         )
         self.assertIn("tests/test_feature.py", runs.frozen_run_files(self.root))
 
-        # Supersede R-20261024-0002 with R-20261024-0003
+        # A normal run cannot silently replace it.
+        with self.assertRaisesRegex(CgspecError, "replacement run not found"):
+            runs.supersede_run(self.root, "R-20261024-0002", superseded_by="R-20261024-0003")
+
+        approval = approve(self.root, "approve supersession R-20261024-0002 to R-20261024-0003")
+        runs.freeze_run(
+            self.root,
+            goal="Feature v3",
+            tier="T1",
+            criteria_paths=["docs/criteria.md"],
+            test_paths=["tests/test_feature.py"],
+            units=[{"id": "u1", "owner": "builder", "allowed_paths": ["src/**"], "status": "todo"}],
+            run_id="R-20261024-0003",
+            outcomes=[],
+            supersession={
+                "replaces": "R-20261024-0002", "reason": "replace the implementation direction",
+                "approval_ref": approval,
+                "links": {"agreements": [{"old": "docs/criteria.md", "new": "docs/criteria.md"}],
+                          "outcomes": [],
+                          "tests": [{"old": "tests/test_feature.py", "new": "tests/test_feature.py"}],
+                          "proofs": []},
+            },
+        )
         runs.supersede_run(self.root, "R-20261024-0002", superseded_by="R-20261024-0003")
         r2_data, _ = runs.load_run_file(self.root / "docs/_cgspec/05-runs/R-20261024-0002/run.json")
         self.assertEqual(r2_data["status"], "superseded")
         self.assertEqual(r2_data["superseded_by"], "R-20261024-0003")
         self.assertIsNotNone(r2_data["superseded_at"])
+        r3_data, _ = runs.load_run_file(self.root / "docs/_cgspec/05-runs/R-20261024-0003/run.json")
+        self.assertEqual(r3_data["supersession"]["approval"]["ref"], approval)
+        self.assertEqual(r3_data["supersession"]["links"]["tests"][0]["old"], "tests/test_feature.py")
+
+    def test_supersession_requires_approval_and_preserves_every_required_outcome_and_proof(self):
+        criteria = self.root / "docs/criteria-old.md"
+        criteria.parent.mkdir(parents=True, exist_ok=True)
+        criteria.write_text("# Old criteria\n", encoding="utf-8")
+        test_file = self.root / "tests/test_old.py"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_text("def test_old(): pass\n", encoding="utf-8")
+        proof = self.root / "docs/_cgspec/06-evidence/tests/old.json"
+        write_json(proof, {"schema": 1, "test_id": "tests/test_old.py::test_old", "test_file": "tests/test_old.py",
+                           "command": ["python3", "tests/test_old.py"], "failed_at": "aaaaaaa",
+                           "covers": ["src/old.py"], "slice": "SLICE-001", "recorded": "2026-10-28T00:00:00Z"})
+        write_json(self.root / "docs/slices/SLICE-001-replacement.start.json", {
+            "outcomes": [{"id": "OUT-required"}],
+        })
+        runs.freeze_run(
+            self.root, "Old direction", "T2", ["docs/criteria-old.md"], ["tests/test_old.py"],
+            [{"id": "u1", "owner": "builder", "allowed_paths": ["src/**"]}],
+            run_id="R-20261024-0010", slice_id="SLICE-001", outcomes=["OUT-required"],
+            proof_paths=["docs/_cgspec/06-evidence/tests/old.json"],
+        )
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "freeze active old direction")
+        replacement_criteria = self.root / "docs/criteria-new.md"
+        replacement_criteria.write_text("# New criteria\n", encoding="utf-8")
+        replacement_test = self.root / "tests/test_new.py"
+        replacement_test.write_text("def test_new(): pass\n", encoding="utf-8")
+        replacement_proof = self.root / "docs/_cgspec/06-evidence/tests/new.json"
+        write_json(replacement_proof, {
+            "schema": 1,
+            "test_id": "tests/test_new.py::test_new",
+            "test_file": "tests/test_new.py",
+            "command": ["python3", "tests/test_new.py"],
+            "runner_id": "unit",
+            "runner_hash": "a" * 64,
+            "selector": "tests/test_new.py",
+            "test_semantics": {
+                "adapter": "command-json-v1",
+                "fingerprint": "b" * 64,
+                "dependencies": [],
+            },
+            "failed_at": "aaaaaaa",
+            "runner_id": "unit", "runner_hash": "a" * 64, "selector": "tests/test_new.py",
+            "test_semantics": {"adapter": "command-json-v1", "fingerprint": "b" * 64, "dependencies": []},
+            "covers": ["src/new.py"],
+            "slice": "SLICE-001",
+            "recorded": "2026-10-28T00:00:00Z",
+        })
+        links = {
+            "agreements": [{"old": "docs/criteria-old.md", "new": "docs/criteria-new.md"}],
+            "outcomes": [],
+            "tests": [{"old": "tests/test_old.py", "new": "tests/test_new.py"}],
+            "proofs": [{"old": "docs/_cgspec/06-evidence/tests/old.json",
+                        "new": "docs/_cgspec/06-evidence/tests/new.json"}],
+        }
+        with self.assertRaisesRegex(CgspecError, "explicit approval"):
+            runs.freeze_run(
+                self.root, "New direction", "T2", ["docs/criteria-new.md"], ["tests/test_new.py"],
+                [{"id": "u1", "owner": "builder", "allowed_paths": ["src/**"]}],
+                run_id="R-20261024-0011", slice_id="SLICE-001", outcomes=["OUT-required"],
+                proof_paths=["docs/_cgspec/06-evidence/tests/new.json"],
+                supersession={"replaces": "R-20261024-0010", "reason": "approved architecture replacement",
+                              "links": links},
+            )
+        generic = approve(self.root, "approved, go ahead")
+        with self.assertRaisesRegex(CgspecError, "must explicitly name"):
+            runs.freeze_run(
+                self.root, "New direction", "T2", ["docs/criteria-new.md"], ["tests/test_new.py"],
+                [{"id": "u1", "owner": "builder", "allowed_paths": ["src/**"]}],
+                run_id="R-20261024-0011", slice_id="SLICE-001", outcomes=["OUT-required"],
+                proof_paths=["docs/_cgspec/06-evidence/tests/new.json"],
+                supersession={"replaces": "R-20261024-0010", "reason": "approved architecture replacement",
+                              "approval_ref": generic, "links": links},
+            )
+        approval = approve(self.root, "approve supersession R-20261024-0010 to R-20261024-0011")
+        with self.assertRaisesRegex(CgspecError, "still-required references: OUT-required"):
+            runs.freeze_run(
+                self.root, "New direction", "T2", ["docs/criteria-new.md"], ["tests/test_new.py"],
+                [{"id": "u1", "owner": "builder", "allowed_paths": ["src/**"]}],
+                run_id="R-20261024-0011", slice_id="SLICE-001", outcomes=["OUT-required"],
+                proof_paths=["docs/_cgspec/06-evidence/tests/new.json"],
+                supersession={"replaces": "R-20261024-0010", "reason": "approved architecture replacement",
+                              "approval_ref": approval, "links": links},
+            )
+        links["outcomes"] = [{"old": "OUT-required", "new": "OUT-required"}]
+        runs.freeze_run(
+            self.root, "New direction", "T2", ["docs/criteria-new.md"], ["tests/test_new.py"],
+            [{"id": "u1", "owner": "builder", "allowed_paths": ["src/**"]}],
+            run_id="R-20261024-0011", slice_id="SLICE-001", outcomes=["OUT-required"],
+            proof_paths=["docs/_cgspec/06-evidence/tests/new.json"],
+            supersession={"replaces": "R-20261024-0010", "reason": "approved architecture replacement",
+                          "approval_ref": approval, "links": links},
+        )
+        old_before = json.loads((self.root / "docs/_cgspec/05-runs/R-20261024-0010/run.json").read_text())
+        runs.supersede_run(self.root, "R-20261024-0010", "R-20261024-0011")
+        old_after = json.loads((self.root / "docs/_cgspec/05-runs/R-20261024-0010/run.json").read_text())
+        for field in runs.FROZEN_FIELDS:
+            self.assertEqual(old_before.get(field), old_after.get(field))
+        self.assertEqual(old_after["status"], "superseded")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "approved architectural supersession")
+        committed = git(self.root, "rev-parse", "HEAD").stdout.strip()
+        self.assertEqual(runs.check_run_commit(View.commit(self.root, committed)), [])
+        write_json(proof, {"historical": "rewritten"})
+        git(self.root, "add", proof.relative_to(self.root).as_posix())
+        self.assertTrue(any("frozen proofs file" in reason for reason in
+                            runs.check_run_commit(View.staged(self.root))))
+
+    def test_new_terminal_run_is_rejected_before_it_can_bypass_supersession(self):
+        criteria = self.root / "docs/criteria.md"
+        criteria.parent.mkdir(parents=True, exist_ok=True)
+        criteria.write_text("# Criteria\n", encoding="utf-8")
+        test_file = self.root / "tests/test_feature.py"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_text("def test_feature(): pass\n", encoding="utf-8")
+        data = runs.freeze_run(
+            self.root, "Injected history", "T1", ["docs/criteria.md"],
+            ["tests/test_feature.py"],
+            [{"id": "u1", "owner": "builder", "allowed_paths": ["src/**"]}],
+            run_id="R-20261024-0020", outcomes=[],
+        )
+        data.update(status="superseded", superseded_by="R-20261024-0021",
+                    superseded_at="2026-10-28T00:00:00Z")
+        write_json(self.root / "docs/_cgspec/05-runs/R-20261024-0020/run.json", data)
+        git(self.root, "add", "-A")
+        reasons = runs.check_run_commit(View.staged(self.root))
+        self.assertTrue(any("newly added runs must start active" in reason for reason in reasons))
+
+    def test_supersession_rejects_self_linked_and_non_pair_proofs(self):
+        from _lib import run_supersession
+
+        proof_path = "docs/_cgspec/06-evidence/tests/old.json"
+        write_json(self.root / proof_path, {
+            "schema": 1, "test_id": "tests/test_old.py::test_old",
+            "test_file": "tests/test_old.py", "command": ["python3", "tests/test_old.py"],
+            "failed_at": "aaaaaaa",
+            "runner_id": "unit", "runner_hash": "a" * 64, "selector": "tests/test_new.py",
+            "test_semantics": {"adapter": "command-json-v1", "fingerprint": "b" * 64, "dependencies": []}, "covers": ["src/old.py"], "slice": "SLICE-001",
+            "recorded": "2026-10-28T00:00:00Z",
+        })
+        old = {"run_id": "R-20261024-0030", "proofs": [{"path": proof_path}],
+               "tests": [{"path": "tests/test_old.py"}], "outcomes": [], "criteria": []}
+        new = {"run_id": "R-20261024-0031", "slice": "SLICE-001",
+               "proofs": [{"path": proof_path}], "tests": [{"path": "tests/test_old.py"}],
+               "outcomes": [], "criteria": [],
+               "supersession": {"links": {"proofs": [{"old": proof_path, "new": proof_path}]}}}
+        reader = lambda path: (self.root / path).read_bytes() if (self.root / path).is_file() else None
+        reasons = run_supersession.proof_link_errors(old, new, reader)
+        self.assertIn("replacement proof must be distinct from every retired proof", reasons)
+
+        new["proofs"] = [{"path": "docs/criteria.md"}]
+        new["supersession"]["links"]["proofs"][0]["new"] = "docs/criteria.md"
+        reasons = run_supersession.proof_link_errors(old, new, reader)
+        self.assertIn("replacement proof must name a test-pair record", reasons)
+
+    def test_omitted_outcomes_do_not_become_an_empty_inventory(self):
+        criteria = self.root / "docs/criteria.md"
+        criteria.parent.mkdir(parents=True, exist_ok=True)
+        criteria.write_text("# Criteria\n", encoding="utf-8")
+        test_file = self.root / "tests/test_feature.py"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_text("def test_feature(): pass\n", encoding="utf-8")
+        old = runs.freeze_run(
+            self.root, "Legacy run", "T1", ["docs/criteria.md"], ["tests/test_feature.py"],
+            [{"id": "u1", "owner": "builder", "allowed_paths": ["src/**"]}],
+            run_id="R-20261024-0040",
+        )
+        self.assertNotIn("outcomes", old)
+        approval = approve(self.root, "approve supersession R-20261024-0040 to R-20261024-0041")
+        with self.assertRaisesRegex(CgspecError, "outcomes inventory is unknown"):
+            runs.freeze_run(
+                self.root, "Replacement", "T1", ["docs/criteria.md"], ["tests/test_feature.py"],
+                [{"id": "u1", "owner": "builder", "allowed_paths": ["src/**"]}],
+                run_id="R-20261024-0041", outcomes=[],
+                supersession={
+                    "replaces": "R-20261024-0040", "reason": "replace legacy direction",
+                    "approval_ref": approval,
+                    "links": {"agreements": [{"old": "docs/criteria.md", "new": "docs/criteria.md"}],
+                              "outcomes": [],
+                              "tests": [{"old": "tests/test_feature.py", "new": "tests/test_feature.py"}],
+                              "proofs": []},
+                },
+            )
 
     def _setup_frozen_run_commit(self) -> tuple[str, Path, Path]:
         """Helper to create and commit a frozen run."""
