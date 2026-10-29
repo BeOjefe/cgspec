@@ -7,9 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-def git(root: Path, *args: str, binary: bool = False) -> subprocess.CompletedProcess:
+def git(root: Path, *args: str, binary: bool = False, timeout: float | None = None) -> subprocess.CompletedProcess:
     return subprocess.run(["git", "-c", "core.quotepath=off", *args], cwd=root, capture_output=True,
-                          text=not binary)
+                          text=not binary, timeout=timeout)
 
 
 @dataclass

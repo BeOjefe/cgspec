@@ -7,6 +7,7 @@ All notable changes, architectural invariants, and skill evolutions to `cgspec` 
 ## [Unreleased]
 
 ### Added
+- Read-only adoption discovery (`cgspec_hook.py adopt discover`) builds an observed project map with observed/inferred/unknown/unreachable facts per repo, and `adopt ready` judges only a slice's required repos, reporting unreachable ones as BLOCKED with owner and timing instead of a silent PASS. New `adoption-map` schema.
 - Slice success/readiness agreements now bind explicit outcomes and evaluation to fresh approval, executable probes, per-outcome coverage, and editor/staged/CI enforcement. T0 declarations require lightweight verification. `CGSPEC_ALLOW_MOCKS=0` disables mock substitution by default without changing real-proof requirements.
 
 ## [v0.2.3] — 2026-10-24
