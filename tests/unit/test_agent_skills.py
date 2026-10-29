@@ -18,7 +18,7 @@ class AgentSkillsTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             skill = root / ".agents/skills/cgspec-ui-ux/SKILL.md"
             self.assertTrue(skill.is_file())
-            self.assertTrue((root / ".agents/skills/_cgspec-docs/METHOD-v0.2.md").is_file())
+            self.assertTrue((root / ".agents/skills/_cgspec-docs/METHOD.md").is_file())
             for md in (root / ".agents/skills").rglob("*.md"):
                 text = md.read_text()
                 for ref in re.findall(r"\]\(([^)\s#]+)", text):
@@ -62,7 +62,12 @@ class AgentSkillsTests(unittest.TestCase):
             self.assertNotIn("LOCAL EDIT", skill.read_text())
             backups = list((root / "docs/_cgspec/_archive/agent-skills").rglob("SKILL.md"))
             self.assertTrue(any("LOCAL EDIT" in p.read_text() for p in backups))
-            self.assertEqual(doctor(root).returncode, 0, doctor(root).stdout)
+            (root / ".agents/skills/foreign.js").write_text("console.log('foreign');\n")
+            checked = doctor(root)
+            self.assertEqual(checked.returncode, 0, checked.stdout)
+            self.assertNotIn("docs/_cgspec/_archive/agent-skills", checked.stdout)
+            self.assertNotIn("W-SCRIPT-OUTSIDE .agents/skills/cgspec-ui-ux", checked.stdout)
+            self.assertIn("W-SCRIPT-OUTSIDE .agents/skills/foreign.js", checked.stdout)
 
 
 if __name__ == "__main__":

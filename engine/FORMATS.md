@@ -3,7 +3,7 @@ Created: unknown · Last edited: 2026-10-29T11:47:57Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
-numbers refer to `docs/METHOD-v0.2.md`.
+numbers refer to `docs/METHOD.md`.
 
 All state files carry `"schema": 1`. A future breaking change bumps it and ships a migration
 in `install.py upgrade`.

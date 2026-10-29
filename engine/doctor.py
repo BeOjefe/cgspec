@@ -21,7 +21,7 @@ from _lib import doctor_checks as C  # noqa: E402
 from _lib import layout as L  # noqa: E402
 from _lib.document_dates import STAMP, touch  # noqa: E402
 from _lib.common import (  # noqa: E402
-    EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, PROJECT_FILE, STATE_DIR, CgspecError, atomic_write_text, resolve_root,
+    ENGINE_DIR, EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, PROJECT_FILE, STATE_DIR, CgspecError, atomic_write_text, resolve_root,
 )
 from install import verify_engine  # noqa: E402
 from memlog import parse as parse_memlog  # noqa: E402
@@ -50,6 +50,16 @@ def load_legacy(root: Path) -> set[str]:
         return set()
 
 
+def load_owned_skills(root: Path) -> set[str]:
+    data, findings = C.load_json(root / ENGINE_DIR / "owned-files.json", root, None)
+    if findings or not isinstance(data, dict):
+        return set()
+    adapters = data.get("adapters")
+    antigravity = adapters.get("antigravity") if isinstance(adapters, dict) else None
+    skills = antigravity.get("skills") if isinstance(antigravity, dict) else None
+    return {item for item in skills if isinstance(item, str)} if isinstance(skills, list) else set()
+
+
 def run_checks(root: Path) -> list[C.Finding]:
     project = load_project(root)
     profile = project.get("profile", "") if isinstance(project, dict) else ""
@@ -65,7 +75,8 @@ def run_checks(root: Path) -> list[C.Finding]:
         ("records", lambda: C.records(root)),
         ("index", lambda: C.index(root)),
         ("frozen", lambda: C.frozen(root)),
-        ("scripts", lambda: C.scripts(root, classes if isinstance(classes, dict) else {}, load_legacy(root))),
+        ("scripts", lambda: C.scripts(root, classes if isinstance(classes, dict) else {}, load_legacy(root),
+                                      load_owned_skills(root))),
         ("engine", lambda: C.engine_integrity(root, verify_engine)),
         ("memlog", lambda: C.memlog(root, parse_memlog)),
         ("evidence", lambda: C.blocked(root)),

@@ -1,7 +1,7 @@
 # ADR-005: Hierarchical ADRs, Documentation Scaling & Multi-Tenant Scoping
 Created: unknown · Last edited: 2026-10-20T17:54:17Z
 
-> Historical v0.1 record; not current v0.2 rules or approval. See [the ADR index](README.md) and [the current method](../METHOD-v0.2.md).
+> Historical v0.1 record; not current v0.2 rules or approval. See [the ADR index](README.md) and [the current method](../METHOD.md).
 
 - **Status:** Accepted
 - **Date:** 2026-10-16

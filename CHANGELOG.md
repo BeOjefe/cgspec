@@ -6,11 +6,20 @@ All notable changes, architectural invariants, and skill evolutions to `cgspec` 
 
 ## [Unreleased]
 
+## [v0.3.0] — 2026-10-29
+
 ### Added
+- Named test runners bind each acceptance criterion to an approved command, environment, dependency set and structured result. Provisioning failures stay distinct from assertion failures, and mock substitution can be disabled with `CGSPEC_ALLOW_MOCKS=0`.
+- Reproducible red-green proof executes tests at their recorded revisions in clean, provisioned worktrees, verifies semantic test identity and dependency closure, and rejects dirty or incomplete evidence.
+- Safe test evolution records approved architectural supersession without rewriting frozen history; replacement tests must inventory old and new behavior and replay before historical proof can be skipped.
+- Built-application parity checks compare frozen prototypes with production assets, journeys, screenshots and video at the exact candidate revision while keeping generated evidence outside the checkout.
+- Per-slice Git execution plans bind approved bases, worktrees, file ownership, red/implementation/green ancestry, integration order and exact-candidate review across single- and multi-repository work.
+- Merge-resilient proof seals map reviewed evidence through merge, squash, rebase and merge-queue outcomes, requiring signed revalidation when material content changes. Key isolation and protected-CI deployment remain live-environment responsibilities.
 - Outcome-based closure (`cgspec_hook.py close check|checklist`): every active outcome needs current-revision passing evidence, real-environment proof where agreed, and an independent final review with no unresolved findings; stale evidence, mocks and self-review are rejected. Runs frozen for an agreed slice enforce this at `run complete`; historical runs are unaffected. Writes a per-outcome human verification checklist. Evidence schema gains review fields.
 - Read-only adoption discovery (`cgspec_hook.py adopt discover`) builds an observed project map with observed/inferred/unknown/unreachable facts per repo, and `adopt ready` judges only a slice's required repos, reporting unreachable ones as BLOCKED with owner and timing instead of a silent PASS. New `adoption-map` schema.
 - Slice success/readiness agreements now bind explicit outcomes and evaluation to fresh approval, executable probes, per-outcome coverage, and editor/staged/CI enforcement. T0 declarations require lightweight verification. `CGSPEC_ALLOW_MOCKS=0` disables mock substitution by default without changing real-proof requirements.
 - Semantic Versioning release governance: a project declares its release policy in `project.json` (`release.enabled`, `pre_1_0`, `current_version`; `enabled: false` opts out), each included slice records its compatibility impact in a `Release:` field, and `release check --target VERSION` rejects an undersized target while naming the slice that caused the required bump. Backward-compatible deprecations count as at least a minor bump.
+- The canonical method specification now has the version-independent name `docs/METHOD.md`; repository entry points distinguish current package code, consumer documentation, historical records and untracked benchmark sources.
 
 ## [v0.2.3] — 2026-10-24
 

@@ -152,7 +152,7 @@ def _markdown_files(root: Path) -> list[Path]:
     docs = root / "docs"
     if docs.is_dir():
         engine = root / ENGINE_DIR
-        files += [p for p in docs.rglob("*.md") if engine not in p.parents]
+        files += [p for p in docs.rglob("*.md") if engine not in p.parents and root / "docs/_cgspec/_archive/agent-skills" not in p.parents]
     return [p for p in files if p.is_file() and not p.is_symlink()]
 
 
@@ -330,8 +330,7 @@ def _registered_checks(root: Path) -> dict[str, str]:
     pinned.update({c["guide"]: c.get("guide_sha256", "") for c in data["checks"] if c.get("guide")})
     return pinned
 
-
-def scripts(root: Path, path_classes: dict, legacy: set[str]) -> Iterator[Finding]:
+def scripts(root: Path, path_classes: dict, legacy: set[str], owned_skills: set[str] | None = None) -> Iterator[Finding]:
     registered = _registered_checks(root)
     for rel, digest in registered.items():
         target = inside(root, rel)
@@ -351,6 +350,7 @@ def scripts(root: Path, path_classes: dict, legacy: set[str]) -> Iterator[Findin
             if path.is_symlink() or name == ".gitkeep" or not _is_script(path):
                 continue
             rel = _rel(path, root)
+            if owned_skills and rel in owned_skills: continue
             if rel.startswith("docs/"):
                 if rel in registered or _browser_asset(path, prototypes):
                     continue

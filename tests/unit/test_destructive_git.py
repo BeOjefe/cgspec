@@ -24,7 +24,7 @@ REPO = Path(__file__).resolve().parents[2]
 
 class MethodStatesTheRule(unittest.TestCase):
     def test_method_v02_states_the_agent_never_runs_these_itself(self):
-        method = (REPO / "docs/METHOD-v0.2.md").read_text(encoding="utf-8")
+        method = (REPO / "docs/METHOD.md").read_text(encoding="utf-8")
         for term in ("force-push", "filter-branch", "reset --hard", "merges a pull request"):
             self.assertIn(term, method)
 
