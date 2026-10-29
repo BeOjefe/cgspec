@@ -91,6 +91,7 @@
         "$ref": "#/definitions/hashed"
       }
     },
+    "closure": {"const": "required"},
     "outcomes": {
       "type": "array",
       "items": {

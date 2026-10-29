@@ -69,6 +69,14 @@ class RunIntegrationTests(unittest.TestCase):
         self.assertEqual(freeze_res.returncode, 0, f"Freeze failed: {freeze_res.stderr}")
         self.assertIn("frozen run R-20261024-0001", freeze_res.stdout)
 
+        # This test covers scope enforcement, not outcome closure (see test_outcome_closure.py);
+        # drop the closure marker that freezing against a slice with an agreement now adds.
+        run_file = self.root / "docs/_cgspec/05-runs/R-20261024-0001/run.json"
+        run_data = json.loads(run_file.read_text(encoding="utf-8"))
+        self.assertEqual(run_data.get("closure"), "required")
+        run_data.pop("closure")
+        run_file.write_text(json.dumps(run_data, indent=2) + "\n", encoding="utf-8")
+
         # Commit frozen run record
         git(self.root, "add", "-A")
         git(self.root, "commit", "-q", "-m", "freeze R-20261024-0001")

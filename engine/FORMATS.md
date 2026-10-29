@@ -151,7 +151,7 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | `docs/_cgspec/06-evidence/tests/<test-id>.json` | `test-pair` | slice workflow | `failed_at` is the commit where the test failed. Unchanged legacy `test_command` proof replays exit codes and is labelled `legacy exit-code-only proof`; it does not meet the new strict assertion-aware contract. A new named proof additionally records `runner_id`, `runner_hash`, and `selector`; CI re-runs the approved runner at both revisions and checks structured assertion results. |
 | `docs/_cgspec/06-evidence/seals/<seal-id>.json` | `proof-seal` | protected CI signing job | Immutable signed pre-integration proof. Trust is resolved at `reviewed_base`; candidate-added signers cannot authorize it. |
 | `docs/_cgspec/06-evidence/integrations/<map-id>.json` | `proof-map` | protected CI signing job | Immutable signed envelope around the integrated parent. Changed sealed content requires an exact mapping and signed revalidation seal. |
-| `docs/_cgspec/06-evidence/<scope>/<check>.json` | `evidence` | whoever ran the check | New PASS records name `claim` and `data_source`. A fixture or unknown source cannot support `claim: integration`; use `data_source: real_backend` only after exercising the real backend. When present, `runner_id`, `runner_hash`, `selector`, and `test_id` must all match a test-pair. `state` becomes `Stale` when a covered file changes. A label does not authenticate the runner or prove the backend was real. |
+| `docs/_cgspec/06-evidence/<scope>/<check>.json` | `evidence` | whoever ran the check | New PASS records name `claim` and `data_source`. A fixture or unknown source cannot support `claim: integration`; use `data_source: real_backend` only after exercising the real backend. When present, `runner_id`, `runner_hash`, `selector`, and `test_id` must all match a test-pair. `state` becomes `Stale` when a covered file changes. A label does not authenticate the runner or prove the backend was real. Review records use `claim: review` and add `reviewer`, `builder`, `reviewer_model`, `inspected` (diff/artifacts examined) and `findings` (`id`, `severity`, `status` open|resolved, `resolution`). `cgspec_hook.py close` reads these records. |
 | `docs/prototypes/_baselines/<screen>-<viewport>.png` | baseline | `visual_audit.py --approve-baseline` | Approved visual baseline screenshot; read-only and recorded with sha256 in `frozen.json` (kind `baseline`). Protected against overwrite by write and commit gates. |
 | `docs/prototypes/<screen>/journeys/<name>.json` | journey (checked by `journey.py`) | main agent at layer 4 | `name`, `url` (file next to the screen, or `http://` for the real frontend), optional `viewports` (`desktop`, `mobile`) and `covers`, and `steps`. Each step has one action on a `data-testid` (`click`, `fill`+`value`, `press`+`key`, `select`+`value`, `check`, `hover`, `goto`, `screenshot`) or `expect` with `visible`, `hidden`, `text`+`equals`/`contains`, `value`+`equals`, `count`+`equals`, `enabled`, `disabled`, `url`; a `state` label may go with any step. Evidence goes to `06-evidence/journeys/`, visual audits to `06-evidence/visual/`, registered checks to `06-evidence/checks/`. Journey names (and screen names) must be non-empty with no newlines or control characters. `visual_audit.py` compares current renders against approved baselines in `docs/prototypes/_baselines/` inside Chromium (reporting `W-DRIFT` or `E-DRIFT` when exceeding `visual_drift_threshold`, diff image in `.cgspec-scratch/visual/`), and renders in dark mode (`colorScheme: "dark"`, reporting info if identical to light or labeling dark contrast/focus failures `(dark)`). `verify.py` runs doctor, journeys and visual audit in one pass and prints a summary table. `journey.py` and `visual_audit.py` take `--json-out FILE` (`{"schema": 1, "tool", "records": [{"item", "verdict", "detail"}]}`); `visual_summary.py` turns those into the CI `evidence.json` and step summary. |
 | `docs/_cgspec/07-state/legacy-baseline.json` | `legacy-baseline` | `cgspec-adopt` | Files listed here are exempt from size and test rules until their hash changes. |
@@ -201,6 +201,22 @@ Only `memlog.py` writes this file.
 - **Status:** Approved            (Draft, Approved, In progress, Done, Blocked)
 - **Scope:** src/login/**, tests/login/**   (comma-separated globs; T1+ edits must match)
 ```
+
+## Outcome closure
+
+`cgspec_hook.py close check|checklist --slice SLICE-NNN [--pr URL,...]` decides whether a slice's active outcomes
+(from its #30 agreement) are demonstrated. Exit 2 lists every blocker. An outcome closes only with: a latest-per-check
+`PASS` evidence record whose `covers` names it and whose `revision` is current (no change outside
+`06-evidence/`, `07-state/` and `.cgspec-scratch/` since that revision, committed or not; `state: Stale` never counts);
+no current `FAIL`, `BLOCKED` or `PARTIAL` record; and, when the agreement says `requires_real`, a `PASS` with
+`claim: integration`, `data_source: real_backend` and `ran_by` other than the builder. Fixtures, mocks, static
+evidence and self-declared labels cannot substitute. The slice also needs a current `claim: review` `PASS` record
+covering every active outcome that names a `reviewer` different from the `builder`, a `reviewer_model`, a non-empty
+`inspected` list, no `same_model_review`, and no finding that is open or resolved without a `resolution`. Model or
+vendor names are never treated as proof of independence. `checklist` repeats the check and writes
+`06-evidence/closure/SLICE-NNN.md`, organised by outcome with proof paths, the reviewed commit, PR links and the
+accepted behaviours to confirm. Runs frozen for a slice that has an agreement carry `"closure": "required"` and
+`run complete` enforces the same check; runs without the marker (historical records) complete as before.
 
 ## `cgspec_hook.py` command line
 
