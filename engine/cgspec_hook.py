@@ -361,9 +361,10 @@ def build_parser() -> argparse.ArgumentParser:
     for f in ("--file", "--applies-to", "--description", "--approval", "--command", "--guide", "--release-dir"):
         parser.add_argument(f)
     parser.add_argument("--no-rerun", action="store_true")
-    for f in ("--criteria", "--tests", "--proofs", "--outcomes", "--supersession", "--units", "--run-id", "--by", "--status", "--unit", "--unit-status", "--outcome", "--verify"):
+    for f in ("--criteria", "--tests", "--proofs", "--outcomes", "--supersession", "--units", "--run-id", "--by", "--status", "--unit", "--unit-status", "--outcome", "--verify", "--commit-kind"):
         parser.add_argument(f)
     parser.add_argument("--review-rounds", type=int)
+    parser.add_argument("--checks-passed", action="store_true")
     return parser
 
 
@@ -374,6 +375,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.event == "tier": return cmd_tier(root, args)
         if args.event == "start": from _lib import start; return start.cli(root, args)
         if args.event == "run": from _lib import runs; return runs.cli(root, args)
+        if args.event == "git-plan": from _lib import git_protocol; return git_protocol.cli(root, args)
         if args.event == "pre-tool": return pre_tool(root, args.tool, sys.stdin.read())
         if args.event == "pre-commit": return pre_commit(root)
         if args.event == "post-tool": return post_tool(root, args.tool, sys.stdin.read())

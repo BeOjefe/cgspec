@@ -1,5 +1,5 @@
 # CGSpec engine: file formats and hook contract
-Created: unknown · Last edited: 2026-10-29T07:51:39Z
+Created: unknown · Last edited: 2026-10-29T10:33:08Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
@@ -7,6 +7,23 @@ numbers refer to `docs/METHOD-v0.2.md`.
 
 All state files carry `"schema": 1`. A future breaking change bumps it and ships a migration
 in `install.py upgrade`.
+
+### Git execution plans
+
+`docs/slices/SLICE-NNN-*.git-plan.json` is the machine-checked execution record for a T1+
+slice. `repositories` declares unique repository IDs, full approved base SHAs, branches,
+optional worktree paths, outcome IDs and explicit file ownership. Parallel ownership also
+declares one unique `worker_worktrees` path per owner; the editor gate requires the matching
+`CGSPEC_WORKER_ID`. `branch_policy` has one default branch and optional stacked branches,
+each with a dependency and reason. `commits` accepts only real commits in current history and
+enforces red-test, implementation and green-test order. `review` binds passing checks to the
+latest recorded candidate HEAD. The sidecar-only commit that stores this binding is a
+traceability envelope around its reviewed parent; any later non-plan candidate change is stale.
+
+For a multi-repository outcome, `multi_repo.repos` identifies exactly the repositories above
+and carries each branch, candidate commit, pull-request reference and status. The same object
+declares the shared outcome, contract version, integration order and cross-repository check.
+The doctor validates these sidecars separately from slice Markdown.
 
 ### Named test runners
 

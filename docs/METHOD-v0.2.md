@@ -1,5 +1,5 @@
 # CGSpec Method v0.2 — Specification
-Created: unknown · Last edited: 2026-10-29T07:51:39Z
+Created: unknown · Last edited: 2026-10-29T10:33:08Z
 
 Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Built in this repository; there is no second development checkout (see `AGENTS.md`).
 
@@ -358,6 +358,8 @@ Minimum checks (the single source; the agent cannot choose less). Cells give the
 | Team review | T3 | T3 | T3 | T3 | T3 | `cgspec-team-review` |
 
 Code rules, all enforced by lint or the commit hook: strict typing; formatter; files ≤ 400 lines and functions ≤ 60 lines for new or changed code; complexity limit; duplicated code detection (jscpd); stack best practices via each linter's recommended configuration; no test may be skipped, emptied or weakened to make a build pass.
+
+For T1 and above, implementation also requires a per-slice Git plan before the first code edit. It records each repository's full approved base revision, branch or worktree, covered outcomes and shared-file ownership. One branch is the default; a stacked branch names its dependency and reason. Recorded commits must be real descendants of the approved base and follow red-test → one or more implementation commits → green-test. A commit that implements multiple unrelated outcomes is split by behavior rather than by an arbitrary file quota. Parallel workers identify themselves with `CGSPEC_WORKER_ID`, edit only their owned paths from declared isolated worktrees, and remain subject to frozen-proof checks. Multi-repository plans link every repository to one outcome, contract version, integration order and cross-repository check. Review and required checks bind only to the current recorded candidate HEAD; the sidecar-only commit that stores the binding is its traceability envelope, and any later non-plan candidate change makes the binding stale. Opening a pull request never authorizes merge or destructive history operations.
 
 ### CI/CD (stage 7, set up with the first slice)
 

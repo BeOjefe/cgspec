@@ -8,7 +8,7 @@ import os
 import unittest
 from pathlib import Path
 
-from tests.helpers import TempDir, claude_payload, hook, install, make_ready_start, make_slice, write_json
+from tests.helpers import TempDir, claude_payload, git, hook, install, make_ready_start, make_slice, write_json
 
 BLOCK = 2
 
@@ -27,6 +27,9 @@ class PreToolTests(unittest.TestCase):
         (self.root / "src/a.ts").write_text("export const a = 1;\n")
         (self.root / "src/login/form.ts").write_text("export const f = 1;\n")
         (self.root / "package.json").write_text("{}\n")
+        git(self.root, "init", "-q", "-b", "main")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "fixture")
 
     def tearDown(self):
         for p in self.root.rglob("*"):

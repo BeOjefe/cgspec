@@ -99,6 +99,7 @@ def state_files(root: Path) -> Iterator[Finding]:
         if not findings and isinstance(data, dict):
             from .start import validate_record
             yield from (Finding("E-SCHEMA", _rel(path, root), error) for error in validate_record(data))
+    for path in sorted((root / "docs/slices").glob("*.git-plan.json")): yield from load_json(path, root, "git-plan")[1]
     runs = root / "docs/_cgspec/05-runs"
     if not runs.is_dir():
         return
@@ -169,7 +170,6 @@ def document_dates(root: Path) -> Iterator[Finding]:
                 yield Finding(code, rel, issue)
     yield from sink
 
-
 def links(root: Path) -> Iterator[Finding]:
     archive = root / "docs/_cgspec/_archive"
     sink: list[Finding] = []
@@ -194,7 +194,7 @@ def records(root: Path) -> Iterator[Finding]:
         base = root / folder
         numbers: dict[str, str] = {}
         for path in sorted(base.iterdir()) if base.is_dir() else []:
-            if path.name == ".gitkeep" or not path.is_file() or path.name.endswith(".start.json"):
+            if path.name == ".gitkeep" or not path.is_file() or path.name.endswith((".start.json", ".git-plan.json")):
                 continue
             name = re.match(pattern, path.name)
             if not name:
