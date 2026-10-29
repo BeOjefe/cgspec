@@ -191,6 +191,23 @@
         }
       }
     },
+    "release": {
+      "type": "object",
+      "required": ["enabled"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "pre_1_0": {
+          "enum": ["0.major.0", "0.minor.0", "0.patch.0"]
+        },
+        "current_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        }
+      }
+    },
     "approver_keys": {
       "type": "array",
       "items": {

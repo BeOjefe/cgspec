@@ -139,7 +139,7 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 
 | File (in a project) | Schema | Written by | Notes |
 | --- | --- | --- | --- |
-| `docs/_cgspec/project.json` | `project` | `install.py` | Version marker. `path_classes` globs drive T0 detection (spec 3). Optional `visual_drift_threshold` (default 0.5% of pixels) sets the threshold between W-DRIFT and E-DRIFT. Optional named `test_runners` and shared `test_environments` require targeted `test_runners_approval`. `proof_signers` lists protected CI SSH public keys with provider/workflow constraints. |
+| `docs/_cgspec/project.json` | `project` | `install.py` | Version marker. `path_classes` globs drive T0 detection (spec 3). Optional `visual_drift_threshold` (default 0.5% of pixels) sets the threshold between W-DRIFT and E-DRIFT. Optional named `test_runners` and shared `test_environments` require targeted `test_runners_approval`. `proof_signers` lists protected CI SSH public keys with provider/workflow constraints. Optional `release` block declares the Semantic Versioning policy: `enabled` (true or false; false is an explicit opt-out), `pre_1_0` (`0.major.0`, `0.minor.0`, `0.patch.0`; default `0.minor.0`) and `current_version` (required while enabled). |
 | `docs/_cgspec/07-state/tier.json` | `tier` | main agent via `cgspec_hook.py tier set` | Declared before editing. `files` and `verification` required for new T0 declarations; `slice` required for T1+. |
 | `docs/slices/SLICE-NNN-*.start.json` | `start` | main agent via `cgspec_hook.py start` | Versioned success/evaluation definition, fresh approval, executable readiness, active outcomes and mock-switch state. Definition edits invalidate readiness and require renewed approval. |
 | `docs/_cgspec/05-runs/<run-id>/run.json` | `run` | inspector | `criteria`, `tests` and `proofs` hold sha256 values. Frozen inventories, outcomes and supersession mappings are immutable. New runs start active; retirement requires validated replacement links and approval. |
@@ -200,7 +200,13 @@ Only `memlog.py` writes this file.
 # SLICE-004: Login form
 - **Status:** Approved            (Draft, Approved, In progress, Done, Blocked)
 - **Scope:** src/login/**, tests/login/**   (comma-separated globs; T1+ edits must match)
+- **Release:** minor (public API) — new capability; no migration   (impact: none|patch|minor|major, then the affected public surface and rationale; read by `release check`)
 ```
+
+Only slices in status Approved, In progress or Done are part of a release. Internal-only
+migrations are not automatically major; an incompatible public data/export format always is.
+A slice declaring `patch` while its rationale says the change deprecates a surface is treated
+as at least `minor`.
 
 ## Outcome closure
 
@@ -284,6 +290,13 @@ List local probe scripts/configuration in `check.inputs` (besides executable fil
 and staged/CI checks reject changed inputs. Inline/external commands still depend on the approved runner/environment;
 trusted runner attestations and replay are later work. Probe stdout/stderr is not persisted. Message approvals must
 follow the Draft; signed-trailer approval binds the exact signed Draft commit even across unrelated later commits.
+
+Release governance: `cgspec_hook.py release policy|plan|check --target VERSION [--slices SLICE-...]`.
+`policy` prints the declared release block and its problems; `plan` prints the policy, every included
+slice's classified impact and the maximum required bump with its causes; `check --target` rejects a
+target below the computed requirement and names the slice that caused the bump. A project with no
+`release` block is blocked (opt in or out explicitly — never guessed); `release.enabled: false` is an
+explicit opt-out and passes with a note. `--slices` limits which slices count.
 
 Per-tool payloads: `--tool claude` reads Claude Code hook JSON (`tool_name`, `tool_input`);
 `--tool antigravity` reads `toolCall.name` / `toolCall.args` (`TargetFile`, `CommandLine`,
