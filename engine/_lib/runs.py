@@ -311,6 +311,7 @@ def freeze_run(root: Path, goal: str, tier: str, criteria_paths: list[str],
         "frozen_at": utc_now(), "approval": _resolve_approval(root, approval_ref),
     }
     if outcomes is not None: data["outcomes"] = list(outcomes)
+    if slice_id and (root / "docs/slices").is_dir() and list((root / "docs/slices").glob(f"{slice_id}-*.start.json")): data["closure"] = "required"
     if slice_id: data["slice"] = slice_id
     if supersession is not None:
         from .run_supersession import prepare
@@ -328,6 +329,10 @@ def complete_run(root: Path, run_id: str) -> dict:
     if errs or not data: raise CgspecError(f"cannot complete malformed run {run_id}: {'; '.join(errs)}")
     if data.get("status") == "completed": return data
     if data.get("status") == "superseded": raise CgspecError(f"cannot complete superseded run {run_id}")
+    if data.get("closure") == "required":
+        from .closure import check
+        _, blockers = check(root, data["slice"])
+        if blockers: raise CgspecError(f"cannot complete run {run_id}: " + "; ".join(blockers))
     data["status"] = "completed"
     data["completed_at"] = utc_now()
     write_json(target, data)

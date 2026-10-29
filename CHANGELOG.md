@@ -7,6 +7,7 @@ All notable changes, architectural invariants, and skill evolutions to `cgspec` 
 ## [Unreleased]
 
 ### Added
+- Outcome-based closure (`cgspec_hook.py close check|checklist`): every active outcome needs current-revision passing evidence, real-environment proof where agreed, and an independent final review with no unresolved findings; stale evidence, mocks and self-review are rejected. Runs frozen for an agreed slice enforce this at `run complete`; historical runs are unaffected. Writes a per-outcome human verification checklist. Evidence schema gains review fields.
 - Read-only adoption discovery (`cgspec_hook.py adopt discover`) builds an observed project map with observed/inferred/unknown/unreachable facts per repo, and `adopt ready` judges only a slice's required repos, reporting unreachable ones as BLOCKED with owner and timing instead of a silent PASS. New `adoption-map` schema.
 - Slice success/readiness agreements now bind explicit outcomes and evaluation to fresh approval, executable probes, per-outcome coverage, and editor/staged/CI enforcement. T0 declarations require lightweight verification. `CGSPEC_ALLOW_MOCKS=0` disables mock substitution by default without changing real-proof requirements.
 

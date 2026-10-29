@@ -34,7 +34,24 @@
       ]
     },
     "claim": {
-      "enum": ["integration", "ui_behavior", "visual", "code_quality", "governance", "other"]
+      "enum": ["integration", "ui_behavior", "visual", "code_quality", "governance", "review", "other"]
+    },
+    "builder": {"type": "string", "minLength": 1},
+    "reviewer": {"type": "string", "minLength": 1},
+    "inspected": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "severity", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "severity": {"enum": ["blocker", "major", "minor"]},
+          "status": {"enum": ["open", "resolved"]},
+          "resolution": {"type": "string"}
+        }
+      }
     },
     "data_source": {
       "enum": ["real_backend", "fixture", "static", "unknown"]
