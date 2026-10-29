@@ -5,9 +5,11 @@ from __future__ import annotations
 import json
 import time
 import re
+import sys
 from pathlib import Path
 
-from .common import STATE_DIR, new_id, sha256_text, utc_now, write_json
+from .common import CgspecError, STATE_DIR, new_id, sha256_text, utc_now, write_json
+from .hook_origin import require_claude_stdin
 
 INBOX = Path("docs/00-INBOX.md")
 APPROVALS = STATE_DIR / "approvals.json"
@@ -91,7 +93,7 @@ def approval_target(text: str) -> str | None:
     return None
 
 
-def record(root: Path, prompt: str, session_id: str | None = None) -> tuple[str, str | None]:
+def record(root: Path, *, tool: str) -> tuple[str, str | None]:
     """Append the scrubbed prompt to the inbox; return (inbox id, approval id or None).
 
     A repo can have several agent sessions open on it at once (parallel Claude Code
@@ -99,6 +101,15 @@ def record(root: Path, prompt: str, session_id: str | None = None) -> tuple[str,
     short session tag is just so a reader can tell entries apart by session, never a
     scoping or filtering mechanism - the inbox itself stays one shared, repo-wide file.
     """
+    if tool != "claude":
+        raise CgspecError("user-message capture is available only through Claude's UserPromptSubmit hook")
+    require_claude_stdin()
+    payload = json.load(sys.stdin)
+    if not isinstance(payload, dict) or payload.get("hook_event_name") != "UserPromptSubmit":
+        raise CgspecError("user-message requires a UserPromptSubmit event")
+    prompt, session_id = payload.get("prompt"), payload.get("session_id")
+    if not isinstance(prompt, str) or not prompt or not isinstance(session_id, str) or not session_id:
+        raise CgspecError("UserPromptSubmit is missing its prompt or host session_id")
     clean = scrub(prompt)
     whole_line = " / ".join(part.strip() for part in clean.splitlines() if part.strip())
     one_line = whole_line[:MAX_INBOX_CHARS]

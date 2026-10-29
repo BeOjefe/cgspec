@@ -238,7 +238,7 @@ and `--tool` tells the hook how to read it. Events:
 | --- | --- | --- |
 | `session-start` | session start and after compaction | no; prints the session pack |
 | `session-check` | inside `session-start`, also runnable alone | no; reports, exit 1 if broken |
-| `user-message` | each user message | never; scrubs secrets, saves to inbox, records approvals |
+| `user-message` | Claude's `UserPromptSubmit`, read directly from host-owned stdin with OS peer verification | never; scrubs secrets, saves to inbox, records approvals; refuses capture from shell pipes/redirects or an unverifiable host channel |
 | `pre-tool` | before a write or shell tool | yes |
 | `post-tool` | after a write, shell or helper-agent tool | no; marks evidence whose `covers` globs match a changed file `Stale`, counts helper agents in `budget.json` (exit 2 only to show a budget warning) |
 | `pre-compact` | before compaction | no; captures bounded mechanical source context and prints the pack; does not invent semantic progress |

@@ -110,9 +110,28 @@ def git_project(root: Path, profile: str = "web-workspace") -> None:
 def approve(root: Path, text: str = "approved, go ahead") -> str:
     """Record an approval the way the user-message hook does and return its id."""
     import json as _json
-    hook(root, "user-message", {"hook_event_name": "UserPromptSubmit", "prompt": text}, "--tool", "claude")
+    user_message(root, text)
     data = _json.loads((root / "docs/_cgspec/07-state/approvals.json").read_text())
     return data["approvals"][-1]["id"]
+
+
+def user_message(root: Path, prompt: str):
+    """Host-event fixture: mock only OS peer identity, never a production bypass flag."""
+    import argparse
+    import contextlib
+    import io
+    from unittest.mock import patch
+    from cgspec_hook import lifecycle
+    payload = {"hook_event_name": "UserPromptSubmit", "prompt": prompt,
+               "session_id": "550e8400-e29b-41d4-a716-446655440000", "cwd": str(root)}
+    stdout, stderr = io.StringIO(), io.StringIO()
+    with patch("_lib.hook_origin._peer_and_image", return_value=(1234, Path("/trusted/claude"))), \
+            patch("_lib.hook_origin._claude_launcher", return_value=Path("/trusted/claude")), \
+            patch("sys.stdin", io.StringIO(json.dumps(payload))) as stdin, \
+            patch.object(stdin, "fileno", return_value=0), \
+            contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        code = lifecycle(root, "user-message", argparse.Namespace(tool="claude"))
+    return subprocess.CompletedProcess(["UserPromptSubmit"], code, stdout.getvalue(), stderr.getvalue())
 
 
 def make_slice(root: Path, status: str = "Approved", scope: str = "src/login/**", approval: str | None = None,
