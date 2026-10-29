@@ -1,5 +1,5 @@
 # CGSpec engine: file formats and hook contract
-Created: unknown · Last edited: 2026-10-29T11:01:01Z
+Created: unknown · Last edited: 2026-10-29T11:47:57Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
@@ -155,6 +155,7 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 | `docs/prototypes/_baselines/<screen>-<viewport>.png` | baseline | `visual_audit.py --approve-baseline` | Approved visual baseline screenshot; read-only and recorded with sha256 in `frozen.json` (kind `baseline`). Protected against overwrite by write and commit gates. |
 | `docs/prototypes/<screen>/journeys/<name>.json` | journey (checked by `journey.py`) | main agent at layer 4 | `name`, `url` (file next to the screen, or `http://` for the real frontend), optional `viewports` (`desktop`, `mobile`) and `covers`, and `steps`. Each step has one action on a `data-testid` (`click`, `fill`+`value`, `press`+`key`, `select`+`value`, `check`, `hover`, `goto`, `screenshot`) or `expect` with `visible`, `hidden`, `text`+`equals`/`contains`, `value`+`equals`, `count`+`equals`, `enabled`, `disabled`, `url`; a `state` label may go with any step. Evidence goes to `06-evidence/journeys/`, visual audits to `06-evidence/visual/`, registered checks to `06-evidence/checks/`. Journey names (and screen names) must be non-empty with no newlines or control characters. `visual_audit.py` compares current renders against approved baselines in `docs/prototypes/_baselines/` inside Chromium (reporting `W-DRIFT` or `E-DRIFT` when exceeding `visual_drift_threshold`, diff image in `.cgspec-scratch/visual/`), and renders in dark mode (`colorScheme: "dark"`, reporting info if identical to light or labeling dark contrast/focus failures `(dark)`). `verify.py` runs doctor, journeys and visual audit in one pass and prints a summary table. `journey.py` and `visual_audit.py` take `--json-out FILE` (`{"schema": 1, "tool", "records": [{"item", "verdict", "detail"}]}`); `visual_summary.py` turns those into the CI `evidence.json` and step summary. |
 | `docs/_cgspec/07-state/legacy-baseline.json` | `legacy-baseline` | `cgspec-adopt` | Files listed here are exempt from size and test rules until their hash changes. |
+| `docs/_cgspec/07-state/adoption-map.json` | `adoption-map` | `cgspec_hook.py adopt save`, or `adopt discover --json-out FILE` | Read-only discovery result mirroring `classify`: `generated_at`, `probe.git`, `repos` and `facts_kinds` counts. Each reachable repo records branch, full and short HEAD, dirty/untracked paths, worktrees, CGSpec marker, docs/tests/CI presence and a per-field fact kind (`observed`, `inferred` for present-but-unproven CI, `unknown`); a missing or non-git path is `{root, reachable: false, reason}`. Written only on request; `adopt discover` alone writes nothing. |
 | `docs/_cgspec/07-state/approvals.json` | `approvals` | `user-message` hook only | One entry per user message that reads as an approval. A ledger entry with status Approved must cite one of these IDs (`--approval-ref A-...`). |
 | `docs/_cgspec/07-state/stop-retries.json` | none | `stop` hook | Counts consecutive stop refusals; reset when the agent ends cleanly. |
 
@@ -248,6 +249,15 @@ Document dates: `cgspec_hook.py doc sync` dates new documents, advances `Last ed
 
 Tier declarations: `cgspec_hook.py tier set --tier T0 --reason "..." --files a,b --verify "..."` (T0) or
 `--slice SLICE-NNN` (T1+); `tier show`; `tier clear`. CI: `cgspec_hook.py ci --base <sha>`.
+
+Adoption: `cgspec_hook.py adopt discover [--repos a,b] [--json-out FILE]` prints the adoption map for the
+root and each named repo (paths relative to `--root`); it runs only read-only git commands with
+`--no-optional-locks` and writes nothing except the requested `--json-out` file. `adopt save` also writes
+`07-state/adoption-map.json`. `adopt ready --slice SLICE-NNN [--repos a,b]` judges only the named repos
+(default `.`): `OK` (git root with docs and tests observed), `PARTIAL` (reachable, some signal missing or
+unknown; limited verification, never PASS), `BLOCKED` (missing or not a git root; owner `user`, timing
+`before_start`) or `UNKNOWN` (reachability undeterminable). Exit 0 unless a named repo is BLOCKED or UNKNOWN,
+then exit 2. Unnamed repos are never judged.
 
 Success/readiness: `cgspec_hook.py start set --slice SLICE-NNN --file <draft.json>` writes a Draft sidecar;
 `start agree --approval A-...` binds a fresh user approval (or `trailer` after the exact Draft is committed with a trusted signature in HEAD);
