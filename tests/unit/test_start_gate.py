@@ -13,8 +13,10 @@ from tests.helpers import (
     approve,
     claude_payload,
     doctor,
+    git,
     hook,
     install,
+    make_git_plan,
     make_slice,
     run_script,
 )
@@ -247,6 +249,9 @@ class StartHookTests(StartFixture, unittest.TestCase):
         return hook(self.root, "pre-tool", payload, "--tool", "claude")
 
     def test_pretool_allows_design_and_tests_but_not_unready_implementation(self):
+        git(self.root, "init", "-q", "-b", "main")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "fixture")
         run_script(
             "cgspec_hook.py", "tier", "set", "--tier", "T1", "--reason", "Build sign-in",
             "--slice", "SLICE-001", "--root", str(self.root),
@@ -258,6 +263,7 @@ class StartHookTests(StartFixture, unittest.TestCase):
         self.agree()
         self.cli("ready", "--slice", "SLICE-001")
         self.cli("begin", "--slice", "SLICE-001", "--outcome", "OUT-login")
+        make_git_plan(self.root, outcome_id="OUT-login")
         self.assertEqual(self.edit("src/login/form.ts").returncode, 0)
         self.assertEqual(self.edit("src/login/form.test.ts").returncode, 0)
         self.assertNotEqual(self.edit("src/other/form.ts").returncode, 0)

@@ -1,5 +1,5 @@
 # CGSpec v0.2 implementation status
-Created: 2026-10-20T17:46:07Z · Last edited: 2026-10-29T07:51:39Z
+Created: 2026-10-20T17:46:07Z · Last edited: 2026-10-29T10:33:08Z
 
 This is the current status reference. The method describes required behavior; this page identifies limits of its implementation. Historical audit results are tied to their source revision and do not automatically apply to later changes.
 
@@ -11,6 +11,7 @@ The source tree is a plugin package, not an installed consumer layout. Run the p
 
 ## Implemented and bounded
 
+- The issue #35 branch adds per-slice Git execution plans with approved bases, branch and worktree context, real red/implementation/green commit ancestry, exact-candidate review/check binding, edit-time worker ownership, semantic multi-outcome commit rejection and linked multi-repository integration order. It does not merge pull requests, replace final-outcome closure (#28), or preserve bindings through history-changing integration (#34). Existing consumer installations need a separate upgrade and live rehearsal.
 - Nine workflow skills, one pivot compatibility alias and eight role definitions are packaged with the engine. Their presence does not prove every host loads or follows them.
 - Source now includes versioned slice success/readiness agreements: fresh approval, executable probes, per-outcome blockers, design prerequisites, a mock kill switch, and editor/staged/CI enforcement. Source tests cover lifecycle, isolation, approval binding and candidate consistency. This establishes pre-implementation readiness only; it does not prove final outcomes (#28), visual parity (#29), or safe adoption/polyrepo coverage (#36). Named runners (#33) are merged. Reproducible runner provisioning (#31) is under reconstruction on an uncommitted branch, not released or independently approved. Existing consumer installations need a separate upgrade and live rehearsal.
 - Source now includes versioned slice success/readiness agreements: fresh approval, executable probes, per-outcome blockers, design prerequisites, a mock kill switch, and editor/staged/CI enforcement. Source tests cover lifecycle, isolation, approval binding and candidate consistency. This establishes pre-implementation readiness only; it does not prove final outcomes (#28), visual parity (#29), or safe adoption/polyrepo coverage (#36). Named runners (#33) are merged. Reproducible runner provisioning (#31) is integrated into the uncommitted #32 reconstruction, not released. Existing consumer installations need a separate upgrade and live rehearsal.

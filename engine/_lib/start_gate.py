@@ -42,9 +42,20 @@ def editor_reason(root: Path, tier: dict, rel: str, classes: dict) -> str | None
         return str(exc)
     if data["status"] != "In progress":
         return f"{slice_id} is {data['status']}; approve, run readiness, and begin its outcomes before implementation"
+    from . import git_protocol
+    plan_problem = git_protocol.check_plan_declared(root, slice_id)
+    if plan_problem:
+        return plan_problem
+    loaded = git_protocol.load_if_exists(root, slice_id)
+    worker_problem = git_protocol.check_worker_context(root, loaded[1], rel) if loaded else None
+    if worker_problem:
+        return worker_problem
     matched = _matching(data, rel)
     if not matched:
         return f"{rel} has no agreed outcome coverage in {slice_id}"
+    planned = {oid for repo in loaded[1]["repositories"] for oid in repo["outcomes"]} if loaded else set()
+    if missing := {item["id"] for item in matched} - planned:
+        return f"{rel} covers outcomes absent from the git execution plan: {', '.join(sorted(missing))}"
     reasons = []
     for item in matched:
         oid = item["id"]
@@ -144,12 +155,30 @@ def commit_records(view, changes) -> list[str]:
     return reasons
 
 
+def _candidate_plan(view, slice_id: str) -> dict | None:
+    bare = slice_id.split(":")[-1]
+    for rel in view.files_new("docs/slices"):
+        if rel.endswith(".git-plan.json") and Path(rel).name.startswith(bare + "-"):
+            raw = view.read_new(rel)
+            try:
+                data = json.loads(raw.decode("utf-8")) if raw else {}
+            except (UnicodeDecodeError, ValueError):
+                data = {}
+            from . import git_protocol
+            if isinstance(data, dict) and not git_protocol.validate_plan(data):
+                return data
+    return None
+
+
 def commit_implementation(view, tier: dict, paths: set[str]) -> list[str]:
     if tier.get("tier") == "T0":
         return [] if tier.get("verification") else ["T0 needs explicit verification in 07-state/tier.json"]
     if not paths:
         return []  # Design and test definition may be committed before readiness.
     slice_id = tier.get("slice", "")
+    plan = _candidate_plan(view, slice_id)
+    if not plan:
+        return [f"{slice_id} has no git execution plan in the candidate; declare repository, base, branch and outcomes before implementation"]
     rel, data = _candidate(view, slice_id)
     if not rel:
         return [f"{slice_id} has no success agreement in the candidate"]
@@ -162,6 +191,11 @@ def commit_implementation(view, tier: dict, paths: set[str]) -> list[str]:
         return [f"{slice_id} is {data['status']}; implementation requires active, ready outcomes"]
     reasons = []
     touched_outcomes = {item["id"] for path in paths for item in _matching(data, path)}
+    planned_outcomes = {oid for repo in plan["repositories"] for oid in repo["outcomes"]}
+    if missing := touched_outcomes - planned_outcomes:
+        reasons.append(f"implementation covers outcomes absent from the git execution plan: {', '.join(sorted(missing))}")
+    if len(touched_outcomes) > 1:
+        reasons.append("commit combines implementation for unrelated outcomes; split it into logical behavior commits")
     results = {result["id"]: result for result in data["readiness"]["checks"]}
     for req in data["prerequisites"]:
         if req["when"] != "before_start" or req["check"] is None or not touched_outcomes.intersection(req["outcomes"]):

@@ -1,0 +1,201 @@
+{
+  "title": "docs/slices/SLICE-NNN-*.git-plan.json — per-slice Git execution plan",
+  "type": "object",
+  "required": [
+    "schema", "slice", "repositories", "branch_policy",
+    "commits", "review", "multi_repo", "created_at", "updated_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "slice": {
+      "type": "string",
+      "pattern": "^([a-z0-9-]+:)?SLICE-(\\d{3}|draft-[a-z0-9-]+)$"
+    },
+    "repositories": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/definitions/repository"}
+    },
+    "branch_policy": {"$ref": "#/definitions/branch_policy"},
+    "commits": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/commit_record"}
+    },
+    "review": {
+      "anyOf": [
+        {"type": "null"},
+        {"$ref": "#/definitions/review_binding"}
+      ]
+    },
+    "multi_repo": {
+      "anyOf": [
+        {"type": "null"},
+        {"$ref": "#/definitions/multi_repo"}
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "updated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    }
+  },
+  "definitions": {
+    "repository": {
+      "type": "object",
+      "required": ["id", "base", "branch", "worktree", "outcomes", "file_ownership"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "base": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "branch": {"type": "string", "minLength": 1},
+        "worktree": {
+          "anyOf": [
+            {"type": "null"},
+            {"type": "string", "minLength": 1}
+          ]
+        },
+        "outcomes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^OUT-[A-Za-z0-9_-]+$"
+          }
+        },
+        "file_ownership": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1}
+          }
+        },
+        "worker_worktrees": {
+          "type": "object",
+          "additionalProperties": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "branch_policy": {
+      "type": "object",
+      "required": ["default_branch", "stacked_branches"],
+      "additionalProperties": false,
+      "properties": {
+        "default_branch": {"type": "string", "minLength": 1},
+        "stacked_branches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["branch", "depends_on", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "branch": {"type": "string", "minLength": 1},
+              "depends_on": {"type": "string", "minLength": 1},
+              "reason": {"type": "string", "minLength": 3},
+              "worktree": {
+                "anyOf": [
+                  {"type": "null"},
+                  {"type": "string", "minLength": 1}
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "commit_record": {
+      "type": "object",
+      "required": ["sha", "summary", "kind", "recorded_at"],
+      "additionalProperties": false,
+      "properties": {
+        "sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "summary": {"type": "string", "minLength": 1},
+        "kind": {
+          "enum": ["red-test", "implementation", "green-test", "review-fix", "docs", "infra"]
+        },
+        "recorded_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "review_binding": {
+      "type": "object",
+      "required": ["bound_head", "bound_at", "valid"],
+      "additionalProperties": false,
+      "properties": {
+        "bound_head": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "bound_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "checks_passed": {"type": "boolean"},
+        "valid": {"type": "boolean"},
+        "invalidated_by": {
+          "anyOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+          ]
+        }
+      }
+    },
+    "multi_repo": {
+      "type": "object",
+      "required": [
+        "outcome_id", "repos", "integration_order",
+        "contract_version", "verification"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "outcome_id": {
+          "type": "string",
+          "pattern": "^OUT-[A-Za-z0-9_-]+$"
+        },
+        "repos": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["id", "branch", "status"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"type": "string", "minLength": 1},
+              "branch": {"type": "string", "minLength": 1},
+              "commit": {
+                "anyOf": [
+                  {"type": "null"},
+                  {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+                ]
+              },
+              "pr": {
+                "anyOf": [
+                  {"type": "null"},
+                  {"type": "string"}
+                ]
+              },
+              "status": {
+                "enum": ["planned", "in-progress", "ready", "merged"]
+              }
+            }
+          }
+        },
+        "integration_order": {
+          "type": "array",
+          "minItems": 2,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "contract_version": {"type": "string", "minLength": 1},
+        "verification": {"type": "string", "minLength": 3}
+      }
+    }
+  }
+}

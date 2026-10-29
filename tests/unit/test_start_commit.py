@@ -10,6 +10,7 @@ from tests.helpers import (
     approve,
     git,
     git_project,
+    make_git_plan,
     make_slice,
     run_script,
     set_test_command,
@@ -40,6 +41,7 @@ class StartCommitTests(unittest.TestCase):
             "cgspec_hook.py", "tier", "set", "--tier", "T1", "--reason", "Implement sign-in",
             "--slice", "SLICE-001", "--root", str(self.root),
         )
+        make_git_plan(self.root, outcome_id="OUT-login")
         (self.root / "src/login/form.ts").write_text("export const f = 2;\n")
         (self.root / "tests").mkdir(exist_ok=True)
         (self.root / "tests/login.test.ts").write_text("test('sign-in', () => {});\n")

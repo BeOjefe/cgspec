@@ -132,7 +132,29 @@ def make_slice(root: Path, status: str = "Approved", scope: str = "src/login/**"
     return path
 
 
-def make_ready_start(root: Path, slice_id: str = "SLICE-001", outcome_id: str = "OUT-work") -> None:
+def make_git_plan(root: Path, slice_id: str = "SLICE-001", outcome_id: str = "OUT-work",
+                  branch: str | None = None) -> None:
+    """Declare a minimal git execution plan for a slice so implementation gates pass."""
+    branch = branch or git(root, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+    base = git(root, "rev-parse", "HEAD").stdout.strip()
+    draft = {
+        "repositories": [{
+            "id": "main", "base": base, "branch": branch,
+            "worktree": None, "outcomes": [outcome_id], "file_ownership": {},
+        }],
+        "default_branch": branch,
+    }
+    source = root / ".cgspec-scratch/plan-draft.json"
+    source.parent.mkdir(exist_ok=True)
+    write_json(source, draft)
+    result = run_script("cgspec_hook.py", "git-plan", "--root", str(root),
+                        "declare", "--slice", slice_id, "--file", str(source))
+    if result.returncode:
+        raise AssertionError(result.stderr)
+
+
+def make_ready_start(root: Path, slice_id: str = "SLICE-001", outcome_id: str = "OUT-work",
+                     with_git_plan: bool = True) -> None:
     """Give legacy gate fixtures a valid approved outcome; #30 tests exercise the workflow explicitly."""
     from _lib import tiers
     found = tiers.find_slice(root, slice_id)
@@ -164,6 +186,8 @@ def make_ready_start(root: Path, slice_id: str = "SLICE-001", outcome_id: str = 
         result = run_script(*base, *args)
         if result.returncode:
             raise AssertionError(result.stderr)
+    if with_git_plan:
+        make_git_plan(root, slice_id, outcome_id)
 
 
 def set_test_command(root: Path, command: list[str]) -> None:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from . import tiers
+from . import git_protocol, tiers
 from .common import ENGINE_DIR, PROJECT_FILE, STATE_DIR
 from . import commit_trust as trust
 from .gates import EMOJI, HOST_PATH, Context, _is_script_name, _script_allowed
@@ -238,9 +238,9 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
                     and not trust.engine_file(c.path) and not c.path.startswith(trust.ENGINE)
                     and c.path != parity_manifest.MANIFEST]
     reasons += _tier_rules(view, code_changes, tier, classes)
+    reasons += git_protocol.commit_plan_reasons(view, tier)
     reasons += _test_pairs(view, code_changes, tier, classes, project)
     reasons += _evidence_rules(view, changes)
-    from . import parity_manifest
     reasons += parity_manifest.gate(view, changes, project)
     reasons += _document_dates(view, changes)
     for change in changes:
