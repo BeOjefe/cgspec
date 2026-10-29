@@ -1,5 +1,5 @@
-# CGSpec v0.2 implementation status
-Created: 2026-10-20T17:46:07Z · Last edited: 2026-10-29T11:47:57Z
+# CGSpec implementation status
+Created: 2026-10-20T17:46:07Z · Last edited: 2026-10-29T13:37:17Z
 
 This is the current status reference. The method describes required behavior; this page identifies limits of its implementation. Historical audit results are tied to their source revision and do not automatically apply to later changes.
 
@@ -27,11 +27,11 @@ The source tree is a plugin package, not an installed consumer layout. Run the p
 - This repository's squash-only merge setting, local main-push guard and post-push PR-origin workflow are in place. They do not prevent direct upstream pushes with the current owner credentials. See [ADR-006](adr/ADR-006-main-branch-governance.md).
 - Release classification is engine-backed: `cgspec_hook.py release check --target VERSION` reads the declared `release` policy from `project.json` and each included slice's `Release:` field, computes the highest required bump (treating backward-compatible deprecations as at least minor and never guessing a policy for undocumented projects), and rejects undersized targets. The trusted-installation bootstrap and a live installed-CI rehearsal remain unproven and out of scope for this gate.
 
-## Release and adoption blockers
+## Remaining release and adoption limits
 
 The Git hook relocation repair is scoped to hook ownership: portable event names, current Git directory discovery and preservation of modified/symlinked hooks. It does not complete portable-reference validation, adapter drift checks, shell conformance or per-worktree ownership of shared hooks. Exact palette/theme/state conformance and installed build identity remain unimplemented; reports 42–43 in the workspace audit folder specify their reproduced gaps and proposed acceptance tests.
 
-1. Publish and inspect the pinned `v0.2.0` release, complete the trusted installation bootstrap, and rehearse the installed CI path on a repository with the required server-side protection. This package's main-origin detector is a different workflow.
+1. The `v0.3.0` package release includes the current source-tested capabilities. Complete the trusted installation bootstrap and rehearse the installed CI path on a repository with the required server-side protection. This package's main-origin detector is a different workflow.
 2. Establish effective credential isolation or appropriate server-side protection before promising PR-only enforcement. A bot/fork is insufficient if the agent's shell can still use owner credentials. The accepted free/squash preference remains in force; private-fork permissions and the end-to-end merge flow still need validation.
 3. Build and test host quota collectors where real telemetry exists. Current schema sources are Claude statusline, manual and unavailable; Codex/Antigravity automatic adapters and context-pressure integration are absent. Never infer quota from model names, turn count or context size.
 4. Complete uncontaminated agent-driven design trials, desktop/phone interactions and blind visual judging. Native mobile/device behavior and cross-provider media integration require separate evidence. No general token savings or visual-quality improvement is established.

@@ -3,7 +3,7 @@ Created: unknown · Last edited: 2026-10-20T17:54:17Z
 
 This directory contains the permanent, immutable **Architecture Decision Records (ADRs)** for the project, following the Markdown Architectural Decision Records (MADR) and Michael Nygard standards.
 
-For current work, [METHOD-v0.2.md](../METHOD-v0.2.md) defines the consumer layout and rules. ADR-001 through ADR-005 retain v0.1 history; their Accepted labels do not override v0.2 paths or establish generic tenant/MCP guarantees. [ADR-006](ADR-006-main-branch-governance.md) records the current governance choice for this plugin repository, including its unfinished credential boundary. Preserve older records rather than silently rewriting their decisions.
+For current work, [METHOD.md](../METHOD.md) defines the consumer layout and rules. ADR-001 through ADR-005 retain v0.1 history; their Accepted labels do not override current paths or establish generic tenant/MCP guarantees. [ADR-006](ADR-006-main-branch-governance.md) records the current governance choice for this plugin repository, including its unfinished credential boundary. Preserve older records rather than silently rewriting their decisions.
 
 ---
 

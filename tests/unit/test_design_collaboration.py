@@ -44,7 +44,7 @@ class PushBackContractTests(unittest.TestCase):
                          if line.startswith("- Ordinary agreement"))
         self.assertIn("hard-to-undo", agreement)
         self.assertIn("understanding check", agreement)
-        method = read("docs/METHOD-v0.2.md")
+        method = read("docs/METHOD.md")
         clear = next(line for line in method.splitlines()
                      if line.startswith("- Clear feedback is applied"))
         self.assertIn("understanding check", clear)
@@ -53,7 +53,7 @@ class PushBackContractTests(unittest.TestCase):
         """Was test_method_states_the_human_job. That framing is what the 2026-10-23 stewardship
         council replaced: push-back and the read-before-consequential-approval rule stay, but the
         definition, records and reconciliation belong to the agent."""
-        collab = section(read("docs/METHOD-v0.2.md"), "1. Collaboration contract").lower()
+        collab = section(read("docs/METHOD.md"), "1. Collaboration contract").lower()
         self.assertIn("push back", collab)
         self.assertIn("read what you approve", collab)
         self.assertIn("never asked to reconcile", collab)
@@ -70,7 +70,7 @@ class StewardshipContractTests(unittest.TestCase):
 
     def setUp(self):
         self.push = section(read("engine/CONTRACT.md"), "Push back when the work is at risk")
-        self.method = read("docs/METHOD-v0.2.md")
+        self.method = read("docs/METHOD.md")
         self.collab = section(self.method, "1. Collaboration contract")
 
     def test_the_blame_framing_is_gone(self):
@@ -118,7 +118,7 @@ class StewardshipContractTests(unittest.TestCase):
 class DesignGuidanceTests(unittest.TestCase):
     def setUp(self):
         self.skill = read("skills/cgspec-ui-ux/SKILL.md")
-        self.method_design = section(read("docs/METHOD-v0.2.md"), "6. Design path")
+        self.method_design = section(read("docs/METHOD.md"), "6. Design path")
 
     def test_no_fixed_variation_count_or_mechanical_pacing(self):
         for text in (self.skill, self.method_design):

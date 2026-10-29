@@ -1,15 +1,23 @@
 # CGSpec
-Created: unknown · Last edited: 2026-10-20T17:48:52Z
+Created: unknown · Last edited: 2026-10-29T13:37:17Z
 
 CGSpec is a project method carried by the agent. You describe the goal, constraints and taste in ordinary language. The agent maps what exists, brings evidence and design references, implements bounded changes, runs checks, and records decisions and gaps. Machine checks enforce what they can; human judgment remains with you.
 
-The canonical [method specification](docs/METHOD-v0.2.md) defines the contract, layout, design path, review rules, adoption flow and limits. The [short agent contract](engine/CONTRACT.md) is installed into each project. Skills under `skills/` load only for the work at hand. The engine under `engine/` is copied once into each project under `docs/_cgspec/01-engine/`.
+The canonical [method specification](docs/METHOD.md) defines the contract, layout, design path, review rules, adoption flow and limits. The [short agent contract](engine/CONTRACT.md) is installed into each project. Skills under `skills/` load only for the work at hand. The engine under `engine/` is copied once into each project under `docs/_cgspec/01-engine/`.
 
-## Development status
+## Start here
 
-CGSpec v0.2 is implemented on `main` but is not a published release. [Current implementation status](docs/STATUS.md) is the single status reference, including release blockers and the distinction between implemented checks and unproven outcomes. The `0.2.0` marker is used for compatibility testing. A passing source check does not establish runtime behavior, design quality, or deployment readiness.
+CGSpec v0.3.0 is the current package release. [Current implementation status](docs/STATUS.md) separates implemented checks from outcomes that still need live proof. A passing source check does not establish runtime behavior, design quality or deployment readiness.
 
-The current package has nine workflows: init, adopt, forge, ui-ux, council, slice, migrate, operate and team-review. `cgspec-pivot` is a compatibility alias. The eight role definitions support bounded team work; routine changes use only the workers that add value.
+| If you want to... | Read |
+| --- | --- |
+| Understand the method | [Current method specification](docs/METHOD.md) |
+| See what is implemented or still limited | [Implementation status](docs/STATUS.md) |
+| Install, upgrade or validate a project | [Engine formats and commands](engine/FORMATS.md) |
+| Contribute to this repository | [Contributor entry](AGENTS.md) |
+| Find historical decisions and research | [Documentation map](docs/00-INDEX.md) |
+
+The package has nine workflows: init, adopt, forge, ui-ux, council, slice, migrate, operate and team-review. `cgspec-pivot` is a compatibility alias. The eight role definitions support bounded team work; routine changes use only the workers that add value.
 
 ## Try it in a disposable project
 
@@ -33,6 +41,6 @@ python3 -m unittest discover -s tests -t .
 claude plugin validate . --strict
 ```
 
-First installation of governance on a GitHub repository needs an owner-reviewed baseline before the CGSpec check can be required. The exact trust sequence and the limits of local hooks are in [section 8](docs/METHOD-v0.2.md#8-enforcement-engine). No local script proves a message came from the user when the agent controls the same shell.
+First installation of governance on a GitHub repository needs an owner-reviewed baseline before the CGSpec check can be required. The exact trust sequence and the limits of local hooks are in [section 8](docs/METHOD.md#8-enforcement-engine). No local script proves a message came from the user when the agent controls the same shell.
 
 CortexGate is optional and independent of CGSpec; using this method does not require that service.

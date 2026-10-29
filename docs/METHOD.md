@@ -1,7 +1,7 @@
-# CGSpec Method v0.2 — Specification
-Created: unknown · Last edited: 2026-10-29T11:01:01Z
+# CGSpec Method — Current Specification
+Created: unknown · Last edited: 2026-10-29T13:37:17Z
 
-Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". Built in this repository; there is no second development checkout (see `AGENTS.md`).
+Oct 18, 2026 · @Jean Franck · Replaces "CGSpec Method v0.1 — Architecture". The method specification evolves independently of package release numbers; Git history and the changelog identify exact revisions. Built in this repository; there is no second development checkout (see `AGENTS.md`).
 
 **CGSpec is one package installed into a project: the AI carries the method, you set goals and judge results, and every rule that can be checked by a machine is enforced by one, not left to the AI's goodwill.** It works for a one-page site up to many independent repos, and for new or half-finished projects. Each rule below is stated once; other sections link to it.
 
@@ -424,7 +424,7 @@ flowchart TB
 
 **First-install trust bootstrap.** Before a repository has a trusted CGSpec selector on its default branch, governance CI deliberately fails closed. Publish and inspect the pinned CGSpec release first. Put the installer output, `plugin_source`, initial `approver_keys` (if wanted), workflow and selection script into one proposed installation change. The repository owner reviews that exact change under a protected branch rule requiring owner review; the first merge cannot claim a passing CGSpec governance check because no prior trusted selector exists. After that reviewed baseline is on the default branch, enable the CGSpec governance check as a required status, then verify it on a subsequent harmless PR before treating the protection as active. Do not add the first approver key later through an ordinary PR: the engine cannot verify GitHub review as an authorization source yet, so it fails closed. A trusted key can rotate keys by signing with the previously trusted key. If owner review or the published release cannot be established, mark bootstrap BLOCKED rather than using the proposed change's engine as its own judge.
 
-What remains possible, and how to close it: the implementation now requires an exact, named approval phrase, reads signer keys from the trusted base, and fails closed when the CI selector cannot establish its trusted source. Those fixes passed bounded adversarial review; they do not certify the whole system. An agent with your shell could still write a fake approval together with a fake inbox line in one change. The first installation also has no earlier selector to judge it and therefore requires the owner-reviewed bootstrap above. The merge protection guarantee holds only when GitHub branch protection requires the CGSpec check and your review for changes to `.github/`, `docs/_cgspec/` and `docs/slices/`, and the agent lacks your GitHub admin credentials. A hardware signing key that requires your touch can strengthen approval evidence. Install prints the GitHub steps. The `v0.2.0` release and a live protected-branch rehearsal are still pending, so this section describes the intended guarantee, not a deployed one.
+What remains possible, and how to close it: the implementation now requires an exact, named approval phrase, reads signer keys from the trusted base, and fails closed when the CI selector cannot establish its trusted source. Those fixes passed bounded adversarial review; they do not certify the whole system. An agent with your shell could still write a fake approval together with a fake inbox line in one change. The first installation also has no earlier selector to judge it and therefore requires the owner-reviewed bootstrap above. The merge protection guarantee holds only when GitHub branch protection requires the CGSpec check and your review for changes to `.github/`, `docs/_cgspec/` and `docs/slices/`, and the agent lacks your GitHub admin credentials. A hardware signing key that requires your touch can strengthen approval evidence. Install prints the GitHub steps. A pinned release still needs a live protected-branch rehearsal before this section describes a deployed guarantee.
 
 **Session lifecycle hooks:**
 
@@ -570,9 +570,9 @@ Smoke test, required to pass in the plugin's CI before step 5 of the plan:
 
 **Licenses.** Reuse open source whenever it beats custom code, always explaining what it solves, how it is used, the exact version, obligations, and an alternative. Permissive (MIT, BSD, Apache-2.0, ISC): use, keep notices. Weak copyleft (LGPL, MPL-2.0): use unmodified; ask before modifying or bundling. Strong copyleft (GPL, AGPL): ask first with the concrete obligation and a permissive alternative. No license: never used silently; the agent asks with its view of the risk. Planned tools: Playwright (Apache-2.0), axe-core (MPL-2.0, unmodified), Lighthouse CI (Apache-2.0), Lefthook (MIT), Stylelint (MIT), lychee (Apache-2.0/MIT), Stryker (Apache-2.0), mutmut (BSD-3-Clause), Spectral (Apache-2.0), Testcontainers (MIT), fast-check (MIT), Hypothesis (MPL-2.0, unmodified), osv-scanner (Apache-2.0), gitleaks (MIT), Semgrep CE (LGPL-2.1, used as a tool), jscpd (MIT), dependency-cruiser (MIT), import-linter (BSD-2-Clause). Each license is re-checked at install.
 
-## 13. Traceability
+## 13. Historical requirements traceability
 
-**Every requirement you stated (Codex session, Antigravity session, and today's comments) maps to a section of this spec; none is live yet except where noted.** "Live" refers to CGSpec revision `716306b`.
+**This table is a preserved planning snapshot at CGSpec revision `716306b`, not current implementation status.** It maps the original requirements to this specification. Use `docs/STATUS.md` for current implementation claims.
 
 | Your requirement | Where | Live |
 | --- | --- | --- |
@@ -612,9 +612,9 @@ Smoke test, required to pass in the plugin's CI before step 5 of the plan:
 | 20-minute follow-up of test sessions | 14 | Not yet installed |
 | Propose existing design systems only if enforceable; guarantee the system is respected | 6, 6b | No (getdesign skill in staging) |
 
-## 14. Evidence base and plan
+## 14. Historical evidence base and plan
 
-**The design choices below rest on published evidence where it exists; where it doesn't, the CortexGate pilot measures it.** Full research with all links: `cgspec-workspace/dossier/13-RESEARCH-PASS.md`.
+**This is the evidence base and plan preserved from the original method design.** Full research with all links: `cgspec-workspace/dossier/13-RESEARCH-PASS.md`. Current implementation status lives in `docs/STATUS.md`.
 
 | Choice | Evidence |
 | --- | --- |

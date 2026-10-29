@@ -33,7 +33,7 @@ Confirm or correct it as the first step of the spike.
 
 It is the nearest thing to a direct counterpart, and it is structurally the opposite bet.
 CGSpec's central claim is that **every rule a machine can check is enforced by one, not left
-to the AI's goodwill** (`docs/METHOD-v0.2.md`). AIS-OS appears to govern an agent almost
+to the AI's goodwill** (`docs/METHOD.md`). AIS-OS appears to govern an agent almost
 entirely through prose instructions in `CLAUDE.md` / `AGENTS.md` plus skills the agent chooses
 to invoke. If that holds, it is the best available natural experiment in what prose-only
 governance does and does not hold on to, and the comparison tells us which CGSpec gates earn

@@ -44,7 +44,7 @@ def _sources(plugin: Path, dest_base: Path) -> list[tuple[Path, Path]]:
     if not skills.is_dir():
         return []
     sources = [(p, dest_base / p.relative_to(skills)) for p in skills.rglob("*") if p.is_file()]
-    sources += [(docs / "METHOD-v0.2.md", dest_base / DOCS / "METHOD-v0.2.md")] if (docs / "METHOD-v0.2.md").is_file() else []
+    sources += [(docs / "METHOD.md", dest_base / DOCS / "METHOD.md")] if (docs / "METHOD.md").is_file() else []
     research = docs / "_cgspec/02-research"
     sources += [(p, dest_base / DOCS / p.relative_to(docs)) for p in research.glob("*.md")] if research.is_dir() else []
     return [(src, dest) for src, dest in sources if "__pycache__" not in src.parts and src.suffix != ".pyc"]

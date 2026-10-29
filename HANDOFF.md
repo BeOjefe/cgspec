@@ -4,13 +4,13 @@ Created: unknown · Last edited: 2026-10-20T17:54:17Z
 **Current entry:** read [docs/STATUS.md](docs/STATUS.md) and [AGENTS.md](AGENTS.md). Everything below is a historical handoff, including its branch names, commands, counts and old isolation instructions; none overrides the current entry. In this workspace development continues only in `cgspec`, not `cgspec-next`.
 
 Date: 2026-10-19. Previous owner: Claude (claude.ai session). Read this first, then
-`docs/METHOD-v0.2.md` (the spec, source of truth) and `engine/FORMATS.md` (file formats and hook contract).
+`docs/METHOD.md` (the spec, source of truth) and `engine/FORMATS.md` (file formats and hook contract).
 
 ## Where things are
 
 | What | Where |
 | --- | --- |
-| Spec (historical at rev 48) | Claude Doc then matched the repo copy; later branch edits and the v0.2 rename make the old digest obsolete. The current repo spec is `docs/METHOD-v0.2.md`. |
+| Spec (historical at rev 48) | Claude Doc then matched the repo copy; later branch edits and the v0.2 rename make the old digest obsolete. The current repo spec is `docs/METHOD.md`. |
 | Code | This handoff originally covered `method-v2`, then `claude/design-craft`; both names describe earlier work, not the current branch. |
 | Audit dossier, history, reviews | `~/Documents/Project/cgspec-workspace/dossier/` (09-RESUME-STATE.md is the running log; 10-13 are re-audit, reviews, research) |
 | Live repos | `~/Documents/Project/cgspec` and `~/Documents/Project/cortexgate`: NOT touched. Do not edit them until step 5 of the plan. |
@@ -83,4 +83,4 @@ Low: `find -iname '*.JSON' -delete` slips past the tool hook (best effort; commi
 - Tests first for every change; for key rules, revert the fix once and confirm a test fails.
 - Commit identity: reuse the repo's last author (`git -c user.name=... -c user.email=...`); never change git config.
 - Keep files <= 400 lines, functions <= 60 (enforced by `tests/unit/test_code_rules.py`).
-- Update `docs/METHOD-v0.2.md` and the live doc together when behavior changes; log progress in `cgspec-workspace/dossier/09-RESUME-STATE.md`.
+- Update `docs/METHOD.md` and the live doc together when behavior changes; log progress in `cgspec-workspace/dossier/09-RESUME-STATE.md`.

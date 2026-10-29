@@ -303,7 +303,7 @@ class DoctorHardeningTests(DoctorTests):
         self.assertFails("E-LAYOUT-UNKNOWN")
 
     def test_method_doc_not_allowed_in_projects(self):
-        (self.root / "docs/METHOD-v0.2.md").write_text("x\n")
+        (self.root / "docs/METHOD.md").write_text("x\n")
         self.assertFails("E-LAYOUT-UNKNOWN")
 
     def test_link_variants(self):

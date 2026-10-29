@@ -11,6 +11,8 @@ from pathlib import Path
 from tests.helpers import REPO, TempDir, git, git_project, write_json
 
 CURRENT_VERSION = (REPO / "engine/VERSION").read_text(encoding="utf-8").strip()
+CURRENT_PARTS = tuple(int(part) for part in CURRENT_VERSION.split("."))
+NEWER_VERSION = f"{CURRENT_PARTS[0]}.{CURRENT_PARTS[1] + 1}.0"
 
 
 def make_release_source(tmp: Path, versions: list[str]) -> Path:
@@ -41,7 +43,7 @@ class CiSelectTests(unittest.TestCase):
         self.tmp = self._tmp.__enter__()
         self.root = self.tmp / "project"
         self.root.mkdir()
-        self.source = make_release_source(self.tmp, [CURRENT_VERSION, "0.3.0"])
+        self.source = make_release_source(self.tmp, [CURRENT_VERSION, NEWER_VERSION])
         git(self.root, "init", "-q", "-b", "main")
         from tests.helpers import run_script
         run_script("install.py", "install", "--root", str(self.root), "--profile", "headless", "--topology", "single",
@@ -77,9 +79,9 @@ class CiSelectTests(unittest.TestCase):
         self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), CURRENT_VERSION)
 
     def test_upgrade_in_head_uses_the_newer_release(self):
-        self.edit("docs/_cgspec/01-engine/VERSION", lambda p: p.write_text("0.3.0\n"))
+        self.edit("docs/_cgspec/01-engine/VERSION", lambda p: p.write_text(NEWER_VERSION + "\n"))
         env = select(self.root, self.base, self.tmp)
-        self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), "0.3.0")
+        self.assertEqual((Path(env["CGSPEC_RELEASE"]) / "engine/VERSION").read_text().strip(), NEWER_VERSION)
 
     def test_redirected_plugin_source_in_head_is_ignored(self):
         def redirect(p):

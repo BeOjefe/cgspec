@@ -9,7 +9,7 @@ This directory houses technical research spikes, comparative benchmarks, and exp
 - Files follow the format: `RES-NNN-<slug>.md` (e.g. `RES-001-ui-design-systems-and-surface-profiles-benchmark.md`).
 - Every concluded spike is listed under "Active Research Compendiums" below and recorded in `docs/00-INDEX.md`.
 - Spikes not yet started are queued in [`RESEARCH-QUEUE.md`](RESEARCH-QUEUE.md), not stubbed as `RES-NNN` files. A `RES-NNN` file means a spike that reached a conclusion.
-- **Link only within this directory.** The installer copies `02-research/*.md` and `METHOD-v0.2.md` into a project's installed docs skill (`engine/_lib/agent_skills.py`) and rewrites relative links to match. A link to anything else, `docs/00-INDEX.md` included, is rewritten to a file the installer never writes, so it dangles in every installed project. Name such a document in backticks instead of linking it. `tests/unit/test_agent_skills.py` fails on a link that would not survive the copy.
+- **Link only within this directory.** The installer copies `02-research/*.md` and `METHOD.md` into a project's installed docs skill (`engine/_lib/agent_skills.py`) and rewrites relative links to match. A link to anything else, `docs/00-INDEX.md` included, is rewritten to a file the installer never writes, so it dangles in every installed project. Name such a document in backticks instead of linking it. `tests/unit/test_agent_skills.py` fails on a link that would not survive the copy.
 
 ---
 
