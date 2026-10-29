@@ -73,12 +73,13 @@ def resolve_canonical_label(root: Path, screen: str) -> str:
     return label
 
 
-def next_baseline_version(root: Path, label: str) -> int:
+def next_baseline_version(root: Path, label: str, state: str = "default") -> int:
     base = baseline_dir(root)
+    prefix = label if state == "default" else f"{label}-{state}"
     versions = []
     if base.is_dir():
-        for p in base.glob(f"{label}-v*-*.png"):
-            m = re.fullmatch(rf"{re.escape(label)}-v(\d+)-(desktop|mobile)\.png", p.name)
+        for p in base.glob(f"{prefix}-v*-*.png"):
+            m = re.fullmatch(rf"{re.escape(prefix)}-v(\d+)-(desktop|mobile)(?:-dark)?\.png", p.name)
             if m:
                 versions.append(int(m.group(1)))
     frozen_path = root / STATE_DIR / "frozen.json"
@@ -87,7 +88,7 @@ def next_baseline_version(root: Path, label: str) -> int:
             frozen = json.loads(frozen_path.read_text(encoding="utf-8"))
             for entry in frozen.get("entries", []):
                 p = entry.get("path", "")
-                m = re.search(rf"{re.escape(label)}-v(\d+)-(desktop|mobile)\.png$", p)
+                m = re.search(rf"{re.escape(prefix)}-v(\d+)-(desktop|mobile)(?:-dark)?\.png$", p)
                 if m:
                     versions.append(int(m.group(1)))
         except (OSError, ValueError):
@@ -110,12 +111,15 @@ def load_active(root: Path) -> dict:
         return {"schema": 1, "screens": {}}
 
 
-def find_baselines(root: Path, label: str) -> tuple[dict[str, str], dict[str, bool]]:
+def find_baselines(root: Path, label: str, state: str = "default") -> tuple[dict[str, str], dict[str, bool]]:
     """(baselines_map for driver, has_baselines boolean map)."""
     active = load_active(root)
     screens = active.get("screens", {}) if isinstance(active, dict) else {}
     if label in screens and isinstance(screens[label], dict):
         entry = screens[label]
+        states = entry.get("states") if isinstance(entry.get("states"), dict) else {}
+        if state in states and isinstance(states[state], dict):
+            entry = {vp: states[state].get(f"{vp}-light") for vp in ("desktop", "mobile")}
         driver_map = {}
         has_map = {}
         for vp in ("desktop", "mobile"):
@@ -147,11 +151,11 @@ def find_baselines(root: Path, label: str) -> tuple[dict[str, str], dict[str, bo
 
 
 def _revision(root: Path) -> str:
-    out = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=root, capture_output=True, text=True)
+    out = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True)
     return out.stdout.strip() if out.returncode == 0 else "no-git"
 
 
-def _resolve_approval(root: Path, approval: str | None) -> str:
+def _resolve_approval(root: Path, approval: str | None) -> dict:
     approvals_path = root / STATE_DIR / "approvals.json"
     if not approvals_path.is_file():
         raise CgspecError("no approvals.json; approving a baseline requires validated user approval")
@@ -170,12 +174,12 @@ def _resolve_approval(root: Path, approval: str | None) -> str:
         entry = next((a for a in approvals_list if isinstance(a, dict) and a.get("id") == approval), None)
         if not entry:
             raise CgspecError(f"approval {approval} is not in 07-state/approvals.json")
-        return approval
+        return entry
     entry = approvals_list[-1]
     chosen = entry.get("id") if isinstance(entry, dict) else None
     if not chosen:
         raise CgspecError("latest approval in approvals.json has no id")
-    return chosen
+    return entry
 
 
 def _load_and_validate_frozen(root: Path) -> tuple[Path, dict]:
@@ -196,7 +200,8 @@ def _load_and_validate_frozen(root: Path) -> tuple[Path, dict]:
     return frozen_path, frozen
 
 
-def _capture_fresh_screenshots(root: Path, label: str, page_path: Path, screen: str, b_dir: Path) -> tuple[Path, Path]:
+def _capture_fresh_screenshots(root: Path, label: str, page_path: Path, screen: str, b_dir: Path,
+                               steps: list[dict] | None = None) -> dict[str, Path]:
     shots = root / ".cgspec-scratch/visual"
     shots.mkdir(parents=True, exist_ok=True)
     _check_no_symlinks(root, shots)
@@ -219,6 +224,7 @@ def _capture_fresh_screenshots(root: Path, label: str, page_path: Path, screen: 
                 p.unlink()
     from visual_audit import _prepare_runs
     runs, _ = _prepare_runs(root, [(label, page_path, [screen])], video=False)
+    runs[0]["steps"] = steps or []
     driver_out = browser.run(root, runs, shots, video=False)
     if not isinstance(driver_out, dict):
         raise CgspecError("browser driver gave no result object")
@@ -228,22 +234,26 @@ def _capture_fresh_screenshots(root: Path, label: str, page_path: Path, screen: 
     problems = browser.proof_problems(runs[0], reported.get(label), shots)
     if problems:
         raise CgspecError(f"browser capture proof failed for {label}: {'; '.join(problems)}")
-    desktop_shot, mobile_shot = shots / f"{label}-desktop.png", shots / f"{label}-mobile.png"
-    for shot in (desktop_shot, mobile_shot):
+    captured = {f"{vp}-{theme}": shots / f"{label}-{vp}{'-dark' if theme == 'dark' else ''}.png"
+                for vp in ("desktop", "mobile") for theme in ("light", "dark")}
+    for shot in captured.values():
         if shot.is_symlink() or shot.resolve() in (b_dir_res, state_res) or shot.resolve().is_relative_to(b_dir_res) or shot.resolve().is_relative_to(state_res):
             raise CgspecError(f"screenshot {shot} is a symlink or resolves into baseline storage")
         validate_png(shot)
-    return desktop_shot, mobile_shot
+    return captured
 
 
-def _write_baseline_files(root: Path, label: str, version: int, shots: tuple[Path, Path],
-                          b_dir: Path, reason: str, rev: str, chosen: str, frozen: dict):
-    desktop_shot, mobile_shot = shots
+def _write_baseline_files(root: Path, label: str, state: str, version: int, shots: dict[str, Path],
+                           b_dir: Path, reason: str, rev: str, approval: dict, reviewer: str, frozen: dict):
     b_dir_res = b_dir.resolve()
     saved, hashes, rels = [], {}, {}
-    for vp, shot in (("desktop", desktop_shot), ("mobile", mobile_shot)):
-        rel = f"docs/prototypes/_baselines/{label}-v{version}-{vp}.png"
-        rels[vp] = rel
+    prefix = label if state == "default" else f"{label}-{state}"
+    approved_at = utc_now()
+    chosen = approval["id"]
+    for key, shot in shots.items():
+        vp, theme = key.split("-", 1)
+        rel = f"docs/prototypes/_baselines/{prefix}-v{version}-{vp}{'-dark' if theme == 'dark' else ''}.png"
+        rels[key] = rel
         dest = root / rel
         if dest.is_symlink() or (dest.resolve().parent != b_dir_res and not dest.resolve().is_relative_to(b_dir_res)):
             raise CgspecError(f"destination {dest} is a symlink or resolves outside baseline directory")
@@ -259,39 +269,73 @@ def _write_baseline_files(root: Path, label: str, version: int, shots: tuple[Pat
             os.close(fd)
         os.chmod(dest, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
         digest = hashlib.sha256(data).hexdigest()
-        hashes[vp] = digest
+        hashes[key] = digest
         frozen.setdefault("entries", []).append({
             "path": rel, "sha256": digest, "kind": "baseline", "added": utc_now(),
-            "reason": reason or f"approved visual baseline for {label} v{version} ({vp}); rev {rev}; approval {chosen}"
+            "reason": reason or f"approved visual baseline for {label} state {state} v{version} ({vp}/{theme}); rev {rev}; approval {chosen}"
         })
         saved.append(dest)
-    return saved, hashes, rels
+    binding = {"approval": chosen, "approval_sha256": approval["sha256"], "reviewer": reviewer,
+               "approved_at": approved_at, "revision": rev, "state": state}
+    return saved, hashes, rels, binding
 
 
-def approve_baseline(root: Path, screen: str, reason: str = "", approval: str | None = None) -> list[Path]:
+def _state_steps(root: Path, journey: str | None, screenshot: str | None) -> list[dict]:
+    if not journey:
+        return []
+    path = (root / journey).resolve()
+    if root.resolve() not in path.parents or path.is_symlink() or not path.is_file():
+        raise CgspecError("baseline journey must be a regular project file")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise CgspecError(f"baseline journey is invalid: {exc}") from exc
+    steps = data.get("steps") if isinstance(data, dict) else None
+    if not isinstance(steps, list) or not steps:
+        raise CgspecError("baseline journey has no steps")
+    if not screenshot:
+        return steps
+    for index, step in enumerate(steps):
+        if isinstance(step, dict) and step.get("screenshot") == screenshot:
+            return steps[:index + 1]
+    raise CgspecError(f"baseline journey has no screenshot {screenshot!r}")
+
+
+def approve_baseline(root: Path, screen: str, reason: str = "", approval: str | None = None,
+                     state: str = "default", reviewer: str = "user", journey: str | None = None,
+                     screenshot: str | None = None) -> list[Path]:
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", state):
+        raise CgspecError("baseline state must be a safe identifier")
+    if not reviewer.strip():
+        raise CgspecError("baseline approval requires reviewer identity")
     label, page_path = resolve_canonical_target(root, screen)
     chosen = _resolve_approval(root, approval)
     frozen_path, frozen = _load_and_validate_frozen(root)
     b_dir = baseline_dir(root)
     b_dir.mkdir(parents=True, exist_ok=True)
-    shots = _capture_fresh_screenshots(root, label, page_path, screen, b_dir)
-    version = next_baseline_version(root, label)
+    shots = _capture_fresh_screenshots(root, label, page_path, screen, b_dir,
+                                       _state_steps(root, journey, screenshot))
+    version = next_baseline_version(root, label, state)
     rev = _revision(root)
-    saved, hashes, rels = _write_baseline_files(root, label, version, shots, b_dir, reason, rev, chosen, frozen)
+    saved, hashes, rels, binding = _write_baseline_files(
+        root, label, state, version, shots, b_dir, reason, rev, chosen, reviewer, frozen)
     write_json(frozen_path, frozen)
     active = load_active(root)
-    active.setdefault("screens", {})[label] = {
-        "version": version, "approval": chosen, "revision": rev,
-        "desktop": {"file": rels["desktop"], "sha256": hashes["desktop"]},
-        "mobile": {"file": rels["mobile"], "sha256": hashes["mobile"]},
-        "approved_at": utc_now(),
-    }
+    screen_entry = active.setdefault("screens", {}).setdefault(label, {})
+    state_entry = {"version": version}
+    for key in rels:
+        state_entry[key] = {"file": rels[key], "sha256": hashes[key], **binding}
+    screen_entry.setdefault("states", {})[state] = state_entry
+    if state == "default":
+        screen_entry.update({"version": version, "approval": binding["approval"], "revision": rev,
+                             "desktop": state_entry["desktop-light"], "mobile": state_entry["mobile-light"],
+                             "approved_at": binding["approved_at"]})
     write_json(b_dir / "active.json", active)
     try:
         import memlog
-        memlog.main(["--root", str(root), "add", "--summary", f"Visual baseline approved for {label} v{version}",
-                     "--tags", "visual,baseline", "--details", f"{rels['desktop']}, {rels['mobile']}; approval {chosen}"])
+        memlog.main(["--root", str(root), "add", "--summary", f"Visual baseline approved for {label} {state} v{version}",
+                     "--tags", "visual,baseline", "--details", f"{', '.join(rels.values())}; approval {chosen['id']}"])
     except Exception:
         pass
-    print(f"approved baseline for {label} v{version} in docs/prototypes/_baselines/ and recorded in 07-state/frozen.json")
+    print(f"approved baseline for {label} state {state} v{version} in docs/prototypes/_baselines/ and recorded in 07-state/frozen.json")
     return saved

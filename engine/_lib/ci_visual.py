@@ -49,6 +49,7 @@ VISUAL_WORKFLOW = """      - name: Install pinned Playwright outside the checkou
         if: github.event_name == 'pull_request'
         env:
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           set +e
           export PLAYWRIGHT_BROWSERS_PATH="$RUNNER_TEMP/cgspec-playwright-browsers"
@@ -70,7 +71,10 @@ VISUAL_WORKFLOW = """      - name: Install pinned Playwright outside the checkou
           # Exit 2 with no structured result is recorded as BLOCKED for each command that could not run.
           JOURNEY_CODE=2
           AUDIT_CODE=2
+          PARITY_CODE=2
           if [ "$CLEAN" = 1 ]; then
+            python3 "$CGSPEC_RELEASE/engine/parity.py" --root "$TREE" --base "$PR_BASE" --out "$OUT/built-app" --json-out "$OUT/parity.json" > "$OUT/parity.log" 2>&1
+            PARITY_CODE=$?
             python3 "$CGSPEC_RELEASE/engine/journey.py" --root "$TREE" --video --json-out "$J" > "$OUT/journeys.log" 2>&1
             JOURNEY_CODE=$?
             python3 "$CGSPEC_RELEASE/engine/visual_audit.py" --root "$TREE" --video --json-out "$A" > "$OUT/visual.log" 2>&1
@@ -84,15 +88,17 @@ VISUAL_WORKFLOW = """      - name: Install pinned Playwright outside the checkou
           python3 "$CGSPEC_RELEASE/engine/visual_summary.py" --revision "$PR_HEAD" \\
             --artifact "cgspec-visual-$PR_HEAD" --evidence "$OUT/evidence.json" \\
             --summary "$GITHUB_STEP_SUMMARY" \\
+            --result parity "$PARITY_CODE" "$OUT/parity.json" \\
             --result journeys "$JOURNEY_CODE" "$J" \\
-            --result "visual audit" "$AUDIT_CODE" "$A" ||
-            echo "CGSpec visual proof: BLOCKED, the summary could not be built" >> "$GITHUB_STEP_SUMMARY"
+            --result "visual audit" "$AUDIT_CODE" "$A"
+          SUMMARY_CODE=$?
+          if [ "$PARITY_CODE" != 0 ] || [ "$JOURNEY_CODE" != 0 ] || [ "$AUDIT_CODE" != 0 ] || [ "$SUMMARY_CODE" != 0 ]; then exit 1; fi
           exit 0
       - uses: actions/upload-artifact@@UPLOAD_ARTIFACT_SHA@  # v@UPLOAD_ARTIFACT_VERSION@
         # A skipped or never-reached proof step (an earlier required step such as governance failed, or
         # this is not a pull_request event) must publish nothing: never upload whatever happens to sit in
         # the checkout, such as a PR-committed artifacts/cgspec-visual/ (spec 7).
-        if: always() && github.event_name == 'pull_request' && steps.@PROOF_STEP_ID@.outcome == 'success'
+        if: always() && github.event_name == 'pull_request' && (steps.@PROOF_STEP_ID@.outcome == 'success' || steps.@PROOF_STEP_ID@.outcome == 'failure')
         with:
           name: cgspec-visual-${{ github.event.pull_request.head.sha }}
           path: ${{ runner.temp }}/cgspec-visual-proof-${{ github.event.pull_request.head.sha }}

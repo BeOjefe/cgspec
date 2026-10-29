@@ -87,6 +87,8 @@ class TrustedPlaywrightTests(unittest.TestCase):
 
     def test_forged_success_without_screenshots_is_not_a_pass(self):
         fake_module(self.root)  # untrusted local mode: the project's module is used, but proved by artifacts
+        journey = self.root / "docs/prototypes/invoice/journeys/create.json"
+        journey.write_text(json.dumps({**JOURNEY, "steps": [{"state": "ready"}, {"screenshot": "after"}]}))
         result = self.run_tool("journey.py", trusted=False)
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertNotIn("PASS", result.stdout)
@@ -163,9 +165,6 @@ class ForgedResultTests(unittest.TestCase):
         shots.mkdir(parents=True, exist_ok=True)
         with mock.patch.object(journey.browser, "run", side_effect=driver):
             code, lines = journey.run(self.root, [], write=False)
-        self.assertEqual(code, 0, lines)
-        with mock.patch.object(journey.browser, "run", side_effect=driver):
-            code, lines = journey.run(self.root, [], write=False, video=True)
         self.assertNotEqual(code, 0, lines)
         self.assertIn(".webm", "\n".join(lines))
 
@@ -214,6 +213,8 @@ class CollidingJourneyLabelTests(unittest.TestCase):
                 ok = i != 0  # the first discovered journey fails, the second passes
                 vp = {"viewport": "desktop", "ok": ok, "state": "s", "errors": [] if ok else ["boom"]}
                 (shots / f"{run['label']}-desktop.png").write_bytes(b"\x89PNG\r\n\x1a\nimage")
+                if ok:
+                    (shots / f"{run['label']}-desktop.webm").write_bytes(b"\x1a\x45\xdf\xa3video")
                 results.append({"label": run["label"], "viewports": [vp]})
             return {"results": results}
 

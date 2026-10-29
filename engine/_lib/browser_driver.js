@@ -78,6 +78,7 @@ async function assertOne(page, a) {
 async function step(page, s, shots, label) {
   if (s.goto !== undefined) return page.goto(s.goto, { waitUntil: "load" });
   if (s.click !== undefined) return byId(page, s.click).first().click({ timeout: TIMEOUT });
+  if (s.focus !== undefined) return byId(page, s.focus).first().focus({ timeout: TIMEOUT });
   if (s.fill !== undefined) return byId(page, s.fill).first().fill(String(s.value), { timeout: TIMEOUT });
   if (s.press !== undefined) return byId(page, s.press).first().press(s.key, { timeout: TIMEOUT });
   if (s.select !== undefined) return byId(page, s.select).first().selectOption(String(s.value), { timeout: TIMEOUT });
@@ -114,6 +115,14 @@ async function journey(browser, run, shots) {
     out.push(await withPage(browser, viewport, async (page, errors) => {
       let state = "start";
       await page.goto(run.url, { waitUntil: "load" });
+      const devControls = await page.evaluate(detectDevControls);
+      if (run.requiredOrigin && new URL(page.url()).origin !== new URL(run.requiredOrigin).origin) throw new Error("navigation left built app");
+      if (run.kind === "audit") for (const s of run.steps || []) {
+        if (s.state !== undefined) state = s.state;
+        await step(page, s, shots, label);
+        devControls.push(...await page.evaluate(detectDevControls));
+        if (run.requiredOrigin && new URL(page.url()).origin !== new URL(run.requiredOrigin).origin) throw new Error("navigation left built app");
+      }
       for (let i = 0; i < run.steps.length; i++) {
         const s = run.steps[i];
         if (s.state !== undefined) state = s.state;
@@ -122,9 +131,13 @@ async function journey(browser, run, shots) {
         }
       }
       // Every journey viewport leaves a final screenshot; Python requires it before a PASS.
-      await page.screenshot({ path: path.join(shots, `${label}.png`), fullPage: true });
-      return { viewport, ok: errors.length === 0, state, errors };
-    }, shots, label, Boolean(run.video)));
+      const shot = path.join(shots, `${label}.png`);
+      await page.screenshot({ path: shot, fullPage: true });
+      const drift = run.baseline ? await compareImagesInBrowser(browser, run.baseline, shot,
+        path.join(shots, `${label}-diff.png`), 16) : null;
+      return { viewport, ok: errors.length === 0, state, errors, drift,
+        devControls: [...new Set(devControls)] };
+    }, shots, label, Boolean(run.video), { colorScheme: run.theme || "light" }));
   }
   return { label: run.label, viewports: out };
 }
@@ -340,6 +353,23 @@ async function compareImagesInBrowser(browser, fileA, fileB, diffOutputPath, tol
   }
 }
 
+// Executed in Chromium against the rendered DOM, including hidden controls and mock links.
+function detectDevControls() {
+  const pattern = /(?:view[-_ ]?as|user[-_ ]?(?:switch|select)|switch[-_ ]?(?:user|account)|dev[-_ ]?(?:panel|switch|control)|mock[-_ ]?(?:user|auth|account)|impersonat|data-cgspec-dev-control)/i;
+  const found = [];
+  const mockURL = (raw) => {
+    try { return [...new URL(raw, location.href).searchParams.keys()].some(k => /^(?:mock|mockUser|mock_user|viewAs|view_as|asUser|as_user|devUser|dev_user)$/i.test(k)); }
+    catch (_) { return false; }
+  };
+  if (mockURL(location.href)) found.push("mock URL parameter");
+  for (const el of document.querySelectorAll("*")) {
+    const attrs = ["id", "class", "data-testid", "aria-label", "name", "data-cgspec-dev-control"].map(k => el.getAttribute(k) || "").join(" ");
+    if (pattern.test(attrs) || (/^(BUTTON|SELECT|LABEL)$/.test(el.tagName) && pattern.test(el.textContent))) found.push(attrs || el.tagName);
+    if (el.hasAttribute("href") && mockURL(el.getAttribute("href"))) found.push("mock link");
+  }
+  return [...new Set(found)];
+}
+
 async function audit(browser, run, shots) {
   const out = [];
   for (const viewport of ["desktop", "mobile"]) {
@@ -351,6 +381,15 @@ async function audit(browser, run, shots) {
     // 1. Light render
     const lightResult = await withPage(browser, viewport, async (page, errors) => {
       await page.goto(run.url, { waitUntil: "load" });
+      const devControls = await page.evaluate(detectDevControls);
+      let state = "start";
+      if (run.requiredOrigin && new URL(page.url()).origin !== new URL(run.requiredOrigin).origin) throw new Error("navigation left built app");
+      if (run.kind === "audit") for (const s of run.steps || []) {
+        if (s.state !== undefined) state = s.state;
+        await step(page, s, shots, label);
+        devControls.push(...await page.evaluate(detectDevControls));
+        if (run.requiredOrigin && new URL(page.url()).origin !== new URL(run.requiredOrigin).origin) throw new Error("navigation left built app");
+      }
       await page.screenshot({ path: lightShotPath, fullPage: true });
       const facts = await page.evaluate((mobile) => {
         const doc = document.documentElement;
@@ -368,18 +407,27 @@ async function audit(browser, run, shots) {
       }, viewport === "mobile");
       const quality = await page.evaluate(measureQuality);
       quality.focus = await focusCheck(page);
-      return { viewport, errors, ...facts, quality };
+      return { viewport, state, errors, devControls: [...new Set(devControls)], ...facts, quality };
     }, shots, label, Boolean(run.video), { colorScheme: "light" });
 
     // 2. Dark render
     let darkQuality = null;
     let darkErrors = [];
+    let darkControls = [];
     await withPage(browser, viewport, async (page, errors) => {
       await page.goto(run.url, { waitUntil: "load" });
+      const devControls = await page.evaluate(detectDevControls);
+      if (run.requiredOrigin && new URL(page.url()).origin !== new URL(run.requiredOrigin).origin) throw new Error("navigation left built app");
+      if (run.kind === "audit") for (const s of run.steps || []) {
+        await step(page, s, shots, label);
+        devControls.push(...await page.evaluate(detectDevControls));
+        if (run.requiredOrigin && new URL(page.url()).origin !== new URL(run.requiredOrigin).origin) throw new Error("navigation left built app");
+      }
       await page.screenshot({ path: darkShotPath, fullPage: true });
       darkQuality = await page.evaluate(measureQuality);
       darkQuality.focus = await focusCheck(page);
       darkErrors = errors || [];
+      darkControls = devControls;
     }, shots, `${label}-dark`, false, { colorScheme: "dark" });
 
     const darkDiff = await compareImagesInBrowser(browser, lightShotPath, darkShotPath, null, 16);
@@ -391,14 +439,16 @@ async function audit(browser, run, shots) {
     // 3. Drift against baseline if baseline exists
     let drift = null;
     if (run.baselines && run.baselines[viewport]) {
-      drift = await compareImagesInBrowser(browser, run.baselines[viewport], lightShotPath, diffShotPath, 16);
+      drift = await compareImagesInBrowser(browser, run.baselines[viewport], lightShotPath, diffShotPath, run.pixelTolerance ?? 16);
     }
 
     out.push({
       ...lightResult,
+      devControls: [...new Set([...(lightResult.devControls || []), ...darkControls])],
       darkTheme,
       darkQuality,
       darkErrors,
+      darkDrift: run.darkBaselines && run.darkBaselines[viewport] ? await compareImagesInBrowser(browser, run.darkBaselines[viewport], darkShotPath, null, run.pixelTolerance ?? 16) : null,
       drift,
     });
   }

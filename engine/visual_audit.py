@@ -36,7 +36,6 @@ VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "met
 REF_ATTRS = ("for", "list", "form", "aria-controls", "aria-labelledby", "aria-describedby", "aria-owns")
 HANDLER_ATTRS = ("onclick", "onmousedown", "onpointerdown", "ontouchstart", "onkeydown", "onchange", "oninput")
 COLOR = re.compile(r"#([0-9a-f]{6}|[0-9a-f]{3})\b|rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)|hsla?\(\s*(\d+)", re.I)
-
 class Page(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
@@ -194,7 +193,6 @@ def static_audit(path: Path, profile: str, accepted: set[str] | None = None) -> 
     if not any(el["tag"] == "html" and el["attrs"].get("lang") for el in page.elements):
         warnings.append("W-LANG: <html> has no lang attribute")
     return errors, warnings + tells(css, page, accepted)
-
 def _evaluate_drift(vp_name: str, vp: dict, has_baselines: dict, drift_threshold: float,
                     errors: list[str], warnings: list[str], infos: list[str]) -> None:
     baseline_exists = has_baselines.get(vp_name, False)
@@ -367,12 +365,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json-out", help="write structured results (one record per screen) to this file")
     parser.add_argument("--approve-baseline", metavar="SCREEN", help="approve current screenshots of SCREEN as baseline")
     parser.add_argument("--approval", help="approval id from 07-state/approvals.json")
+    parser.add_argument("--reviewer", default="user", help="identity of the person approving the exact baseline")
+    parser.add_argument("--state", default="default", help="named prototype state represented by this baseline")
+    parser.add_argument("--journey", help="journey file used to render the named state")
+    parser.add_argument("--screenshot", help="stop the baseline journey at this screenshot step")
     parser.add_argument("--reason", default="", help="reason for approved baseline")
     parser.add_argument("--root")
     args = parser.parse_args(argv)
     if args.approve_baseline:
         try:
-            approve_baseline(resolve_root(args.root), args.approve_baseline, args.reason, approval=args.approval)
+            approve_baseline(resolve_root(args.root), args.approve_baseline, args.reason, approval=args.approval,
+                             state=args.state, reviewer=args.reviewer, journey=args.journey,
+                             screenshot=args.screenshot)
             return EXIT_OK
         except CgspecError as exc:
             print(f"visual_audit: {exc}", file=sys.stderr)

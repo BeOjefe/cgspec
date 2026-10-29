@@ -163,6 +163,9 @@ class WiringTests(unittest.TestCase):
         self.assertIn(f"id: {PROOF_STEP_ID}", workflow[proof_start:])
         upload_block = workflow[workflow.rindex("uses: actions/upload-artifact@"):]
         self.assertIn(f"steps.{PROOF_STEP_ID}.outcome == 'success'", upload_block)
+        self.assertIn(f"steps.{PROOF_STEP_ID}.outcome == 'failure'", upload_block)
+        condition = next(line for line in upload_block.splitlines() if line.strip().startswith("if:"))
+        self.assertNotIn("skipped", condition, "skipped proof steps must not upload candidate artifacts")
         path_line = next(line for line in upload_block.splitlines() if line.strip().startswith("path:"))
         self.assertRegex(path_line, r"path:\s*\$\{\{\s*runner\.temp\s*\}\}/cgspec-visual-proof-")
         self.assertNotIn("artifacts/cgspec-visual", path_line)

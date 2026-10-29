@@ -20,6 +20,9 @@ from _lib.layout import GUI_PROFILES  # noqa: E402
 import doctor  # noqa: E402
 import journey  # noqa: E402
 import visual_audit  # noqa: E402
+import os
+import tempfile
+import parity  # noqa: E402
 
 
 def _is_gui(root: Path) -> bool:
@@ -133,6 +136,16 @@ def verify_json(root: Path, allow_partial: bool = False) -> dict:
         {"check": "visual_audit", "result": vis_v, "errors": vis_e, "warnings": vis_w, "artifacts": vis_a},
     ]
 
+    base = os.environ.get("CGSPEC_BASE_REV")
+    if _is_gui(root) and base:
+        try:
+            with tempfile.TemporaryDirectory(prefix="cgspec-parity-") as tmp:
+                closure = parity.execute(root, base, Path(tmp))
+            result = "FAIL" if any(r["verdict"] == "FAIL" for r in closure) else "PASS"
+        except (CgspecError, OSError, ValueError) as exc:
+            result = "BLOCKED"
+        checks.append({"check": "built_app_parity", "result": result, "errors": int(result != "PASS"),
+                       "warnings": 0, "artifacts": []})
     all_verdicts = {c["result"] for c in checks}
     if "FAIL" in all_verdicts:
         overall = "FAIL"

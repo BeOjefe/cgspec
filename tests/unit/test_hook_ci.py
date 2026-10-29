@@ -48,11 +48,11 @@ class CiTests(unittest.TestCase):
         write_json(self.root / "docs/_cgspec/06-evidence/tests/login.json", {
             "schema": 1, "test_id": "login-fixed", "test_file": "tests/login_check.py", "slice": "SLICE-001",
             "command": ["python3", "tests/login_check.py"], "failed_at": failed_at,
-            "passed_at": None, "covers": ["src/login/form.ts", "src/login/fixed.txt"], "recorded": "2026-10-18T00:00:00Z"})
+            "passed_at": None, "covers": ["src/login/form.py", "src/login/fixed.txt"], "recorded": "2026-10-18T00:00:00Z"})
 
     def fix_commit(self, failed_at):
         self.tier_t1()
-        (self.root / "src/login/form.ts").write_text("export const f = 2;\n")
+        (self.root / "src/login/form.py").write_text("f = 2\n")
         (self.root / "src/login/fixed.txt").write_text("ok\n")
         self.record(failed_at)
         git(self.root, "add", "-A")
@@ -76,7 +76,7 @@ class CiTests(unittest.TestCase):
         self.assertIn("did not fail", result.stdout)
 
     def test_commit_that_skipped_the_local_hook_is_caught(self):
-        (self.root / "src/a.ts").write_text("export const a = 99;\n")  # no tier at all
+        (self.root / "src/a.py").write_text("a = 99\n")  # no tier at all
         git(self.root, "add", "-A")
         git(self.root, "commit", "-q", "--no-verify", "-m", "sneaky")
         result = ci(self.root, self.base)

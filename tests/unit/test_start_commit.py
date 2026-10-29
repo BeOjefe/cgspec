@@ -27,7 +27,7 @@ class StartCommitTests(unittest.TestCase):
         git_project(self.root)
         self.failed_at = git(self.root, "rev-parse", "HEAD").stdout.strip()
         set_test_command(self.root, ["python3", "{test_file}"])
-        self.slice_path = make_slice(self.root, scope="src/login/**,tests/**")
+        self.slice_path = make_slice(self.root, scope="src/login/**,tests/**,docs/prototypes/**")
         source = self.root / ".cgspec-scratch/start.json"
         source.parent.mkdir(exist_ok=True)
         source.write_text(json.dumps(draft()))
@@ -53,6 +53,34 @@ class StartCommitTests(unittest.TestCase):
             "covers": ["src/login/form.ts"],
             "slice": "SLICE-001",
             "recorded": "2026-10-28T00:00:00Z",
+        })
+        sha = "a" * 64
+        rev = git(self.root, "rev-parse", "HEAD").stdout.strip()
+        write_json(self.root / "docs/prototypes/parity.json", {
+            "schema": 1,
+            "covers": ["src/login/form.ts"],
+            "build_mode": "development",
+            "data_source": "unknown",
+            "authentication_method": "none",
+            "mock_switch_state": "absent",
+            "app": {"build": ["true"], "serve": ["true"], "ready_url": "http://localhost:0"},
+            "states": [{"name": "default", "route": "/", "data_set": "empty", "screen": "login",
+                        "journey": "login", "baselines": {
+                            "desktop-light": {"file": "login-desktop.png", "sha256": sha,
+                                "approval": "approved", "approval_sha256": sha,
+                                "reviewer": "test", "approved_at": "2026-01-01T00:00:00Z", "revision": rev},
+                            "desktop-dark": {"file": "login-desktop-dark.png", "sha256": sha,
+                                "approval": "approved", "approval_sha256": sha,
+                                "reviewer": "test", "approved_at": "2026-01-01T00:00:00Z", "revision": rev},
+                            "mobile-light": {"file": "login-mobile.png", "sha256": sha,
+                                "approval": "approved", "approval_sha256": sha,
+                                "reviewer": "test", "approved_at": "2026-01-01T00:00:00Z", "revision": rev},
+                            "mobile-dark": {"file": "login-mobile-dark.png", "sha256": sha,
+                                "approval": "approved", "approval_sha256": sha,
+                                "reviewer": "test", "approved_at": "2026-01-01T00:00:00Z", "revision": rev}}}],
+            "review": {"approval": "approved", "approval_sha256": sha, "reviewer": "test", "approved_at": "2026-01-01T00:00:00Z",
+                       "revision": rev, "base_revision": rev, "functional_revision": rev, "visual_revision": rev,
+                       "content_sha256": sha, "diff_sha256": sha},
         })
         git(self.root, "add", "docs", "src", "tests")
 

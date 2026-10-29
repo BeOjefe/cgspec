@@ -29,6 +29,12 @@ if "--json-out" in args:
               open(out, "w"))
 print("PASS create invoice")
 """
+PASSING_COMMAND = """import json, sys
+args = sys.argv[1:]
+flag = '--json-out' if '--json-out' in args else None
+out = args[args.index(flag) + 1]
+json.dump({'schema': 1, 'records': [{'item': 'proof', 'verdict': 'PASS'}]}, open(out, 'w'))
+"""
 CRASHING_AUDIT = """import sys
 print("visual_audit: internal error: setup exploded", file=sys.stderr)
 sys.exit(3)
@@ -94,15 +100,15 @@ class VisualSummaryStepTests(unittest.TestCase):
     def out_dir(self, head: str) -> Path:
         return self.runner / f"cgspec-visual-proof-{head}"
 
-    def run_step(self, release: Path) -> tuple[dict, str]:
+    def run_step(self, release: Path, expected_code: int = 1) -> tuple[dict, str]:
         head = git(self.root, "rev-parse", "HEAD").stdout.strip()
         summary = self.runner / "summary.md"
         env = {k: v for k, v in os.environ.items() if not k.startswith(("CGSPEC_", "GITHUB_"))}
         env.update(RUNNER_TEMP=str(self.runner), GITHUB_STEP_SUMMARY=str(summary), GITHUB_WORKSPACE=str(self.root),
-                   CGSPEC_RELEASE=str(release), PR_HEAD=head, CGSPEC_BROWSER="none")
+                   CGSPEC_RELEASE=str(release), PR_HEAD=head, PR_BASE=git(self.root, "rev-parse", "HEAD^").stdout.strip(), CGSPEC_BROWSER="none")
         result = subprocess.run(["bash", "-c", step_script(self.workflow, STEP)], cwd=self.root, env=env,
                                 capture_output=True, text=True, timeout=300)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.returncode, expected_code, result.stdout + result.stderr)
         evidence = json.loads((self.out_dir(head) / "evidence.json").read_text())
         self.assertEqual(evidence["revision"], head)
         return evidence, summary.read_text()
@@ -145,6 +151,14 @@ class VisualSummaryStepTests(unittest.TestCase):
         self.assertTrue(failed, records)
         self.assertTrue(any("visual audit" in r["item"] for r in failed), records)
         self.assertTrue(any("visual audit" in row and "FAIL" in row for row in self.table_rows(summary)), summary)
+
+    def test_all_three_visual_commands_must_exit_zero_for_step_success(self):
+        release = make_release(self.base, "release-success", PASSING_JOURNEY)
+        (release / "engine/parity.py").write_text(PASSING_COMMAND)
+        (release / "engine/visual_audit.py").write_text(PASSING_COMMAND)
+        self.journey("create invoice")
+        evidence, _ = self.run_step(release, expected_code=0)
+        self.assertTrue(all(record["verdict"] == "PASS" for record in evidence["journeys"]), evidence)
 
     def test_dirty_tracked_file_in_the_checkout_is_never_tested_as_the_pr_head(self):
         """A tracked file left dirty in the existing checkout must not leak into the proof: the proof

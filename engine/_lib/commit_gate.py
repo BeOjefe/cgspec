@@ -219,6 +219,9 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     reasons += runs.check_run_commit(view)
     from . import start_gate
     reasons += start_gate.commit_records(view, changes)
+    from . import parity_manifest
+    reasons += parity_manifest.gate(view, [c for c in changes if c.path not in exempt
+                               and not c.path.startswith(trust.ENGINE)], project)
     reasons += _governance_reasons(root, view, changes)
     reasons += trust.engine_changes(view, changes, release_dir, strict)
     reasons += trust.approvals_have_inbox_lines(view) + trust.check_approvals(view)
@@ -230,10 +233,13 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
                 if c.status != "D" and ("__pycache__/" in c.path or c.path.endswith(".pyc"))]
     code_changes = [c for c in changes if (needs_tier(c.path) or (c.old_path and needs_tier(c.old_path)))
                     and c.path not in exempt
-                    and not trust.engine_file(c.path) and not c.path.startswith(trust.ENGINE)]
+                    and not trust.engine_file(c.path) and not c.path.startswith(trust.ENGINE)
+                    and c.path != parity_manifest.MANIFEST]
     reasons += _tier_rules(view, code_changes, tier, classes)
     reasons += _test_pairs(view, code_changes, tier, classes, project)
     reasons += _evidence_rules(view, changes)
+    from . import parity_manifest
+    reasons += parity_manifest.gate(view, changes, project)
     reasons += _document_dates(view, changes)
     for change in changes:
         if change.path.startswith(trust.ENGINE) or change.path in exempt:

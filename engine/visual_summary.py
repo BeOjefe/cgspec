@@ -109,6 +109,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--artifact", required=True, help="name of the uploaded artifact")
     parser.add_argument("--evidence", required=True, help="evidence JSON to write")
     parser.add_argument("--summary", help="Markdown file to append to (GITHUB_STEP_SUMMARY)")
+    parser.add_argument("--require-pass", action="store_true",
+                        help="exit non-zero when any result is FAIL, PARTIAL, or BLOCKED")
     parser.add_argument("--result", nargs=3, action="append", default=[], metavar=("NAME", "EXIT", "JSON"),
                         help="one command: its name, exit code and --json-out file")
     args = parser.parse_args(argv)
@@ -123,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     for record in records:
         print(f"{record['verdict']} {cell(record['item'])}")
-    return 0
+    return 1 if args.require_pass and any(record["verdict"] != "PASS" for record in records) else 0
 
 
 if __name__ == "__main__":

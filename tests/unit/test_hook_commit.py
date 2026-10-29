@@ -24,6 +24,11 @@ class PreCommitTests(unittest.TestCase):
         self._tmp = TempDir()
         self.root = self._tmp.__enter__()
         git_project(self.root)
+        (self.root / "src/login").mkdir(parents=True, exist_ok=True)
+        (self.root / "src/a.py").write_text("a = 1\n")
+        (self.root / "src/login/form.py").write_text("f = 1\n")
+        git(self.root, "add", "src")
+        git(self.root, "commit", "-q", "-m", "non-ui code fixtures")
 
     def tearDown(self):
         for p in self.root.rglob("*"):
@@ -51,7 +56,7 @@ class PreCommitTests(unittest.TestCase):
         make_ready_start(self.root)
         git(self.root, "add", "-A")
 
-    def add_test_pair(self, covers=("src/login/form.ts",), failed_at=None):
+    def add_test_pair(self, covers=("src/login/form.py",), failed_at=None):
         failed_at = failed_at or git(self.root, "rev-parse", "HEAD").stdout.strip()
         (self.root / "tests").mkdir(exist_ok=True)
         (self.root / "tests/login.test.ts").write_text("test('rejects empty', () => {});\n")
@@ -74,8 +79,8 @@ class PreCommitTests(unittest.TestCase):
         self.assertBlocked("no change tier")
 
     def test_t0_within_limits_passes(self):
-        tier(self.root, "set", "--tier", "T0", "--reason", "fix a constant", "--files", "src/a.ts", "--verify", "unit check")
-        self.stage("src/a.ts", "export const a = 2;\n")
+        tier(self.root, "set", "--tier", "T0", "--reason", "fix a constant", "--files", "src/a.py", "--verify", "unit check")
+        self.stage("src/a.py", "a = 2\n")
         self.assertAllowed()
 
     def test_t0_line_limit(self):
@@ -85,7 +90,7 @@ class PreCommitTests(unittest.TestCase):
 
     def test_t0_unlisted_file_and_new_file_blocked(self):
         tier(self.root, "set", "--tier", "T0", "--reason", "fix a constant", "--files", "src/a.ts", "--verify", "unit check")
-        self.stage("src/login/form.ts", "export const f = 2;\n")
+        self.stage("src/login/form.py", "f = 2\n")
         self.assertBlocked("not in the T0 file list")
         git(self.root, "reset", "-q", "--hard")
         tier(self.root, "set", "--tier", "T0", "--reason", "fix a constant", "--files", "src/a.ts", "--verify", "unit check")
@@ -98,7 +103,7 @@ class PreCommitTests(unittest.TestCase):
         git(self.root, "commit", "-q", "-m", "test command")
         self.slice()
         tier(self.root, "set", "--tier", "T1", "--reason", "login validation", "--slice", "SLICE-001")
-        self.stage("src/login/form.ts", "export const f = 2;\n")
+        self.stage("src/login/form.py", "f = 2\n")
         self.assertBlocked("failing-test record")
         self.add_test_pair()
         self.assertAllowed()
