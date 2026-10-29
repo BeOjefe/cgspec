@@ -1,0 +1,93 @@
+{
+  "title": "docs/_cgspec/07-state/adoption-map.json — read-only adoption discovery with observed/inferred/unknown/unreachable facts",
+  "type": "object",
+  "required": ["schema", "generated_at", "probe", "repos", "facts_kinds"],
+  "additionalProperties": false,
+  "definitions": {
+    "kind": {"enum": ["observed", "inferred", "unknown"]},
+    "strings": {"type": ["array", "null"], "items": {"type": "string"}},
+    "reachable": {
+      "type": "object",
+      "required": ["root", "reachable", "git", "dirty", "worktrees", "cgspec", "docs", "tests", "ci", "facts"],
+      "additionalProperties": false,
+      "properties": {
+        "root": {"type": "string", "minLength": 1},
+        "reachable": {"const": true},
+        "requested": {"type": "string"},
+        "git": {
+          "type": "object",
+          "required": ["branch", "head", "head_short"],
+          "additionalProperties": false,
+          "properties": {
+            "branch": {"type": ["string", "null"]},
+            "head": {"anyOf": [{"type": "null"}, {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}]},
+            "head_short": {"type": ["string", "null"]}
+          }
+        },
+        "dirty": {
+          "anyOf": [
+            {"type": "null"},
+            {"type": "object", "required": ["modified", "untracked"], "additionalProperties": false,
+             "properties": {"modified": {"$ref": "#/definitions/strings"},
+                            "untracked": {"$ref": "#/definitions/strings"}}}
+          ]
+        },
+        "worktrees": {"$ref": "#/definitions/strings"},
+        "cgspec": {
+          "type": "object",
+          "required": ["installed", "cgspec_version"],
+          "additionalProperties": false,
+          "properties": {"installed": {"type": "boolean"}, "cgspec_version": {"type": ["string", "null"]}}
+        },
+        "docs": {"type": "object", "required": ["present"], "properties": {"present": {"type": "boolean"}}},
+        "tests": {"type": "object", "required": ["present"], "properties": {"present": {"type": ["boolean", "null"]}}},
+        "ci": {"type": "object", "required": ["present"], "properties": {"present": {"type": "boolean"}}},
+        "facts": {
+          "type": "object",
+          "required": ["branch", "head", "dirty", "worktrees", "cgspec", "docs", "tests", "ci"],
+          "additionalProperties": false,
+          "properties": {
+            "branch": {"$ref": "#/definitions/kind"}, "head": {"$ref": "#/definitions/kind"},
+            "dirty": {"$ref": "#/definitions/kind"}, "worktrees": {"$ref": "#/definitions/kind"},
+            "cgspec": {"$ref": "#/definitions/kind"}, "docs": {"$ref": "#/definitions/kind"},
+            "tests": {"$ref": "#/definitions/kind"}, "ci": {"$ref": "#/definitions/kind"}
+          }
+        }
+      }
+    },
+    "unreachable": {
+      "type": "object",
+      "required": ["root", "reachable", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "root": {"type": "string", "minLength": 1},
+        "reachable": {"const": false},
+        "reason": {"type": "string", "minLength": 1},
+        "requested": {"type": "string"}
+      }
+    }
+  },
+  "properties": {
+    "schema": {"const": 1},
+    "generated_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+    "probe": {
+      "type": "object",
+      "required": ["git"],
+      "additionalProperties": false,
+      "properties": {"git": {"enum": ["observed", "unknown"]}}
+    },
+    "repos": {
+      "type": "array",
+      "items": {"anyOf": [{"$ref": "#/definitions/reachable"}, {"$ref": "#/definitions/unreachable"}]}
+    },
+    "facts_kinds": {
+      "type": "object",
+      "required": ["observed", "inferred", "unknown", "unreachable"],
+      "additionalProperties": false,
+      "properties": {
+        "observed": {"type": "integer", "minimum": 0}, "inferred": {"type": "integer", "minimum": 0},
+        "unknown": {"type": "integer", "minimum": 0}, "unreachable": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

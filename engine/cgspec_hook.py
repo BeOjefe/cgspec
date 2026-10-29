@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import os
 import re
@@ -20,6 +21,7 @@ from _lib.shellparse import write_targets  # noqa: E402
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 AG_WRITE_TOOLS = {"write_to_file", "replace_file_content", "multi_replace_file_content"}
 AG_PATH_KEYS = {"TargetFile", "AbsolutePath", "Cwd"}
+CLI_MODULES = {"start": "start", "run": "runs", "git-plan": "git_protocol", "proof": "proof_commands", "adopt": "discover"}
 
 
 def _strings(value, skip=frozenset()) -> list[str]:
@@ -356,7 +358,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base", help="ci: base commit of the range to check")
     from _lib.checkpoint_cmd import add_arguments
     add_arguments(parser)
-    for f in ("--file", "--applies-to", "--description", "--approval", "--command", "--guide", "--release-dir"):
+    for f in ("--file", "--applies-to", "--description", "--approval", "--command", "--guide", "--release-dir", "--repos", "--json-out"):
         parser.add_argument(f)
     parser.add_argument("--no-rerun", action="store_true")
     for f in ("--criteria", "--tests", "--proofs", "--outcomes", "--supersession", "--units", "--run-id", "--by", "--status", "--unit", "--unit-status", "--outcome", "--verify", "--commit-kind"):
@@ -373,10 +375,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         root = resolve_root(args.root)
         if args.event == "tier": return cmd_tier(root, args)
-        if args.event == "start": from _lib import start; return start.cli(root, args)
-        if args.event == "run": from _lib import runs; return runs.cli(root, args)
-        if args.event == "git-plan": from _lib import git_protocol; return git_protocol.cli(root, args)
-        if args.event == "proof": from _lib import proof_commands; return proof_commands.cli(root, args)
+        if args.event in CLI_MODULES: return importlib.import_module(f"_lib.{CLI_MODULES[args.event]}").cli(root, args)
         if args.event == "pre-tool": return pre_tool(root, args.tool, sys.stdin.read())
         if args.event == "pre-commit": return pre_commit(root)
         if args.event == "post-tool": return post_tool(root, args.tool, sys.stdin.read())
