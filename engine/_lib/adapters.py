@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 
 from .ci_visual import VISUAL_WORKFLOW
 from .common import CgspecError, STATE_DIR, utc_now, write_json
@@ -278,6 +279,8 @@ def wire(root: Path, tools: list[str], owned: dict, profile: str = "") -> list[s
     notes, record = [], owned.setdefault("adapters", {})
     if "claude" in tools:
         record["claude"] = {"path": ".claude/settings.json", "created": _merge_json(root / ".claude/settings.json", _claude)}
+        launcher = shutil.which("claude")
+        record["claude"]["launcher"] = str(Path(launcher).absolute()) if launcher else None
         notes.append("wired .claude/settings.json")
     if "antigravity" in tools:
         record["antigravity"] = {"path": ".agents/hooks.json", "created": _merge_json(root / ".agents/hooks.json", _antigravity)}
@@ -328,6 +331,8 @@ def refresh(root: Path, owned: dict) -> list[str]:
         except (OSError, ValueError, TypeError, AttributeError) as exc:
             raise CgspecError(f"cannot refresh Claude hooks: {exc}") from exc
         notes.append("refreshed Claude hooks")
+        launcher = shutil.which("claude")
+        record["claude"]["launcher"] = str(Path(launcher).absolute()) if launcher else None
     if "antigravity" in record:
         path = root / ".agents/hooks.json"
         try:

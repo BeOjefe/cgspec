@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import io
+import os
+import shutil
 import socket
 import struct
 import sys
@@ -127,6 +129,68 @@ class SessionTests(unittest.TestCase):
                 patch("_lib.hook_origin._claude_launcher", return_value=Path("/trusted/claude")):
             with self.assertRaisesRegex(CgspecError, "not the installed Claude host"):
                 require_claude_stdin()
+
+    def test_runtime_path_cannot_replace_the_pinned_host_with_python(self):
+        from _lib.hook_origin import require_claude_stdin
+        fake_bin = self.root / "fake-bin"
+        fake_bin.mkdir()
+        (fake_bin / "claude").symlink_to(Path(sys.executable).resolve())
+        owned = self.root / "docs/_cgspec/01-engine/owned-files.json"
+        data = json.loads(owned.read_text())
+        launcher = self.root / "trusted-claude"
+        launcher.write_bytes(b"native host fixture")
+        data["adapters"]["claude"]["launcher"] = str(launcher)
+        write_json(owned, data)
+        with patch.dict(os.environ, {"PATH": str(fake_bin) + os.pathsep + os.environ["PATH"]}), \
+                patch("_lib.hook_origin.HOST_RECORD", owned), \
+                patch("_lib.hook_origin._peer_and_image", return_value=(1234, Path(sys.executable).resolve())), \
+                patch("sys.stdin", io.StringIO()) as stdin, patch.object(stdin, "fileno", return_value=0):
+            with self.assertRaisesRegex(CgspecError, "not the installed Claude host"):
+                require_claude_stdin()
+        self.assertEqual(self.approvals(), [])
+
+    def test_pinned_hook_capture_works_without_runtime_path_lookup(self):
+        from _lib.inbox import record, approval_exists
+        launcher = self.root / "trusted-claude"
+        launcher.write_bytes(b"native host fixture")
+        owned = self.root / "docs/_cgspec/01-engine/owned-files.json"
+        data = json.loads(owned.read_text())
+        data["adapters"]["claude"]["launcher"] = str(launcher)
+        write_json(owned, data)
+        payload = {"hook_event_name": "UserPromptSubmit", "prompt": "approve SLICE-004",
+                   "session_id": "550e8400-e29b-41d4-a716-446655440000"}
+        with patch.dict(os.environ, {"PATH": ""}), patch("_lib.hook_origin.HOST_RECORD", owned), \
+                patch("_lib.hook_origin._peer_and_image", return_value=(1234, launcher)), \
+                patch("sys.stdin", io.StringIO(json.dumps(payload))) as stdin, \
+                patch.object(stdin, "fileno", return_value=0):
+            _, approval_id = record(self.root, tool="claude")
+        self.assertTrue(approval_exists(self.root, approval_id, "SLICE-004"))
+
+    def test_install_and_upgrade_record_the_host_launcher(self):
+        from _lib.adapters import refresh
+        owned = self.root / "docs/_cgspec/01-engine/owned-files.json"
+        data = json.loads(owned.read_text())
+        launcher = shutil.which("claude")
+        self.assertEqual(data["adapters"]["claude"]["launcher"],
+                         str(Path(launcher).absolute()) if launcher else None)
+        # Upgrade an installation made before host pinning was introduced.
+        del data["adapters"]["claude"]["launcher"]
+        with patch("_lib.adapters.shutil.which", return_value="/trusted/new-claude"):
+            refresh(self.root, data)
+        self.assertEqual(data["adapters"]["claude"]["launcher"], "/trusted/new-claude")
+
+    def test_capture_fails_closed_without_an_installation_pin(self):
+        from _lib.hook_origin import require_claude_stdin
+        owned = self.root / "docs/_cgspec/01-engine/owned-files.json"
+        data = json.loads(owned.read_text())
+        del data["adapters"]["claude"]["launcher"]
+        write_json(owned, data)
+        with patch("_lib.hook_origin.HOST_RECORD", owned), \
+                patch("_lib.hook_origin._peer_and_image", return_value=(1234, Path("/trusted/claude"))), \
+                patch("sys.stdin", io.StringIO()) as stdin, patch.object(stdin, "fileno", return_value=0):
+            with self.assertRaisesRegex(CgspecError, "not pinned"):
+                require_claude_stdin()
+        self.assertEqual(self.approvals(), [])
 
     @unittest.skipUnless(sys.platform.startswith("linux"), "Linux kernel credential API")
     def test_linux_channel_uses_kernel_peer_credentials(self):

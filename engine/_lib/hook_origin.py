@@ -8,16 +8,18 @@ The installed host executable/launcher and the hook code must remain trusted.
 from __future__ import annotations
 
 import os
+import json
 from pathlib import Path
 import re
 import shlex
-import shutil
 import socket
 import struct
 import subprocess
 import sys
 
 from .common import CgspecError
+
+HOST_RECORD = Path(__file__).resolve().parents[1] / "owned-files.json"
 
 
 def _windows_peer_and_image(fd: int) -> tuple[int, Path]:
@@ -70,9 +72,15 @@ def _peer_and_image(fd: int) -> tuple[int, Path]:
 
 
 def _claude_launcher() -> Path:
-    command = shutil.which("claude")
-    if not command:
-        raise OSError("Claude launcher is unavailable")
+    # Installation/upgrade is the trust bootstrap, not a capture caller's PATH.
+    # The engine-owned record is protected with the installed engine itself.
+    try:
+        owned = json.loads(HOST_RECORD.read_text(encoding="utf-8"))
+        command = owned["adapters"]["claude"]["launcher"]
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise OSError("Claude launcher is not pinned; upgrade the installed CGSpec hooks") from exc
+    if not isinstance(command, str) or not Path(command).is_absolute():
+        raise OSError("Claude launcher is not pinned; install CGSpec with Claude available")
     launcher = Path(command).resolve(strict=True)
     if launcher.suffix.lower() == ".cmd":  # npm's Windows shim
         script = launcher.parent / "node_modules/@anthropic-ai/claude-code/cli.js"
