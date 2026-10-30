@@ -124,7 +124,7 @@ def capture(root: Path, prompt: str, session_id: str | None = None, tool: str = 
     return inbox_id, approval_id
 
 
-def record(root: Path, *, tool: str) -> tuple[str, str | None]:
+def record(root: Path, *, tool: str, raw: str = "") -> tuple[str, str | None]:
     """Append the scrubbed prompt to the inbox; return (inbox id, approval id or None).
 
     A repo can have several agent sessions open on it at once (parallel Claude Code
@@ -132,19 +132,23 @@ def record(root: Path, *, tool: str) -> tuple[str, str | None]:
     short session tag is just so a reader can tell entries apart by session, never a
     scoping or filtering mechanism - the inbox itself stays one shared, repo-wide file.
     """
+    def _payload() -> dict:
+        data = json.loads(raw) if raw.strip() else json.load(sys.stdin)
+        if not isinstance(data, dict):
+            raise CgspecError("user-message requires a JSON object payload")
+        return data
+
     if tool == "claude":
         require_claude_stdin()
-        payload = json.load(sys.stdin)
-        if not isinstance(payload, dict) or payload.get("hook_event_name") != "UserPromptSubmit":
+        payload = _payload()
+        if payload.get("hook_event_name") != "UserPromptSubmit":
             raise CgspecError("user-message requires a UserPromptSubmit event")
         prompt, session_id = payload.get("prompt"), payload.get("session_id")
         if not isinstance(prompt, str) or not prompt or not isinstance(session_id, str) or not session_id:
             raise CgspecError("UserPromptSubmit is missing its prompt or host session_id")
         return capture(root, prompt, session_id=session_id, tool="claude")
     if tool == "codex":
-        payload = json.load(sys.stdin)
-        if not isinstance(payload, dict):
-            raise CgspecError("user-message requires a JSON object payload")
+        payload = _payload()
         prompt = payload.get("prompt") or payload.get("message")
         session_id = payload.get("session_id") or payload.get("conversation_id")
         if not isinstance(prompt, str) or not prompt:

@@ -185,7 +185,7 @@ def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str = "") -
     from _lib import inbox, session
     if event == "user-message":
         try:
-            inbox.record(root, tool=args.tool)
+            inbox.record(root, tool=args.tool, raw=raw)
         except Exception as exc:  # never block the user's message
             print(f"cgspec_hook: inbox capture failed: {exc!r}", file=sys.stderr)
         return EXIT_OK
