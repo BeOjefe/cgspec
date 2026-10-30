@@ -199,7 +199,7 @@ def cmd_install(root: Path, args: argparse.Namespace) -> int:
         print(note)
     write_json(root / OWNED, owned)
     project = {"schema": 1, "cgspec_version": version(), "profile": args.profile, "topology": args.topology,
-               "path_classes": PATH_CLASSES, "tools": tools}
+               "path_classes": PATH_CLASSES, "tools": tools, "protected_branches": ["main", "master"]}
     if args.repo_prefix:
         project["repo_prefix"] = args.repo_prefix
     project["plugin_source"] = args.plugin_source
@@ -272,6 +272,7 @@ def cmd_upgrade(root: Path, args: argparse.Namespace) -> int:
     owned["cgspec_version"] = version()
     write_json(root / OWNED, owned)
     project["cgspec_version"] = version()  # the version marker is updated last (spec 5)
+    project.setdefault("protected_branches", ["main", "master"])
     write_json(root / PROJECT_FILE, project)
     print(f"engine refreshed; CGSpec {old} -> {version()}")
     return EXIT_OK

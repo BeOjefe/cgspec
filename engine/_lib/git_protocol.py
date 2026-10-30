@@ -118,6 +118,9 @@ def declare(root: Path, slice_id: str, repos: list[dict], default_branch: str,
         "created_at": now,
         "updated_at": now,
     }
+    from .project_policy import plan_errors, read_project
+    if problems := plan_errors(read_project(root), data):
+        raise CgspecError("; ".join(problems))
     save(path, data)
     print(f"git plan declared: {slice_id} on {default_branch}")
     return data
@@ -219,7 +222,12 @@ def check_plan_declared(root: Path, slice_id: str) -> str | None:
         return f"{slice_id} git execution plan is unreadable"
     if errors := validate_plan(data):
         return f"{slice_id} git execution plan is invalid: {'; '.join(errors)}"
+    from .project_policy import plan_errors, read_project
+    if problems := plan_errors(read_project(root), data):
+        return "; ".join(problems)
     branch = git(root, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+    if branch == "HEAD":
+        return "implementation cannot start from a detached protected baseline; create a dedicated feature branch"
     stack = next((item for item in data["branch_policy"]["stacked_branches"] if item["branch"] == branch), None)
     matches = [repo for repo in data["repositories"] if repo["branch"] == branch]
     if not matches and not stack:

@@ -71,6 +71,7 @@ def run_checks(root: Path) -> list[C.Finding]:
         ("symlinks", lambda: C.symlinks(root)),
         ("state", lambda: C.state_files(root)),
         ("capabilities", lambda: capability_findings(root)),
+        ("implementation_policy", lambda: __import__("_lib.project_policy", fromlist=["doctor_findings"]).doctor_findings(root)),
         ("spines", lambda: C.spines(root, load_stages(root))),
         ("document_dates", lambda: C.document_dates(root)),
         ("links", lambda: C.links(root)),

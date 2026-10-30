@@ -110,9 +110,10 @@ class TestPlanDeclaration(unittest.TestCase):
         repo = data["repositories"][0]
         self.assertEqual(repo["id"], "main")
         self.assertEqual(repo["base"], git(self.root, "rev-parse", "HEAD").stdout.strip())
-        self.assertEqual(repo["branch"], "main")
+        branch = git(self.root, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+        self.assertEqual(repo["branch"], branch)
         self.assertEqual(repo["outcomes"], ["OUT-work"])
-        self.assertEqual(data["branch_policy"]["default_branch"], "main")
+        self.assertEqual(data["branch_policy"]["default_branch"], branch)
 
     def test_declare_with_file_ownership(self):
         ownership = {"worker-1": ["src/login/**"], "worker-2": ["src/auth/**"]}
@@ -162,7 +163,8 @@ class TestBranchPolicy(unittest.TestCase):
         self.assertEqual(data["branch_policy"]["stacked_branches"], [])
 
     def test_stacked_branches_require_reason(self):
-        stacked = [{"branch": "feat/step-2", "depends_on": "main",
+        current = git(self.root, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+        stacked = [{"branch": "feat/step-2", "depends_on": current,
                      "reason": "API must land before UI consumers"}]
         _declare_plan(self.root, stacked=stacked)
         plan_files = list((self.root / "docs/slices").glob("SLICE-001-*.git-plan.json"))
@@ -171,7 +173,8 @@ class TestBranchPolicy(unittest.TestCase):
         self.assertIn("API must land", data["branch_policy"]["stacked_branches"][0]["reason"])
 
     def test_declared_stacked_branch_allows_implementation_context(self):
-        stacked = [{"branch": "feat/step-2", "depends_on": "main",
+        current = git(self.root, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+        stacked = [{"branch": "feat/step-2", "depends_on": current,
                     "reason": "API must land before UI consumers", "worktree": None}]
         _declare_plan(self.root, stacked=stacked)
         git(self.root, "checkout", "-q", "-b", "feat/step-2")

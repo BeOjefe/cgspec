@@ -376,6 +376,11 @@ block `start begin` and staged implementation until readiness is rerun. A missin
 registry, or undeclared ID records a BLOCKED result naming the reason. Prerequisites without `capability` behave as
 before.
 
+Project.json may declare `implementation_capabilities: ["CAP-..."]`; these become synthetic
+`REQ-PREFLIGHT-CAP-...` prerequisites covering every outcome. Their results also hash-bind project.json, and Ready or
+In-progress records must cover the exact configured global set. `protected_branches` lists integration baselines that
+may be approved bases but cannot be the default or a stacked implementation branch.
+
 Release governance: `cgspec_hook.py release policy|plan|check --target VERSION [--slices SLICE-...]`.
 `policy` prints the declared release block and its problems; `plan` prints the policy, every included
 slice's classified impact and the maximum required bump with its causes; `check --target` rejects a

@@ -90,13 +90,14 @@ def validate_record(data: dict) -> list[str]:
             errors.append("implementation readiness needs an execution timestamp")
         expected = {r["id"] for r in data["prerequisites"] if r["when"] == "before_start"}
         actual = {r["id"] for r in data["readiness"]["checks"]}
-        if actual != expected:
-            errors.append(f"readiness results must cover exactly {sorted(expected)}")
+        unknown = actual - expected
+        if not expected.issubset(actual) or any(not item.startswith("REQ-PREFLIGHT-") for item in unknown):
+            errors.append(f"readiness results must cover local prerequisites {sorted(expected)} and only known global preflight checks")
     if data["status"] == "In progress" and not data["active_outcomes"]:
         errors.append("In progress needs at least one active outcome")
     known_requirements = set(requirement_ids)
     for result in data["readiness"]["checks"]:
-        if result["id"] not in known_requirements:
+        if result["id"] not in known_requirements and not result["id"].startswith("REQ-PREFLIGHT-"):
             errors.append(f"readiness names unknown prerequisite {result['id']}")
     return errors
 
@@ -107,15 +108,17 @@ def load(root: Path, slice_id: str) -> tuple[Path, dict]:
         raise CgspecError(f"{slice_id} has no success agreement; run start set first")
     data = read_json(path)
     errors = validate_record(data)
+    from .project_policy import read_project, record_errors
+    errors += record_errors(read_project(root), data)
     if errors:
         raise CgspecError(f"invalid success agreement {path.name}: " + "; ".join(errors))
     return path, data
 
 
-def readiness_input_errors(data: dict, outcome_id: str, reader) -> list[str]:
+def readiness_input_errors(data: dict, outcome_id: str, reader, requirements=None) -> list[str]:
     results = {r.get("id"): r for r in data["readiness"].get("checks", [])}
     reasons = []
-    for req in data["prerequisites"]:
+    for req in requirements or data["prerequisites"]:
         if req["when"] != "before_start" or outcome_id not in req["outcomes"]:
             continue
         result = results.get(req["id"], {})
@@ -135,7 +138,7 @@ def root_reader(root: Path):
     return read
 
 
-def eligibility_errors(data: dict, outcome_id: str, allow_mocks: bool, reader=None) -> list[str]:
+def eligibility_errors(data: dict, outcome_id: str, allow_mocks: bool, reader=None, requirements=None) -> list[str]:
     item = outcome(data, outcome_id)
     if not item:
         return [f"unknown outcome {outcome_id}"]
@@ -148,7 +151,7 @@ def eligibility_errors(data: dict, outcome_id: str, allow_mocks: bool, reader=No
     if development["uses_mocks"] and not allow_mocks:
         reasons.append(f"{outcome_id}: CGSPEC_ALLOW_MOCKS=0 disables mock-based development substitution")
     results = {r.get("id"): r for r in data["readiness"].get("checks", [])}
-    for req in data["prerequisites"]:
+    for req in requirements or data["prerequisites"]:
         if req["when"] != "before_start" or outcome_id not in req["outcomes"]:
             continue
         result = results.get(req["id"])
@@ -156,7 +159,7 @@ def eligibility_errors(data: dict, outcome_id: str, allow_mocks: bool, reader=No
             detail = result.get("detail") if result else req["need"]
             reasons.append(f"{outcome_id}: {detail} Owner: {req['owner']}. Next: {req['assistance']}")
     if reader:
-        reasons += readiness_input_errors(data, outcome_id, reader)
+        reasons += readiness_input_errors(data, outcome_id, reader, requirements)
     return reasons
 
 
@@ -298,14 +301,19 @@ def ready(root: Path, slice_id: str) -> int:
     if data["status"] not in ("Agreed", "Ready", "In progress"):
         raise CgspecError("approve the success definition before readiness")
     allow_mocks = mocks_enabled()
-    checks = [probe_requirement(root, req) for req in data["prerequisites"] if req["when"] == "before_start"]
+    from .project_policy import PROJECT_REL, bind_project, effective_requirements
+    requirements = effective_requirements(root, data)
+    project_raw = (root / PROJECT_REL).read_bytes()
+    checks = [probe_requirement(root, req) for req in requirements if req["when"] == "before_start"]
+    checks = [bind_project(result, project_raw) if result["id"].startswith("REQ-PREFLIGHT-") else result
+              for result in checks]
     data["readiness"] = {"definition_hash": definition_hash(data), "mocks_allowed": allow_mocks,
                          "ran_at": utc_now(), "checks": checks}
-    eligible = [o["id"] for o in data["outcomes"] if not eligibility_errors(data, o["id"], allow_mocks, root_reader(root))]
+    eligible = [o["id"] for o in data["outcomes"] if not eligibility_errors(data, o["id"], allow_mocks, root_reader(root), requirements)]
     data["active_outcomes"] = [oid for oid in data["active_outcomes"] if oid in eligible]
     data["status"] = "In progress" if data["active_outcomes"] else ("Ready" if eligible else "Agreed")
     save(path, data)
-    blocked = {o["id"]: eligibility_errors(data, o["id"], allow_mocks, root_reader(root)) for o in data["outcomes"] if o["id"] not in eligible}
+    blocked = {o["id"]: eligibility_errors(data, o["id"], allow_mocks, root_reader(root), requirements) for o in data["outcomes"] if o["id"] not in eligible}
     for outcome_id, reasons in blocked.items():
         print(f"{outcome_id}: " + " | ".join(reasons), file=sys.stderr)
     print(f"readiness: {len(eligible)} eligible, {len(blocked)} blocked; mocks_allowed={str(allow_mocks).lower()}")
@@ -319,7 +327,9 @@ def begin(root: Path, slice_id: str, raw_ids: str) -> None:
     ids = [item.strip() for item in raw_ids.split(",") if item.strip()]
     if not ids:
         raise CgspecError("begin needs --outcome OUT-ID[,OUT-ID]")
-    reasons = [reason for oid in ids for reason in eligibility_errors(data, oid, mocks_enabled(), root_reader(root))]
+    from .project_policy import effective_requirements
+    requirements = effective_requirements(root, data)
+    reasons = [reason for oid in ids for reason in eligibility_errors(data, oid, mocks_enabled(), root_reader(root), requirements)]
     if reasons:
         raise CgspecError("; ".join(reasons))
     data["active_outcomes"] = list(dict.fromkeys(data["active_outcomes"] + ids))
@@ -346,10 +356,12 @@ def cli(root: Path, args) -> int:
         begin(root, args.slice, args.outcome or "")
     elif action == "show":
         _, data = load(root, args.slice)
+        from .project_policy import effective_requirements
+        requirements = effective_requirements(root, data)
         result = copy.deepcopy(data)
-        result["eligible_outcomes"] = [o["id"] for o in data["outcomes"] if not eligibility_errors(data, o["id"], mocks_enabled(), root_reader(root))]
-        result["blockers"] = {o["id"]: eligibility_errors(data, o["id"], mocks_enabled(), root_reader(root)) for o in data["outcomes"]
-                              if eligibility_errors(data, o["id"], mocks_enabled(), root_reader(root))}
+        result["eligible_outcomes"] = [o["id"] for o in data["outcomes"] if not eligibility_errors(data, o["id"], mocks_enabled(), root_reader(root), requirements)]
+        result["blockers"] = {o["id"]: eligibility_errors(data, o["id"], mocks_enabled(), root_reader(root), requirements) for o in data["outcomes"]
+                              if eligibility_errors(data, o["id"], mocks_enabled(), root_reader(root), requirements)}
         print(json.dumps(result, indent=2))
     else:
         raise CgspecError("usage: cgspec_hook.py start set|agree|ready|begin|show --slice SLICE-NNN")
