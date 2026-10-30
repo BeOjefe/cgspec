@@ -10,6 +10,8 @@ from __future__ import annotations
 GOVERNANCE_FILES = frozenset({
     ".claude/settings.json",
     ".agents/hooks.json",
+    ".codex/hooks.json",
+    ".opencode/hooks.json",
     ".github/cgspec-select.sh",
     ".git/config",
     ".gitmodules",

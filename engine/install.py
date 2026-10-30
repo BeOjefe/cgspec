@@ -376,7 +376,7 @@ def build_parser() -> argparse.ArgumentParser:
                            choices=["website", "web-workspace", "mobile", "cli", "headless", "small"])
             p.add_argument("--topology", required=True,
                            choices=["single", "monorepo", "large-monorepo", "polyrepo-governance", "polyrepo-member"])
-            p.add_argument("--tools", default="git", help="comma-separated: claude,antigravity,codex,cursor,git,ci")
+            p.add_argument("--tools", default="git", help="comma-separated: claude,antigravity,codex,opencode,cursor,git,ci")
             p.add_argument("--repo-prefix", default="")
             p.add_argument("--plugin-source", default=PLUGIN_SOURCE, help="git URL CI downloads releases from")
     return parser

@@ -93,23 +93,10 @@ def approval_target(text: str) -> str | None:
     return None
 
 
-def record(root: Path, *, tool: str) -> tuple[str, str | None]:
-    """Append the scrubbed prompt to the inbox; return (inbox id, approval id or None).
-
-    A repo can have several agent sessions open on it at once (parallel Claude Code
-    sessions, or another tool entirely); every one of them shares this one file. The
-    short session tag is just so a reader can tell entries apart by session, never a
-    scoping or filtering mechanism - the inbox itself stays one shared, repo-wide file.
-    """
-    if tool != "claude":
-        raise CgspecError("user-message capture is available only through Claude's UserPromptSubmit hook")
-    require_claude_stdin()
-    payload = json.load(sys.stdin)
-    if not isinstance(payload, dict) or payload.get("hook_event_name") != "UserPromptSubmit":
-        raise CgspecError("user-message requires a UserPromptSubmit event")
-    prompt, session_id = payload.get("prompt"), payload.get("session_id")
-    if not isinstance(prompt, str) or not prompt or not isinstance(session_id, str) or not session_id:
-        raise CgspecError("UserPromptSubmit is missing its prompt or host session_id")
+def capture(root: Path, prompt: str, session_id: str | None = None, tool: str = "generic") -> tuple[str, str | None]:
+    """Append the scrubbed prompt to the inbox; return (inbox id, approval id or None)."""
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise CgspecError("capture requires non-empty prompt text")
     clean = scrub(prompt)
     whole_line = " / ".join(part.strip() for part in clean.splitlines() if part.strip())
     one_line = whole_line[:MAX_INBOX_CHARS]
@@ -117,7 +104,8 @@ def record(root: Path, *, tool: str) -> tuple[str, str | None]:
     path = root / INBOX
     existing = path.read_text(encoding="utf-8") if path.is_file() else "# Inbox\n"
     sep = "" if existing.endswith("\n") else "\n"
-    tag = f" [sess {session_id[-8:]}]" if session_id else ""
+    sess_id = session_id or f"{tool}-{new_id('S')}"
+    tag = f" [sess {sess_id[-8:]}]" if session_id else (f" [{tool}]" if tool and tool != "claude" else "")
     with path.open("a", encoding="utf-8") as handle:
         handle.write(f"{sep}- {inbox_id} {utc_now()}{tag}: {one_line}\n")
     approval_id = None
@@ -130,10 +118,43 @@ def record(root: Path, *, tool: str) -> tuple[str, str | None]:
             data = {"schema": 1, "approvals": []}
         approval_id = new_id("A")
         entry = {"id": approval_id, "at": utc_now(), "captured_ns": time.time_ns(), "excerpt": one_line[:200],
-                 "sha256": sha256_text(prompt), "session_id": session_id}
+                 "sha256": sha256_text(one_line[:200]), "session_id": sess_id}
         data.setdefault("approvals", []).append(entry)
         write_json(approvals_path, data)
     return inbox_id, approval_id
+
+
+def record(root: Path, *, tool: str, raw: str = "") -> tuple[str, str | None]:
+    """Append the scrubbed prompt to the inbox; return (inbox id, approval id or None).
+
+    A repo can have several agent sessions open on it at once (parallel Claude Code
+    sessions, or another tool entirely); every one of them shares this one file. The
+    short session tag is just so a reader can tell entries apart by session, never a
+    scoping or filtering mechanism - the inbox itself stays one shared, repo-wide file.
+    """
+    def _payload() -> dict:
+        data = json.loads(raw) if raw.strip() else json.load(sys.stdin)
+        if not isinstance(data, dict):
+            raise CgspecError("user-message requires a JSON object payload")
+        return data
+
+    if tool == "claude":
+        require_claude_stdin()
+        payload = _payload()
+        if payload.get("hook_event_name") != "UserPromptSubmit":
+            raise CgspecError("user-message requires a UserPromptSubmit event")
+        prompt, session_id = payload.get("prompt"), payload.get("session_id")
+        if not isinstance(prompt, str) or not prompt or not isinstance(session_id, str) or not session_id:
+            raise CgspecError("UserPromptSubmit is missing its prompt or host session_id")
+        return capture(root, prompt, session_id=session_id, tool="claude")
+    if tool == "codex":
+        payload = _payload()
+        prompt = payload.get("prompt") or payload.get("message")
+        session_id = payload.get("session_id") or payload.get("conversation_id")
+        if not isinstance(prompt, str) or not prompt:
+            raise CgspecError("user-message is missing prompt text")
+        return capture(root, prompt, session_id=session_id, tool="codex")
+    raise CgspecError("user-message capture is available only through Claude's UserPromptSubmit hook")
 
 
 def approval_record(root: Path, approval_id: str, target: str | None = None) -> dict | None:

@@ -23,7 +23,8 @@ APPROVALS = (STATE_DIR / "approvals.json").as_posix()
 INBOX = "docs/00-INBOX.md"
 ENGINE = ENGINE_DIR.as_posix() + "/"
 ENGINE_BOOKKEEPING = {"manifest.json", "owned-files.json"}
-ADAPTER_PATHS = {".claude/settings.json", ".agents/hooks.json", ".github/workflows/cgspec.yml", ".github/cgspec-select.sh",
+ADAPTER_PATHS = {".claude/settings.json", ".agents/hooks.json", ".codex/hooks.json", ".opencode/hooks.json",
+                 ".github/workflows/cgspec.yml", ".github/cgspec-select.sh",
                  ".cursor/rules/cgspec.mdc", ".gitignore", "AGENTS.md", "CLAUDE.md"}
 APPROVAL_FIELD = re.compile(tiers.FIELD % "Approval", re.M | re.I)
 TRAILER = re.compile(r"^Approved-by:\s*\S", re.M | re.I)
@@ -335,9 +336,9 @@ def is_bootstrap(view: View) -> bool:
 
 
 def canonical_adapter_refresh(view: View, rel: str) -> bool:
-    """True when an existing Claude or Antigravity adapter file changed only by the exact
+    """True when an existing Claude, Antigravity, Codex or OpenCode adapter file changed only by the exact
     canonical `adapters.refresh` transformation."""
-    if rel not in {".claude/settings.json", ".agents/hooks.json"}:
+    if rel not in {".claude/settings.json", ".agents/hooks.json", ".codex/hooks.json", ".opencode/hooks.json"}:
         return False
     old_raw, new_raw = view.read_old(rel), view.read_new(rel)
     if not old_raw or not new_raw:
@@ -360,10 +361,16 @@ def canonical_adapter_refresh(view: View, rel: str) -> bool:
                 if not hooks[event]:
                     del hooks[event]
         adapters._claude(expected)
-    else:
+    elif rel == ".agents/hooks.json":
         if "cgspec" not in expected:
             return False
         adapters._antigravity(expected)
+    elif rel == ".codex/hooks.json":
+        adapters._strip_hook_entries(expected)
+        adapters._codex(expected)
+    elif rel == ".opencode/hooks.json":
+        adapters._strip_hook_entries(expected)
+        adapters._opencode(expected)
     return actual == expected
 
 

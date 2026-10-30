@@ -15,6 +15,7 @@ from .globs import match_any
 from .governance_paths import GOVERNANCE_DIRS, GOVERNANCE_FILES, governance_path
 from .inbox import contains_secret
 from .path_policy import needs_tier
+from .tool_payloads import project_content
 
 MAX_CODE_LINES = 400
 HOST_PATH = re.compile(
@@ -43,7 +44,7 @@ ALWAYS_PROTECTED = [
     "docs/prototypes/_baselines/active.json",
     MEMLOG_FILE.as_posix(),
 ]
-GUARD_FILES = [".claude/settings.json", ".agents/hooks.json"]  # lab finding: an agent disabled its own hooks
+GUARD_FILES = [".claude/settings.json", ".agents/hooks.json", ".codex/hooks.json", ".opencode/hooks.json"]  # lab finding: an agent disabled its own hooks
 GUARD_DIRS = [".git/hooks/", ".agents/skills/"]
 # lab finding: a sub-agent ran `cat ~/.bash_history | grep ...` looking for a credential it had seen earlier.
 CREDENTIAL_STORE_HINTS = (".bash_history", ".zsh_history", ".fish_history", "fish/fish_history",
@@ -258,56 +259,6 @@ def _hygiene_reasons(ctx: Context, rel: str, content: str) -> list[str]:
     if (in_code or match_any(rel, L.CONFIG_GLOBS)) and HOST_PATH.search(content):
         reasons.append(f"content for {rel} contains a hardcoded host path; use project-relative paths or environment variables")
     return reasons
-
-
-def project_content(root: Path, rel: str, payload: dict, tool: str, fallback: str | None) -> str | None:
-    """Project the resulting file content after a tool edit or write."""
-    target = root / rel
-    if tool == "antigravity":
-        args = (payload.get("toolCall") or {}).get("args") or {}
-        name = (payload.get("toolCall") or {}).get("name", "")
-        if name in ("replace_file_content", "multi_replace_file_content") and target.is_file():
-            chunks = args.get("ReplacementChunks") or [
-                {"TargetContent": args.get("TargetContent", ""), "ReplacementContent": args.get("ReplacementContent", "")}
-            ]
-            try:
-                orig = target.read_text(encoding="utf-8", errors="replace")
-                replaced = orig
-                for c in chunks:
-                    t, r = c.get("TargetContent", ""), c.get("ReplacementContent", "")
-                    if t and t in replaced:
-                        replaced = replaced.replace(t, r, 1)
-                if replaced != orig:
-                    return replaced
-            except OSError:
-                return fallback
-        elif name == "write_to_file":
-            if args.get("Append") and target.is_file():
-                try:
-                    return target.read_text(encoding="utf-8", errors="replace") + (args.get("CodeContent") or "")
-                except OSError:
-                    return fallback
-            if args.get("CodeContent") is not None:
-                return args.get("CodeContent")
-    elif tool == "claude":
-        name, data = payload.get("tool_name", ""), payload.get("tool_input") or {}
-        if name in ("Edit", "MultiEdit") and target.is_file():
-            edits = data.get("edits") or [{"old_string": data.get("old_string", ""), "new_string": data.get("new_string", "")}]
-            try:
-                orig = target.read_text(encoding="utf-8", errors="replace")
-                replaced = orig
-                for e in edits:
-                    o, n = e.get("old_string", ""), e.get("new_string", "")
-                    if o and o in replaced:
-                        replaced = replaced.replace(o, n, 1)
-                if replaced != orig:
-                    return replaced
-            except OSError:
-                return fallback
-        if name == "Write" and data.get("content") is not None:
-            return data.get("content")
-    return fallback
-
 
 
 def check_write(ctx: Context, rel: str, content: str | None, is_new: bool | None = None) -> list[str]:

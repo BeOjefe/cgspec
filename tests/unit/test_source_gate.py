@@ -264,7 +264,7 @@ class NoInertAdapterConfig(unittest.TestCase):
     """
 
     def test_source_tree_carries_no_host_hook_config(self):
-        for rel in (".agents/hooks.json", ".claude/settings.json", ".cursor/rules/cgspec.mdc"):
+        for rel in (".agents/hooks.json", ".claude/settings.json", ".codex/hooks.json", ".opencode/hooks.json", ".cursor/rules/cgspec.mdc"):
             self.assertFalse((REPO / rel).exists(),
                              f"{rel} is checked in at the source root but no engine event can run here; "
                              "remove it or the next agent will read it as active wiring")
