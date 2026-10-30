@@ -122,6 +122,36 @@ class DoctorTests(unittest.TestCase):
         spine.write_text("# Intent\n\n[a](https://example.com) [b](#top) [c](02-OOUX.md#nouns) `[x](nope.md)`\n")
         self.assertPasses()
 
+    def test_bare_path_dangling_absolute_path_warns(self):
+        spine = self.root / "docs/spines/01-INTENT.md"
+        spine.write_text("# Intent\n\nSee `/home/outside/some_file.md` and `~/outside/plan.json`.\n")
+        result = doctor(self.root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("W-BARE-PATH", result.stdout)
+        self.assertIn("dangling bare path: /home/outside/some_file.md", result.stdout)
+        self.assertIn("dangling bare path: ~/outside/plan.json", result.stdout)
+
+    def test_bare_path_dangling_relative_path_warns(self):
+        spine = self.root / "docs/spines/01-INTENT.md"
+        spine.write_text("# Intent\n\n- **Supersedes:** `master_plan.md:14-35`\n- **Ref:** `../missing/file.json`\n")
+        result = doctor(self.root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("W-BARE-PATH", result.stdout)
+        self.assertIn("dangling bare path: master_plan.md:14-35", result.stdout)
+        self.assertIn("dangling bare path: ../missing/file.json", result.stdout)
+
+    def test_bare_path_legitimate_relative_and_known_refs_pass(self):
+        spine = self.root / "docs/spines/01-INTENT.md"
+        spine.write_text(
+            "# Intent\n\n"
+            "Relative in-repo: `docs/00-INDEX.md` and `02-OOUX.md`\n"
+            "Reference patterns: `SLICE-NNN`, `ADR-NNN`, `SLICE-001`, `ADR-001`, `CAP-github-browser`\n"
+            "URL pattern: `https://example.com/plan.md`\n"
+        )
+        result = doctor(self.root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("W-BARE-PATH", result.stdout)
+
     def test_edited_frozen_snapshot_fails(self):
         rel = "docs/prototypes/_snapshots/home-v1.html"
         freeze(self.root, rel, "<html>v1</html>")

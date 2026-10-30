@@ -16,22 +16,12 @@ from .globs import match_any
 from .mdlinks import link_targets
 from .findings import Finding, rel as _rel
 from .doctor_layout import layout  # noqa: F401  (re-exported for doctor.py)
+from .doctor_links import inside, links, read_text, _markdown_files  # noqa: F401
 from .schema import validate_named
 from .document_dates import STAMP, FIRST_SEEN, managed_doc, validate_change
 
 STATUS = re.compile(r"^\s*[-*]?\s*\*{0,2}Status:?\*{0,2}:?\s*(.+?)\s*$", re.M | re.I)
 URL_SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*:", re.I)
-
-
-def read_text(path: Path, root: Path, sink: list[Finding]) -> str | None:
-    """Read UTF-8 text; on failure record a finding and return None so other checks continue."""
-    try:
-        return path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        sink.append(Finding("E-ENCODING", _rel(path, root), "not valid UTF-8"))
-    except OSError as exc:
-        sink.append(Finding("E-READ", _rel(path, root), f"cannot read: {exc.strerror}"))
-    return None
 
 
 def load_json(path: Path, root: Path, schema: str | None) -> tuple[object | None, list[Finding]]:
@@ -46,16 +36,6 @@ def load_json(path: Path, root: Path, schema: str | None) -> tuple[object | None
     if schema is None:
         return data, []
     return data, [Finding("E-SCHEMA", _rel(path, root), e) for e in validate_named(data, schema)]
-
-
-def inside(root: Path, rel: str) -> Path | None:
-    """Path under root, or None when rel escapes it."""
-    try:
-        target = (root / rel).resolve()
-        target.relative_to(root.resolve())
-        return target
-    except (ValueError, OSError):
-        return None
 
 
 def project(root: Path, data: dict | None) -> Iterator[Finding]:
@@ -147,15 +127,6 @@ def spines(root: Path, stages: dict) -> Iterator[Finding]:
     yield from sink
 
 
-def _markdown_files(root: Path) -> list[Path]:
-    files = [root / "AGENTS.md", root / "CLAUDE.md"]
-    docs = root / "docs"
-    if docs.is_dir():
-        engine = root / ENGINE_DIR
-        files += [p for p in docs.rglob("*.md") if engine not in p.parents and root / "docs/_cgspec/_archive/agent-skills" not in p.parents]
-    return [p for p in files if p.is_file() and not p.is_symlink()]
-
-
 def document_dates(root: Path) -> Iterator[Finding]:
     sink: list[Finding] = []
     for path in _markdown_files(root):
@@ -168,22 +139,6 @@ def document_dates(root: Path) -> Iterator[Finding]:
             for issue in validate_change(None, content, now=datetime.now(timezone.utc), allow_unknown=True):
                 code = "W-DOC-DATES" if issue.startswith("missing Created") else "E-DOC-DATES"
                 yield Finding(code, rel, issue)
-    yield from sink
-
-def links(root: Path) -> Iterator[Finding]:
-    archive = root / "docs/_cgspec/_archive"
-    sink: list[Finding] = []
-    for path in _markdown_files(root):
-        text = read_text(path, root, sink)
-        if text is None:
-            continue
-        for target in sorted(set(link_targets(text))):
-            if URL_SCHEME.match(target) or target.startswith("#"):
-                continue
-            file_part = unquote(target.split("#", 1)[0])
-            if file_part and not (path.parent / file_part).exists():
-                code = "W-LINK" if archive in path.parents else "E-LINK"
-                yield Finding(code, _rel(path, root), f"broken link: {target}")
     yield from sink
 
 
