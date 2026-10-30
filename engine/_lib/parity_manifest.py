@@ -14,7 +14,7 @@ MANIFEST = "docs/prototypes/parity.json"
 UI_SUFFIXES = {".html", ".htm", ".css", ".scss", ".sass", ".js", ".jsx", ".ts", ".tsx", ".vue",
                ".svelte", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".woff", ".woff2"}
 EXCLUDED = ("docs/_cgspec/", "docs/prototypes/", "tests/", ".cgspec-scratch/", "engine/", ".agents/",
-            ".claude/", ".cursor/", ".github/")
+            ".claude/", ".cursor/", ".github/", ".codex/", ".opencode/")
 HASH = re.compile(r"[0-9a-f]{64}")
 
 

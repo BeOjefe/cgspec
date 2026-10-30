@@ -89,7 +89,7 @@ def step_script(workflow: str, name: str) -> str:
 
 
 class WiringTests(unittest.TestCase):
-    TOOLS = "claude,antigravity,git,ci,cursor"
+    TOOLS = "claude,antigravity,codex,opencode,git,ci,cursor"
 
     def setUp(self):
         self._tmp = TempDir()
@@ -113,6 +113,12 @@ class WiringTests(unittest.TestCase):
         ag = json.loads((self.root / ".agents/hooks.json").read_text())
         self.assertIn("cgspec", ag)
         self.assertIn("PreToolUse", ag["cgspec"])
+        codex = json.loads((self.root / ".codex/hooks.json").read_text())
+        self.assertIn("PreToolUse", codex)
+        self.assertIn("cgspec_hook.py pre-tool --tool codex", json.dumps(codex))
+        opencode = json.loads((self.root / ".opencode/hooks.json").read_text())
+        self.assertIn("PreToolUse", opencode)
+        self.assertIn("cgspec_hook.py pre-tool --tool opencode", json.dumps(opencode))
         self.assertTrue(os.access(self.root / ".git/hooks/pre-commit", os.X_OK))
         self.assertTrue((self.root / ".git/hooks/commit-msg").exists())
         workflow = (self.root / ".github/workflows/cgspec.yml").read_text()
@@ -242,7 +248,7 @@ class WiringTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         after = json.loads(path.read_text())
         self.assertIn("echo my-hook", json.dumps(after))
-        self.assertIn('"$CLAUDE_PROJECT_DIR"/docs/_cgspec/01-engine/cgspec_hook.py stop',
+        self.assertIn('"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"/docs/_cgspec/01-engine/cgspec_hook.py stop',
                       after["hooks"]["Stop"][0]["hooks"][0]["command"])
         self.assertNotIn("stale/cgspec_hook.py", json.dumps(after))
 
@@ -285,8 +291,278 @@ class WiringTests(unittest.TestCase):
     def test_uninstall_unwires_everything_it_added(self):
         self.do_install()
         run_script("install.py", "uninstall", "--root", str(self.root))
-        for rel in (".agents/hooks.json", ".git/hooks/pre-commit", ".github/workflows/cgspec.yml", ".cursor/rules/cgspec.mdc"):
+        for rel in (".agents/hooks.json", ".codex/hooks.json", ".opencode/hooks.json",
+                    ".git/hooks/pre-commit", ".github/workflows/cgspec.yml", ".cursor/rules/cgspec.mdc"):
             self.assertFalse((self.root / rel).exists(), rel)
+
+
+class PortableRootResolutionTests(unittest.TestCase):
+    def test_command_root_resolution(self):
+        from _lib.adapters import _command
+        claude_cmd = _command("pre-tool", "claude")
+        self.assertIn("${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}", claude_cmd)
+        codex_cmd = _command("pre-tool", "codex")
+        self.assertIn("$(git rev-parse --show-toplevel 2>/dev/null || pwd)", codex_cmd)
+        self.assertNotIn("CLAUDE_PROJECT_DIR", codex_cmd)
+        opencode_cmd = _command("pre-tool", "opencode")
+        self.assertIn("$(git rev-parse --show-toplevel 2>/dev/null || pwd)", opencode_cmd)
+        generic_cmd = _command("pre-tool", "generic")
+        self.assertIn("$(git rev-parse --show-toplevel 2>/dev/null || pwd)", generic_cmd)
+
+    def test_portable_command_runs_from_subdirectory(self):
+        with TempDir() as root:
+            git(root, "init", "-q", "-b", "main")
+            install(root)
+            sub = root / "src/subdir"
+            sub.mkdir(parents=True)
+            from _lib.adapters import _command
+            # Simulating Codex running from a subdirectory without CLAUDE_PROJECT_DIR set
+            cmd = _command("tier show", "codex")
+            env = dict(os.environ)
+            env.pop("CLAUDE_PROJECT_DIR", None)
+            res = subprocess.run(cmd, shell=True, cwd=sub, capture_output=True, text=True, env=env)
+            self.assertEqual(res.returncode, 0, res.stderr)
+            self.assertNotIn("No such file or directory", res.stderr)
+            # Claude command also resolves via git when CLAUDE_PROJECT_DIR is empty/unset
+            claude_cmd = _command("tier show", "claude")
+            res_claude = subprocess.run(claude_cmd, shell=True, cwd=sub, capture_output=True, text=True, env=env)
+            self.assertEqual(res_claude.returncode, 0, res_claude.stderr)
+            self.assertNotIn("No such file or directory", res_claude.stderr)
+
+
+class CodexPayloadTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = TempDir()
+        self.root = self._tmp.__enter__()
+        install(self.root)
+
+    def tearDown(self):
+        self._tmp.__exit__(None, None, None)
+
+    def run_hook(self, payload, event="pre-tool", stdin=None):
+        return hook(self.root, event, payload, "--tool", "codex")
+
+    def test_denied_write_blocks_codex(self):
+        payload = {
+            "tool_name": "file_edit",
+            "tool_input": {
+                "file_path": str(self.root / "docs/_cgspec/01-engine/doctor.py"),
+                "old_str": "import sys",
+                "new_str": "import os",
+            },
+        }
+        res = self.run_hook(payload)
+        self.assertEqual(res.returncode, 2)
+        self.assertIn("protected", res.stderr)
+
+    def test_allowed_write_allows_codex(self):
+        payload = {
+            "tool_name": "file_edit",
+            "tool_input": {
+                "file_path": str(self.root / "docs/spines/01-INTENT.md"),
+                "old_str": "a",
+                "new_str": "b",
+            },
+        }
+        res = self.run_hook(payload)
+        self.assertEqual(res.returncode, 0, res.stderr)
+
+    def test_apply_patch_denied_on_protected_file(self):
+        patch = (
+            "--- a/docs/_cgspec/01-engine/doctor.py\n"
+            "+++ b/docs/_cgspec/01-engine/doctor.py\n"
+            "@@ -1,3 +1,3 @@\n"
+            "-import sys\n"
+            "+import os\n"
+        )
+        payload = {
+            "tool_name": "apply_patch",
+            "tool_input": {"patch": patch},
+        }
+        res = self.run_hook(payload)
+        self.assertEqual(res.returncode, 2)
+        self.assertIn("protected", res.stderr)
+
+    def test_bash_dangerous_command_blocked_codex(self):
+        payload = {
+            "tool_name": "bash",
+            "tool_input": {"command": "sed -i s/a/b/ docs/_memlog.md"},
+        }
+        res = self.run_hook(payload)
+        self.assertEqual(res.returncode, 2)
+        self.assertIn("protected", res.stderr)
+
+    def test_codex_user_message_captures_approval(self):
+        payload = {"prompt": "approve SLICE-001", "session_id": "codex-session-123"}
+        res = self.run_hook(payload, event="user-message")
+        self.assertEqual(res.returncode, 0)
+        approvals = json.loads((self.root / "docs/_cgspec/07-state/approvals.json").read_text())["approvals"]
+        self.assertEqual(len(approvals), 1)
+        self.assertIn("approve SLICE-001", approvals[0]["excerpt"])
+        inbox = (self.root / "docs/00-INBOX.md").read_text()
+        self.assertIn("approve SLICE-001", inbox)
+        self.assertIn("[sess sion-123]", inbox)
+
+    def test_post_tool_codex_exits_zero(self):
+        payload = {
+            "tool_name": "file_edit",
+            "tool_input": {"file_path": str(self.root / "docs/spines/01-INTENT.md")},
+        }
+        res = self.run_hook(payload, event="post-tool")
+        self.assertEqual(res.returncode, 0)
+
+
+class OpenCodePayloadTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = TempDir()
+        self.root = self._tmp.__enter__()
+        install(self.root)
+
+    def tearDown(self):
+        self._tmp.__exit__(None, None, None)
+
+    def run_hook(self, payload, event="pre-tool"):
+        return hook(self.root, event, payload, "--tool", "opencode")
+
+    def test_denied_write_blocks_opencode(self):
+        payload = {
+            "tool": "edit",
+            "args": {
+                "filePath": str(self.root / "docs/_cgspec/01-engine/doctor.py"),
+                "content": "new text",
+            },
+        }
+        res = self.run_hook(payload)
+        self.assertEqual(res.returncode, 2)
+        self.assertIn("protected", res.stderr)
+
+    def test_allowed_write_allows_opencode(self):
+        payload = {
+            "tool": "edit",
+            "args": {
+                "filePath": str(self.root / "docs/spines/01-INTENT.md"),
+                "content": "new text",
+            },
+        }
+        res = self.run_hook(payload)
+        self.assertEqual(res.returncode, 0, res.stderr)
+
+    def test_bash_dangerous_command_blocked_opencode(self):
+        payload = {
+            "tool": "bash",
+            "args": {"command": "sed -i s/a/b/ docs/_memlog.md"},
+        }
+        res = self.run_hook(payload)
+        self.assertEqual(res.returncode, 2)
+        self.assertIn("protected", res.stderr)
+
+    def test_post_tool_opencode_exits_zero(self):
+        payload = {
+            "tool": "edit",
+            "args": {"filePath": str(self.root / "docs/spines/01-INTENT.md")},
+        }
+        res = self.run_hook(payload, event="post-tool")
+        self.assertEqual(res.returncode, 0)
+
+
+class ContentProjectionTests(unittest.TestCase):
+    def test_project_content_codex_str_replace(self):
+        from _lib.gates import project_content
+        with TempDir() as root:
+            target = root / "src/sample.txt"
+            target.parent.mkdir(parents=True)
+            target.write_text("Hello world\nGood morning\n")
+            payload = {
+                "tool_name": "file_edit",
+                "tool_input": {
+                    "file_path": "src/sample.txt",
+                    "old_str": "world",
+                    "new_str": "universe",
+                },
+            }
+            projected = project_content(root, "src/sample.txt", payload, "codex", None)
+            self.assertEqual(projected, "Hello universe\nGood morning\n")
+
+    def test_project_content_codex_unified_diff(self):
+        from _lib.gates import project_content
+        with TempDir() as root:
+            target = root / "src/sample.txt"
+            target.parent.mkdir(parents=True)
+            target.write_text("line1\nline2\nline3\n")
+            patch = (
+                "--- a/src/sample.txt\n"
+                "+++ b/src/sample.txt\n"
+                "@@ -1,3 +1,3 @@\n"
+                " line1\n"
+                "-line2\n"
+                "+line2_updated\n"
+                " line3\n"
+            )
+            payload = {
+                "tool_name": "apply_patch",
+                "tool_input": {"patch": patch},
+            }
+            projected = project_content(root, "src/sample.txt", payload, "codex", None)
+            self.assertEqual(projected, "line1\nline2_updated\nline3\n")
+
+    def test_project_content_opencode_edit(self):
+        from _lib.gates import project_content
+        with TempDir() as root:
+            target = root / "src/sample.txt"
+            target.parent.mkdir(parents=True)
+            target.write_text("alpha beta gamma\n")
+            payload = {
+                "tool": "edit",
+                "args": {
+                    "filePath": "src/sample.txt",
+                    "old_string": "beta",
+                    "new_string": "delta",
+                },
+            }
+            projected = project_content(root, "src/sample.txt", payload, "opencode", None)
+            self.assertEqual(projected, "alpha delta gamma\n")
+
+
+class ApprovalCaptureCommandTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = TempDir()
+        self.root = self._tmp.__enter__()
+        install(self.root)
+
+    def tearDown(self):
+        self._tmp.__exit__(None, None, None)
+
+    def test_capture_approval_via_positional_arg(self):
+        res = run_script("cgspec_hook.py", "capture-approval", "approve SLICE-004", "--root", str(self.root))
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn("captured approval A-", res.stdout)
+        data = json.loads((self.root / "docs/_cgspec/07-state/approvals.json").read_text())
+        self.assertEqual(len(data["approvals"]), 1)
+        self.assertEqual(data["approvals"][0]["excerpt"], "approve SLICE-004")
+        self.assertIn("approve SLICE-004", (self.root / "docs/00-INBOX.md").read_text())
+
+    def test_capture_approval_via_message_flag(self):
+        res = run_script("cgspec_hook.py", "capture-approval", "--message", "lgtm", "--root", str(self.root))
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn("captured approval A-", res.stdout)
+        data = json.loads((self.root / "docs/_cgspec/07-state/approvals.json").read_text())
+        self.assertEqual(len(data["approvals"]), 1)
+        self.assertEqual(data["approvals"][0]["excerpt"], "lgtm")
+
+    def test_capture_approval_via_stdin(self):
+        res = run_script("cgspec_hook.py", "capture-approval", "--root", str(self.root), stdin="ship it\n")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn("captured approval A-", res.stdout)
+        data = json.loads((self.root / "docs/_cgspec/07-state/approvals.json").read_text())
+        self.assertEqual(len(data["approvals"]), 1)
+        self.assertEqual(data["approvals"][0]["excerpt"], "ship it")
+
+    def test_capture_non_approval_records_inbox_and_fails(self):
+        res = run_script("cgspec_hook.py", "capture-approval", "hello world, can you check this?", "--root", str(self.root))
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("did not match an approval pattern", res.stderr)
+        self.assertFalse((self.root / "docs/_cgspec/07-state/approvals.json").exists())
+        self.assertIn("hello world", (self.root / "docs/00-INBOX.md").read_text())
 
 
 if __name__ == "__main__":

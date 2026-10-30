@@ -10,4 +10,5 @@ so the vendored engine can also remove it on uninstall. What each tool gets:
 | git | `.git/hooks/pre-commit`, `.git/hooks/commit-msg` (never overwrites a foreign hook) | staged-diff gate, commit message check |
 | CI | `.github/workflows/cgspec.yml`, recorded in `frozen.json` | `cgspec_hook.py ci --base <sha>` on push and pull request |
 | Cursor | `.cursor/rules/cgspec.mdc` | rules only; git hooks and CI enforce |
-| Codex | nothing extra | no hooks; git hooks and CI enforce |
+| Codex | `.codex/hooks.json` (merged, your entries kept) | PreToolUse (apply_patch, file_edit, write_file, str_replace, bash, Bash, exec_command), PostToolUse, UserPromptSubmit, SessionStart, Stop |
+| OpenCode | `.opencode/hooks.json` (merged, your entries kept) | PreToolUse (edit, write, bash, file_edit, patch), PostToolUse, SessionStart, Stop |

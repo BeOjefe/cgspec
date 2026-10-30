@@ -17,54 +17,9 @@ from _lib import hook_heartbeat, tiers  # noqa: E402
 from _lib.common import EXIT_BLOCK, EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, CgspecError, resolve_root  # noqa: E402
 from _lib.gates import Context, check_write, project_content  # noqa: E402
 from _lib.shellparse import write_targets  # noqa: E402
+from _lib.tool_payloads import normalize  # noqa: E402
 
-WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
-AG_WRITE_TOOLS = {"write_to_file", "replace_file_content", "multi_replace_file_content"}
-AG_PATH_KEYS = {"TargetFile", "AbsolutePath", "Cwd"}
 CLI_MODULES = {"start": "start", "run": "runs", "git-plan": "git_protocol", "proof": "proof_commands", "adopt": "discover", "close": "closure", "release": "release", "capability": "capabilities"}
-
-
-def _strings(value, skip=frozenset()) -> list[str]:
-    if isinstance(value, str):
-        return [value]
-    if isinstance(value, dict):
-        return [s for k, v in value.items() if k not in skip for s in _strings(v, skip)]
-    if isinstance(value, list):
-        return [s for v in value for s in _strings(v, skip)]
-    return []
-
-
-def normalize(payload: dict, tool: str) -> dict:
-    """Turn a tool-specific payload into {kind: write|shell|other, paths, content, command, cwd}."""
-    if tool == "claude":
-        name, data = payload.get("tool_name", ""), payload.get("tool_input") or {}
-        if name in WRITE_TOOLS:
-            path = data.get("file_path") or data.get("notebook_path")
-            edits = data.get("edits") or []
-            content = data.get("content") or data.get("new_string") or data.get("new_source") or \
-                "\n".join(e.get("new_string", "") for e in edits if isinstance(e, dict))
-            return {"kind": "write", "paths": [path] if path else [], "content": content,
-                    "new": name == "Write" and None, "cwd": payload.get("cwd")}
-        if name == "Bash":
-            return {"kind": "shell", "command": data.get("command", ""), "cwd": payload.get("cwd")}
-        return {"kind": "other"}
-    if tool == "antigravity":
-        call = payload.get("toolCall") or {}
-        name, data = call.get("name", ""), call.get("args") or {}
-        cwd = (payload.get("workspacePaths") or [None])[0]
-        if name in AG_WRITE_TOOLS:
-            return {"kind": "write", "paths": [data["TargetFile"]] if data.get("TargetFile") else [],
-                    "content": "\n".join(_strings(data, AG_PATH_KEYS)), "cwd": cwd}
-        if name == "run_command":
-            return {"kind": "shell", "command": data.get("CommandLine", ""), "cwd": data.get("Cwd") or cwd}
-        return {"kind": "other"}
-    kind = payload.get("tool")
-    if kind in ("write", "edit"):
-        return {"kind": "write", "paths": payload.get("paths", []), "content": payload.get("content"),
-                "cwd": payload.get("cwd")}
-    if kind == "shell":
-        return {"kind": "shell", "command": payload.get("command", ""), "cwd": payload.get("cwd")}
-    return {"kind": "other"}
 
 
 def shell_reasons(ctx: Context, command: str, cwd: str | None) -> list[str]:
@@ -319,6 +274,22 @@ def cmd_doc(root: Path, args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_capture_approval(root: Path, args: argparse.Namespace) -> int:
+    from _lib import inbox
+    text = args.message or args.prompt or (" ".join(args.rest) if args.rest else None)
+    if not text and not sys.stdin.isatty():
+        text = sys.stdin.read().strip()
+    if not text:
+        raise CgspecError("capture-approval requires approval text: pass as argument, --message, or stdin")
+    inbox_id, approval_id = inbox.capture(root, text, tool=args.tool or "generic")
+    if approval_id:
+        print(f"captured approval {approval_id} ({inbox_id})")
+        return EXIT_OK
+    else:
+        print(f"recorded in inbox ({inbox_id}), but text did not match an approval pattern", file=sys.stderr)
+        return EXIT_FAIL
+
+
 def cmd_tier(root: Path, args: argparse.Namespace) -> int:
     action = args.rest[0] if args.rest else ""
     if action not in ("set", "show", "clear"):
@@ -340,13 +311,15 @@ def cmd_tier(root: Path, args: argparse.Namespace) -> int:
     memlog_main(["--root", str(root), "add", "--tags", "tier", "--summary",
                  f"tier {entry['tier']} {entry['id']}: {entry['reason']} ({detail})"])
     return EXIT_OK
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cgspec_hook.py", description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("event", help="tier, pre-tool, or a later hook event")
+    parser.add_argument("event", help="tier, pre-tool, capture-approval, or a later hook event")
     parser.add_argument("rest", nargs="*", help="tier: set|show|clear; commit-msg: message file")
     parser.add_argument("--root")
-    parser.add_argument("--tool", default="generic", choices=["claude", "antigravity", "codex", "cursor", "git", "generic"])
+    parser.add_argument("--tool", default="generic", choices=["claude", "antigravity", "codex", "opencode", "cursor", "git", "generic"])
     parser.add_argument("--tier", choices=["T0", "T1", "T2", "T3"])
     parser.add_argument("--reason")
     parser.add_argument("--files", help="T0: comma-separated existing files")
@@ -354,7 +327,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base", help="ci: base commit of the range to check")
     from _lib.checkpoint_cmd import add_arguments
     add_arguments(parser)
-    for f in ("--file", "--applies-to", "--description", "--approval", "--command", "--guide", "--release-dir", "--repos", "--json-out", "--target", "--slices", "--id"):
+    for f in ("--file", "--applies-to", "--description", "--approval", "--command", "--guide", "--release-dir", "--repos", "--json-out", "--target", "--slices", "--id", "--message", "--prompt"):
         parser.add_argument(f)
     parser.add_argument("--no-rerun", action="store_true")
     for f in ("--criteria", "--tests", "--proofs", "--outcomes", "--supersession", "--units", "--run-id", "--by", "--status", "--unit", "--unit-status", "--outcome", "--verify", "--commit-kind", "--pr"):
@@ -373,6 +346,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.event in hook_heartbeat.EVENTS:
             return hook_heartbeat.dispatch(root, args, sys.modules[__name__])
         if args.event == "tier": return cmd_tier(root, args)
+        if args.event == "capture-approval": return cmd_capture_approval(root, args)
         if args.event in CLI_MODULES: return importlib.import_module(f"_lib.{CLI_MODULES[args.event]}").cli(root, args)
         if args.event == "pre-commit": return pre_commit(root)
         if args.event == "post-commit": from _lib.local_approval_gate import post_commit; return post_commit(root)
