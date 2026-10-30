@@ -8,6 +8,48 @@ numbers refer to `docs/METHOD.md`.
 All state files carry `"schema": 1`. A future breaking change bumps it and ships a migration
 in `install.py upgrade`.
 
+### Hook activity and missing-hook detection
+
+The six lifecycle callbacks (`session-start`, `pre-tool`, `post-tool`, `user-message`,
+`stop`, `pre-compact`) record a machine-local receipt before their ordinary work.
+`07-state/hook-heartbeats/<host-identity>.json` carries `schema: 1`, `event`, epoch-second
+`at`, `session_id`, host `pid`, `host`, `sequence`, `previous` MAC and `mac`. A local
+ignore file keeps these ephemeral receipts out of Git. Each host has its own file,
+so concurrent sessions cannot cover for one another. Linux kernel ancestry, boot ID
+and process start ticks determine host identity; caller-supplied session IDs and
+timestamps cannot select it. Recording requires a matching host/event payload and
+a direct callback process, optionally through one shell. All callbacks retain stdin.
+
+Each receipt is HMAC-SHA256 authenticated and chained to the previous receipt. A
+private, locked witness under the OS temporary directory, outside the checkout,
+holds the random key and latest authenticated head for each host/project. Checking
+requires both that witness and an identical authenticated checkout receipt. Editing
+a timestamp, recreating an unkeyed chain, copying another process's receipt or
+replaying an older signed receipt fails. Ordinary pre-tool edits and shell commands
+that name receipt/witness paths are refused. Neither `session-check`, doctor nor
+the Git commit event creates or refreshes hook receipts.
+
+`cgspec_hook.py session-check --root <project>` automatically finds a supported live
+Claude/Antigravity ancestor even when invoked from a tool shell in a session whose
+settings never loaded. Missing activity fails immediately with an explicit
+`HOOK COVERAGE FAILURE` diagnostic, process age and relaunch instructions. A receipt
+older than 120 seconds also fails if Git reports edits/deletions after it; an idle
+session alone does not fail. The installed Git pre-commit event independently runs
+the same check before checking the staged snapshot. This is a local check, not a CI
+requirement. An unavailable Git status fails visibly rather than asserting coverage;
+a receipt writer failure blocks the next pre-tool action, while user messages and
+finished tools remain non-blocking. Use `--tool claude` or `--tool antigravity` to
+require verification even when host discovery is unavailable; a generic check outside a supported host prints
+`UNVERIFIED` and continues its structural checks.
+
+Limits: Linux `/proc` host discovery is currently required. No watchdog can warn if
+neither an independent check nor the Git gate runs. A chain and a key accessible to
+the same OS account are not an isolation boundary: unrestricted same-account shell
+access can steal the key, alter the external witness or imitate callback ancestry.
+The signal rejects hand-written heartbeat files; it does not authenticate human
+approvals or certify every historical edit. These checks need an installed consumer
+upgrade; a synthetic-host subprocess test is not a live Claude/Antigravity rehearsal.
+
 ### Git execution plans
 
 `docs/slices/SLICE-NNN-*.git-plan.json` is the machine-checked execution record for a T1+

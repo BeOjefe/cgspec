@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True  # never leave caches in the vendored engine
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _lib import tiers  # noqa: E402
+from _lib import hook_heartbeat, tiers  # noqa: E402
 from _lib.common import EXIT_BLOCK, EXIT_FAIL, EXIT_INTERNAL, EXIT_OK, CgspecError, resolve_root  # noqa: E402
 from _lib.gates import Context, check_write, project_content  # noqa: E402
 from _lib.shellparse import write_targets  # noqa: E402
@@ -121,6 +121,12 @@ def pre_tool(root: Path, tool: str, raw: str) -> int:
         if not isinstance(payload, dict):
             raise ValueError("payload is not a JSON object")
         call = normalize(payload, tool)
+        # The witness key is outside the checkout. Ordinary edit/shell tools must
+        # not manufacture receipts or inspect the witness to forge their MACs.
+        coverage_paths = ("hook-heartbeats", "cgspec-hook-witness-")
+        if any(marker in p for p in call.get("paths", []) for marker in coverage_paths) or \
+                any(marker in call.get("command", "") for marker in coverage_paths):
+            return block(tool, "CGSpec hook coverage evidence is engine-owned; do not read or write its witness or receipts")
         if call["kind"] == "other":
             if tool == "antigravity": print('{"decision":"allow"}')
             return EXIT_OK
@@ -176,6 +182,10 @@ def staged_doctor(root: Path, doctor, staged: list[str] | None = None) -> tuple[
 
 
 def pre_commit(root: Path) -> int:
+    coverage = hook_heartbeat.problems(root)
+    if coverage:
+        print(hook_heartbeat.report(coverage), file=sys.stderr)
+        return EXIT_FAIL
     from _lib.commit_gate import evaluate
     from _lib.gitview import View
     import doctor
@@ -216,7 +226,7 @@ def doctor_state(root: Path) -> tuple[int, str]:
     return len(errors), summary
 
 
-def lifecycle(root: Path, event: str, args: argparse.Namespace) -> int:
+def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str = "") -> int:
     from _lib import inbox, session
     if event == "user-message":
         try:
@@ -233,10 +243,7 @@ def lifecycle(root: Path, event: str, args: argparse.Namespace) -> int:
               if args.tool == "antigravity" else pack)
         return EXIT_OK
     if event == "session-check":
-        from install import verify_engine
-        problems = verify_engine(root)
-        print(f"doctor: {summary}" + (f"; engine: {len(problems)} problems" if problems else "; engine OK"))
-        return EXIT_FAIL if errors or problems else EXIT_OK
+        return hook_heartbeat.session_check(root, args.tool, errors, summary)
     if event == "stop":
         from _lib.doc_sync import sync
         try:
@@ -363,9 +370,10 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_intermixed_args(argv)
     try:
         root = resolve_root(args.root)
+        if args.event in hook_heartbeat.EVENTS:
+            return hook_heartbeat.dispatch(root, args, sys.modules[__name__])
         if args.event == "tier": return cmd_tier(root, args)
         if args.event in CLI_MODULES: return importlib.import_module(f"_lib.{CLI_MODULES[args.event]}").cli(root, args)
-        if args.event == "pre-tool": return pre_tool(root, args.tool, sys.stdin.read())
         if args.event == "pre-commit": return pre_commit(root)
         if args.event == "post-commit": from _lib.local_approval_gate import post_commit; return post_commit(root)
         if args.event == "pre-push": from _lib.local_approval_gate import pre_push; return pre_push(root, sys.stdin.read())

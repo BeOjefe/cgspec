@@ -71,6 +71,7 @@ ALLOWED_STATE_FILES = {
     "legacy-baseline.json": "legacy-baseline",
     "approvals.json": "approvals",
     "stop-retries.json": None,
+    "hook-heartbeats": None,  # process-specific receipts; authenticated by session-check, not JSON Schema
 }
 
 DECISION_STATUSES = ["Draft", "Proposed", "Approved", "Delegated", "Rejected", "Superseded", "Imported"]
