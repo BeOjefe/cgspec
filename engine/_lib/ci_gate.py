@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -14,6 +15,31 @@ from .commit_gate import evaluate
 from .gitview import View, git
 
 TEST_TIMEOUT = 600
+
+ISSUE_PATTERN = re.compile(
+    r"(?:(?i:\b(?:closes|closed|fixes|fixed|resolves|resolved|issue)\b:?\s*)?#\d+\b|"
+    r"https?://github\.com/[^/\s]+/[^/\s]+/issues/\d+\b|"
+    r"\b[a-zA-Z0-9_-]+#\d+\b|"
+    r"\b(?:GH|gh)-\d+\b|"
+    r"(?i:\b(?:closes|closed|fixes|fixed|resolves|resolved|issue)\s+\d+\b))"
+)
+BRANCH_ISSUE_PATTERN = re.compile(r"(?:^|[/-])(?:issue[-/]?|gh-?|fix[-/]?|feat[-/]?)?(\d+)(?:[/-]|$)")
+
+
+def has_issue_reference(root: Path, base: str, pr: str | None = None) -> bool:
+    if pr:
+        if ISSUE_PATTERN.search(pr) or re.search(r"\b\d+\b", pr):
+            return True
+    for commit in commits_in_range(root, base):
+        msg = git(root, "log", "-1", "--format=%B", commit).stdout
+        if ISSUE_PATTERN.search(msg):
+            return True
+    branch = git(root, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+    if not branch or branch == "HEAD":
+        branch = os.environ.get("GITHUB_HEAD_REF") or os.environ.get("GITHUB_REF_NAME") or ""
+    if branch and branch not in ("main", "master") and BRANCH_ISSUE_PATTERN.search(branch):
+        return True
+    return False
 
 
 def commits_in_range(root: Path, base: str) -> list[str]:
@@ -243,11 +269,38 @@ def effective_base(root: Path, base: str | None) -> str:
 
 
 def run(root: Path, base: str | None, rerun_tests: bool = True,
-        release_dir: Path | None = None) -> tuple[list[str], list[str]]:
+        release_dir: Path | None = None,
+        pr: str | None = None,
+        require_issue: bool | None = None) -> tuple[list[str], list[str]]:
     """(problems, notes) for the range base..HEAD."""
     problems, notes = [], []
     base = effective_base(root, base)
     notes.append(f"checking {base[:10]}..HEAD")
+
+    pj_file = root / "docs" / "_cgspec" / "project.json"
+    project_data = {}
+    if pj_file.exists():
+        try:
+            project_data = json.loads(pj_file.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            project_data = {}
+    if not isinstance(project_data, dict):
+        project_data = {}
+
+    enforce_issue = (
+        pr is not None
+        or bool(require_issue)
+        or bool(project_data.get("require_issue_linking"))
+        or os.environ.get("CGSPEC_REQUIRE_ISSUE") == "1"
+        or os.environ.get("GITHUB_EVENT_NAME") == "pull_request"
+        or bool(os.environ.get("GITHUB_BASE_REF"))
+    )
+    if enforce_issue:
+        if not has_issue_reference(root, base, pr):
+            problems.append("candidate PR or commit range has no associated issue reference (e.g. closes #<id>, fixes #<id>, or #<id>)")
+        else:
+            notes.append("verified PR-to-issue reference")
+
     for commit in commits_in_range(root, base):
         subject = git(root, "log", "-1", "--format=%h %s", commit).stdout.strip()
         view = View.commit(root, commit)
