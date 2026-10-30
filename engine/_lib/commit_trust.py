@@ -80,9 +80,7 @@ def approver_key_change(view: View) -> list[str]:
     """
     old = load(view.read_old(PROJECT_FILE.as_posix())).get("approver_keys", [])
     new = load(view.read_new(PROJECT_FILE.as_posix())).get("approver_keys", [])
-    if old == new or view.new == ":":
-        return []
-    if trusted_signature(view):
+    if old == new or view.new == ":" or trusted_signature(view):
         return []
     return ["project.json approver_keys changed without a commit signature from a previously trusted key; "
             "bootstrap requires a protected installation baseline or separately verified GitHub review"]
@@ -212,13 +210,15 @@ def is_install_commit(view: View) -> bool:
 
 
 def install_exempt(view: View) -> set[str]:
-    """Files an install/upgrade commit may add without a tier: template docs and adapter files only."""
+    """Files an install/upgrade commit may add or remove without a tier: template docs, skills and adapter files."""
     if not is_install_commit(view):
         return set()
-    owned = load(view.read_new(ENGINE + "owned-files.json"))
-    paths = set(owned.get("created", {})) | set(owned.get("replaced", {}))
+    owned, old = load(view.read_new(ENGINE + "owned-files.json")), load(view.read_old(ENGINE + "owned-files.json"))
+    paths = set(owned.get("created", {})) | set(owned.get("replaced", {})) | set(owned.get("deleted", {}) or ())
+    paths |= set(old.get("created", {})) | set(old.get("replaced", {})) | set(old.get("deleted", {}) or ())
     skills = set(((owned.get("adapters") or {}).get("antigravity") or {}).get("skills", []))
-    return {p for p in paths if p.startswith("docs/")} | ADAPTER_PATHS | skills
+    skills |= set(((old.get("adapters") or {}).get("antigravity") or {}).get("skills", []))
+    return {p for p in paths if p.startswith("docs/") or p.startswith(".agents/skills/")} | ADAPTER_PATHS | skills
 
 
 def approval_ids(view: View) -> set[str]:
