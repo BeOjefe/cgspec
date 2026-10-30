@@ -1,0 +1,42 @@
+name: version-bump
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'engine/**'
+
+jobs:
+  enforce-version-bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compute changed files and VERSION values
+        id: diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=100 origin "$BASE_SHA" || true
+          BASE_VERSION="$(git show "$BASE_SHA:engine/VERSION" 2>/dev/null | tr -d '[:space:]' || true)"
+          HEAD_VERSION="$(tr -d '[:space:]' < engine/VERSION)"
+          echo "base_version=$BASE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "head_version=$HEAD_VERSION" >> "$GITHUB_OUTPUT"
+          git diff --name-only "$BASE_SHA...$HEAD_SHA" > /tmp/changed.txt
+          echo "--- changed files ---"
+          cat /tmp/changed.txt
+      - name: Enforce VERSION bump
+        run: |
+          python3 .github/scripts/check_version_bump.py \
+            --base-version '${{ steps.diff.outputs.base_version }}' \
+            --head-version '${{ steps.diff.outputs.head_version }}' \
+            < /tmp/changed.txt
