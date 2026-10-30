@@ -35,6 +35,32 @@ class Host:
     identity: str
     started: float
     direct: bool
+    cwd: Path | None = None
+    argv: tuple[str, ...] = ()
+
+
+def _governs(host: Host, root: Path) -> bool:
+    if host.cwd is None and not host.argv:
+        return True
+    root_resolved = root.resolve()
+    if host.cwd is not None:
+        try:
+            if root_resolved == host.cwd or root_resolved.is_relative_to(host.cwd) or host.cwd.is_relative_to(root_resolved):
+                return True
+        except (ValueError, OSError):
+            pass
+    root_str = str(root_resolved)
+    if any(root_str in arg for arg in host.argv):
+        return True
+    try:
+        exe = Path(host.argv[0])
+        if not exe.is_absolute() and host.cwd:
+            exe = host.cwd / exe
+        if exe.resolve().is_relative_to(root_resolved):
+            return True
+    except (ValueError, IndexError, OSError):
+        pass
+    return False
 
 
 def host_process() -> Host | None:
@@ -54,13 +80,17 @@ def host_process() -> Host | None:
             fields = (proc / "stat").read_text().rsplit(")", 1)[1].split()
             argv = (proc / "cmdline").read_bytes().decode(errors="replace").split("\0")
             name = Path(argv[0]).name.lower()
-            tool = name if name in ("claude", "antigravity") else None
-            if name == "node" and len(argv) > 1 and "/claude-code/" in argv[1]:
+            tool = "antigravity" if name in ("antigravity", "agy") else (name if name == "claude" else None)
+            if not tool and name == "node" and len(argv) > 1 and "/claude-code/" in argv[1]:
                 tool = "claude"
             if tool:
                 identity = hashlib.sha256(f"{boot}:{pid}:{fields[19]}".encode()).hexdigest()
                 direct = not between or (len(between) == 1 and between[0] in ("sh", "bash", "dash", "zsh"))
-                return Host(tool, pid, identity, boot_at + int(fields[19]) / ticks, direct)
+                try:
+                    host_cwd = Path(os.readlink(f"/proc/{pid}/cwd")).resolve()
+                except OSError:
+                    host_cwd = None
+                return Host(tool, pid, identity, boot_at + int(fields[19]) / ticks, direct, host_cwd, tuple(argv))
             between.append(name)
             pid = int(fields[1])
             if not pid:
@@ -179,14 +209,20 @@ def _recent_edits(root: Path, since: float) -> int:
             continue
         path = root / rel
         # Deletions have no mtime. Count them conservatively in a stale session.
-        if "D" in status or path.lstat().st_mtime > since:
+        if "D" in status:
             count += 1
+        else:
+            try:
+                if path.lstat().st_mtime > since:
+                    count += 1
+            except OSError:
+                count += 1
     return count
 
 
 def problems(root: Path, tool: str = "generic") -> list[str]:
     host = host_process()
-    if not host:
+    if not host or not _governs(host, root):
         return (["cannot verify hook coverage: no supported live host process (Linux /proc required)"]
                 if tool in ("claude", "antigravity") else [])
     elapsed = max(0, int(time.time() - host.started))
@@ -224,7 +260,8 @@ def session_check(root: Path, tool: str, errors: int, summary: str) -> int:
         print(report(coverage), file=sys.stderr)
     engine_problems = verify_engine(root)
     print(f"doctor: {summary}" + (f"; engine: {len(engine_problems)} problems" if engine_problems else "; engine OK"))
-    print("hooks: verified for this live host process" if not coverage and host_process()
+    host = host_process()
+    print("hooks: verified for this live host process" if not coverage and host and _governs(host, root)
           else "hooks: FAILED" if coverage else "hooks: UNVERIFIED (no supported live host ancestor)")
     return 1 if errors or engine_problems or coverage else 0
 
@@ -239,7 +276,7 @@ def read_payload(raw: str) -> dict:
 
 def dispatch(root: Path, args, adapter) -> int:
     """Capture callback stdin once, then forward it unchanged to the entry point's handlers."""
-    raw = sys.stdin.read()
+    raw = "" if not sys.stdin or sys.stdin.isatty() else sys.stdin.read()
     try:
         record(root, args.event, args.tool, read_payload(raw))
     except Exception as exc:  # never block a user message or a finished tool

@@ -207,6 +207,12 @@ class HeartbeatTests(unittest.TestCase):
             with contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(cgspec_hook.pre_tool(self.root, "claude", json.dumps(payload)), 2)
 
+    def test_interactive_tty_stdin_does_not_block_and_does_not_seed_receipt(self):
+        with patch.object(sys.stdin, "isatty", return_value=True), contextlib.redirect_stdout(io.StringIO()):
+            code = cgspec_hook.main(["session-start", "--root", str(self.root), "--tool", "claude"])
+            self.assertEqual(code, 0)
+            self.assertFalse(self.receipt_path().exists())
+
 
 @unittest.skipUnless(sys.platform.startswith("linux"), "live process identity currently requires Linux /proc")
 class LiveHostHeartbeatTests(unittest.TestCase):
@@ -243,8 +249,36 @@ print(json.dumps({"before": [before.returncode, before.stderr], "start": [starte
                 self.assertIn("hooks: verified", data["after"][1])
             finally:
                 shutil.rmtree(data["witness"], ignore_errors=True)
-            # Diagnostic outside a host cannot falsely advertise verified activity.
-            self.assertIn("UNVERIFIED", hook(root, "session-check", {}).stdout)
+            # Diagnostic outside a host (or inside an uncovered host) cannot falsely advertise verified activity.
+            out = hook(root, "session-check", {}).stdout
+            self.assertTrue("UNVERIFIED" in out or "hooks: FAILED" in out)
+            self.assertNotIn("hooks: verified", out)
+
+    def test_antigravity_cli_real_process_tree(self):
+        with TempDir() as root:
+            git_project(root)
+            host = root / "agy"
+            host.symlink_to(sys.executable)
+            driver = '''
+import json, sys
+from pathlib import Path
+from tests.helpers import hook
+from _lib.hook_heartbeat import witness_directory
+root = Path(sys.argv[1])
+started = hook(root, "session-start", {"hook_event_name": "SessionStart", "session_id": "live-agy"}, "--tool", "antigravity")
+after = hook(root, "session-check", {})
+print(json.dumps({"start": [started.returncode, started.stderr],
+                  "after": [after.returncode, after.stdout, after.stderr], "witness": str(witness_directory(root))}))
+'''
+            child = subprocess.run([str(host), "-c", driver, str(root)], capture_output=True, text=True, timeout=60)
+            self.assertEqual(child.returncode, 0, child.stderr)
+            data = json.loads(child.stdout)
+            try:
+                self.assertEqual(data["start"][0], 0, data)
+                self.assertEqual(data["after"][0], 0, data)
+                self.assertIn("hooks: verified", data["after"][1])
+            finally:
+                shutil.rmtree(data["witness"], ignore_errors=True)
 
 
 if __name__ == "__main__":
