@@ -226,7 +226,7 @@ def doctor_state(root: Path) -> tuple[int, str]:
     return len(errors), summary
 
 
-def lifecycle(root: Path, event: str, args: argparse.Namespace) -> int:
+def lifecycle(root: Path, event: str, args: argparse.Namespace, raw: str = "") -> int:
     from _lib import inbox, session
     if event == "user-message":
         try:
