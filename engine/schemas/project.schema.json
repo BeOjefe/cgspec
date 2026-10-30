@@ -245,6 +245,12 @@
       "type": "number",
       "minimum": 0,
       "maximum": 100
+    },
+    "require_issue_linking": {
+      "type": "boolean"
+    },
+    "pre_push_tests": {
+      "type": "boolean"
     }
   },
   "definitions": {

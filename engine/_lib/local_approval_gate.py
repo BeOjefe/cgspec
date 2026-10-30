@@ -7,12 +7,17 @@ intermediate commits, against that commit's own parent policy.
 
 from __future__ import annotations
 
+import json
+import os
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 from . import commit_trust as trust
 from .common import EXIT_FAIL, EXIT_OK
 from .gitview import View, git
+from .globs import match_any
 
 
 def commit_problems(view: View) -> list[str]:
@@ -38,6 +43,113 @@ def post_commit(root: Path) -> int:
         print(f"CGSpec local approval check failed ({sha}):\n- " + "\n- ".join(reasons), file=sys.stderr)
         return EXIT_FAIL
     return EXIT_OK
+
+
+def _find_test_files(root: Path, commits: set[str], test_globs: list[str]) -> list[str]:
+    touched: list[str] = []
+    for sha in sorted(commits):
+        view = View.commit(root, sha)
+        for c in view.changes():
+            if c.status != "D" and (match_any(c.path, test_globs) or c.path.startswith(("tests/", "test/"))) and (root / c.path).is_file():
+                if c.path not in touched:
+                    touched.append(c.path)
+    if not touched:
+        for folder in ("tests", "test", "spec", "specs"):
+            tdir = root / folder
+            if tdir.is_dir():
+                for p in sorted(tdir.rglob("*")):
+                    if p.is_file() and not p.name.startswith((".", "_", "helper", "conftest")):
+                        rel = p.relative_to(root).as_posix()
+                        if match_any(rel, test_globs) or rel.endswith((".py", ".js", ".ts", ".jsx", ".tsx")):
+                            if rel not in touched:
+                                touched.append(rel)
+    return touched
+
+
+def _run_test_cmd(root: Path, commits: set[str], test_cmd: list[str], test_globs: list[str]) -> list[str]:
+    failures = []
+    if "{test_file}" in test_cmd:
+        for tf in _find_test_files(root, commits, test_globs):
+            cmd = [tf if part == "{test_file}" else part for part in test_cmd]
+            try:
+                res = subprocess.run(cmd, cwd=root, capture_output=True, text=True, timeout=300)
+                if res.returncode != 0:
+                    detail = (res.stderr or res.stdout or "").strip()
+                    failures.append(f"test {tf} failed (exit {res.returncode}): {detail}" if detail else f"test {tf} failed (exit {res.returncode})")
+            except Exception as exc:
+                failures.append(f"could not run test {tf} ({cmd}): {exc}")
+    else:
+        try:
+            res = subprocess.run(test_cmd, cwd=root, capture_output=True, text=True, timeout=600)
+            if res.returncode != 0:
+                detail = (res.stderr or res.stdout or "").strip()
+                failures.append(f"test command {' '.join(test_cmd)} failed (exit {res.returncode}): {detail}" if detail else f"test command {' '.join(test_cmd)} failed (exit {res.returncode})")
+        except Exception as exc:
+            failures.append(f"could not run test command {' '.join(test_cmd)}: {exc}")
+    return failures
+
+
+def _run_runners(root: Path, test_runners: list, commits: set[str], test_globs: list[str]) -> list[str]:
+    failures = []
+    for runner in test_runners:
+        if not isinstance(runner, dict):
+            continue
+        cmd = runner.get("command")
+        if not (isinstance(cmd, list) and cmd):
+            continue
+        runner_cwd = root / runner.get("cwd", ".")
+        timeout = runner.get("timeout_seconds", 300)
+        runner_id = runner.get("id", "default")
+        globs = runner.get("applies_to") if isinstance(runner.get("applies_to"), list) else test_globs
+
+        if "{test_file}" in cmd:
+            for tf in _find_test_files(root, commits, globs):
+                sub_cmd = [tf if part == "{test_file}" else part for part in cmd]
+                try:
+                    res = subprocess.run(sub_cmd, cwd=runner_cwd, capture_output=True, text=True, timeout=timeout)
+                    if res.returncode != 0:
+                        detail = (res.stderr or res.stdout or "").strip()
+                        failures.append(f"test runner {runner_id} on {tf} failed (exit {res.returncode}): {detail}" if detail else f"test runner {runner_id} on {tf} failed (exit {res.returncode})")
+                except Exception as exc:
+                    failures.append(f"could not run test runner {runner_id} on {tf} ({sub_cmd}): {exc}")
+        else:
+            try:
+                res = subprocess.run(cmd, cwd=runner_cwd, capture_output=True, text=True, timeout=timeout)
+                if res.returncode != 0:
+                    detail = (res.stderr or res.stdout or "").strip()
+                    failures.append(f"test runner {runner_id} failed (exit {res.returncode}): {detail}" if detail else f"test runner {runner_id} failed (exit {res.returncode})")
+            except Exception as exc:
+                failures.append(f"could not run test runner {runner_id} ({cmd}): {exc}")
+    return failures
+
+
+def run_pre_push_tests(root: Path, commits: set[str]) -> list[str]:
+    pj_file = root / "docs" / "_cgspec" / "project.json"
+    if not pj_file.exists():
+        return []
+    try:
+        project = json.loads(pj_file.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return []
+    if not isinstance(project, dict):
+        return []
+    if project.get("pre_push_tests") is False or os.environ.get("CGSPEC_SKIP_PRE_PUSH_TESTS") == "1":
+        return []
+
+    test_cmd, test_runners = project.get("test_command"), project.get("test_runners")
+    if not test_cmd and not test_runners:
+        return []
+
+    failures = []
+    classes = project.get("path_classes", {}) if isinstance(project.get("path_classes"), dict) else {}
+    test_globs = classes.get("tests", ["tests/**"]) if isinstance(classes.get("tests"), list) else ["tests/**"]
+
+    if isinstance(test_cmd, list) and test_cmd:
+        failures.extend(_run_test_cmd(root, commits, test_cmd, test_globs))
+    elif isinstance(test_runners, list) and test_runners:
+        failures.extend(_run_runners(root, test_runners, commits, test_globs))
+
+    return failures
 
 
 def pre_push(root: Path, raw: str) -> int:
@@ -68,5 +180,10 @@ def pre_push(root: Path, raw: str) -> int:
     if reasons:
         print("CGSpec local approval check failed (push blocked):\n- " + "\n- ".join(reasons))
         return EXIT_FAIL
+    if commits:
+        test_failures = run_pre_push_tests(root, commits)
+        if test_failures:
+            print("CGSpec pre-push test run failed (push blocked):\n- " + "\n- ".join(test_failures))
+            return EXIT_FAIL
     print("CGSpec local approval check passed")
     return EXIT_OK
