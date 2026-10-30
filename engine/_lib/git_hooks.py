@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .common import CgspecError
 
-EVENTS = ("pre-commit", "commit-msg")
+EVENTS = ("pre-commit", "commit-msg", "pre-push")
 
 _REPO_SELECTORS = (
     "GIT_DIR",

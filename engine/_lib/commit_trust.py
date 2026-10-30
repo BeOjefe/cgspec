@@ -12,6 +12,7 @@ from collections import Counter
 from pathlib import Path
 
 from . import tiers
+from .approval_provenance import approval_provenance_problem, commit_msg_problem
 from .common import ENGINE_DIR, PROJECT_FILE, STATE_DIR
 from .gitview import View
 from .inbox import approval_target
@@ -41,7 +42,7 @@ def trusted_signature(view: View) -> bool:
     """Verify the judged commit against approver keys already trusted by its parent.
 
     A key introduced by the judged commit cannot establish trust in that same commit.
-    Staged changes have no commit signature yet; CI verifies the final commit.
+    Staged changes have no commit signature yet; local pre-push and CI verify the final commit.
     """
     keys = load(view.read_old(PROJECT_FILE.as_posix())).get("approver_keys", [])
     if not isinstance(keys, list) or not keys or view.new == ":":
@@ -102,7 +103,7 @@ def approval_ok(view: View, ref: str, record_id: str | None = None) -> str | Non
     if ref == TRAILER_REF:
         message = commit_message(view)
         if message is None:
-            return None  # staged: commit-msg checks the trailer, CI checks the signature
+            return None  # staged: commit-msg checks text; pre-push and CI check the signature
         if not TRAILER.search(message):
             return "cites the commit trailer but the commit has no 'Approved-by:' line"
         if not trusted_signature(view):
@@ -118,7 +119,7 @@ def approval_ok(view: View, ref: str, record_id: str | None = None) -> str | Non
         if target and target.startswith(("SLICE-", "ADR-", "CHK-")):
             return f"cites approval {ref}, but your message names {target}, not {record_id}"
         return f"cites approval {ref}, but your message does not name {record_id or 'an approval target'}"
-    return None
+    return approval_provenance_problem(view, fresh[ref])
 
 
 def citation_counts(view: View) -> dict[str, int]:
@@ -242,6 +243,9 @@ def approvals_have_inbox_lines(view: View) -> list[str]:
     reasons = []
     for entry in load(view.read_new(APPROVALS)).get("approvals", []):
         if isinstance(entry, dict) and entry.get("id") not in old:
+            problem = approval_provenance_problem(view, entry)
+            if problem:
+                reasons.append(f"approval {entry.get('id')} {problem}")
             excerpt = str(entry.get("excerpt", ""))[:80]
             if not excerpt or excerpt not in inbox:
                 reasons.append(f"approval {entry.get('id')} has no matching message in {INBOX}")
@@ -380,21 +384,8 @@ def governance_change(view: View) -> bool:
 def governance_authorized(view: View) -> bool:
     """A governance change needs the user's `Approved-by:` trailer on a commit signed by a key the
     parent already trusted. A staged change has no message yet: when the parent has trusted
-    approver keys, commit-msg demands the trailer and CI verifies the signature."""
+    approver keys, commit-msg demands the trailer; local pre-push and CI verify the signature."""
     message = commit_message(view)
     if message is None:
         return bool(load(view.read_old(PROJECT_FILE.as_posix())).get("approver_keys"))
     return bool(TRAILER.search(message)) and trusted_signature(view)
-
-
-def commit_msg_problem(root: Path, text: str) -> str | None:
-    """Why the message file cannot be committed with the staged change, or None."""
-    view = View.staged(root)
-    if TRAILER.search(text):
-        return None
-    if staged_trailer_refs(view):
-        return "CGSpec: this commit cites the 'trailer' approval; add 'Approved-by: <you>' to the message yourself"
-    if governance_change(view):
-        return ("CGSpec: this commit changes governance files (hooks, workflows, ownership, plugin source); "
-                "add 'Approved-by: <you>' yourself and sign the commit with a trusted approver key")
-    return None

@@ -8,7 +8,7 @@ import unittest
 
 from pathlib import Path
 
-from tests.helpers import TempDir, git, git_project, hook, make_slice, run_script
+from tests.helpers import TempDir, git, git_project, git_live, hook, make_slice, run_script
 
 
 def commit(root, message):
@@ -130,6 +130,60 @@ class TrailerApprovalTests(unittest.TestCase):
         msg.write_text("Approve login slice\n\nApproved-by: Ojefe <me@example.com>\n")
         self.assertEqual(run_script("cgspec_hook.py", "commit-msg", str(msg), "--root", str(self.root)).returncode, 0)
 
+    def local_push(self):
+        remote = self.root / ".git/local-test-remote.git"
+        git(self.root, "init", "--bare", "-q", str(remote))
+        # Seed the protected installation/key baseline without invoking hooks.
+        git(self.root, "push", "-q", str(remote), f"{self.base}:refs/heads/main")
+        return git_live(self.root, "push", str(remote), "HEAD:refs/heads/main", check=False)
+
+    def test_local_push_blocks_unsigned_trailer(self):
+        _, pub = self.signing_key()
+        self.trust_key(pub)
+        make_slice(self.root, approval="trailer")
+        commit(self.root, "Approve login slice\n\nApproved-by: human")
+        result = self.local_push()
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("not signed by a key", result.stdout)
+        self.assertIn("push blocked", result.stdout)
+
+    def test_local_push_blocks_wrong_signer(self):
+        _, pub = self.signing_key()
+        other, _ = self.signing_key("agent")
+        self.trust_key(pub)
+        make_slice(self.root, approval="trailer")
+        self.signed_commit(other, "Approve login slice\n\nApproved-by: human")
+        result = self.local_push()
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("not signed by a key", result.stdout)
+
+    def test_local_push_accepts_trusted_signed_trailer(self):
+        key, pub = self.signing_key()
+        self.trust_key(pub)
+        make_slice(self.root, approval="trailer")
+        self.signed_commit(key, "Approve login slice\n\nApproved-by: human")
+        result = self.local_push()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("local approval check passed", result.stdout)
+
+    def test_local_push_checks_intermediate_commits(self):
+        key, pub = self.signing_key()
+        self.trust_key(pub)
+        make_slice(self.root, approval="trailer")
+        commit(self.root, "Unsigned approval\n\nApproved-by: human")
+        (self.root / "docs/extra-note.md").write_text("Unrelated final change\n")
+        self.signed_commit(key, "Final signed commit\n\nApproved-by: human")
+        result = self.local_push()
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("not signed by a key", result.stdout)
+
+    def test_local_push_blocks_missing_trailer(self):
+        make_slice(self.root, approval="trailer")
+        commit(self.root, "Self-asserted approval")
+        result = self.local_push()
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Approved-by:", result.stdout)
+
     def test_tier_accepts_a_trailer_approved_slice(self):
         key, pub = self.signing_key()
         self.trust_key(pub)
@@ -223,6 +277,28 @@ class TrailerApprovalTests(unittest.TestCase):
         result = self.ci()
         self.assertEqual(result.returncode, 1)
         self.assertIn("A-20261018-ffff", result.stdout)
+
+    def test_local_post_commit_and_pre_push_reject_unsigned_trailer(self):
+        from _lib.local_approval_gate import post_commit, pre_push
+        _, pub = self.signing_key()
+        self.trust_key(pub)
+        make_slice(self.root, approval="trailer")
+        commit(self.root, "Approve login slice\n\nApproved-by: Ojefe <me@example.com>")
+        head = git(self.root, "rev-parse", "HEAD").stdout.strip()
+        self.assertEqual(post_commit(self.root), 1)
+        ref_update = f"refs/heads/main {head} refs/heads/main {self.base}\n"
+        self.assertEqual(pre_push(self.root, ref_update), 1)
+
+    def test_local_post_commit_and_pre_push_accept_signed_trailer(self):
+        from _lib.local_approval_gate import post_commit, pre_push
+        key, pub = self.signing_key()
+        self.trust_key(pub)
+        make_slice(self.root, approval="trailer")
+        self.signed_commit(key, "Approve login slice\n\nApproved-by: Ojefe <me@example.com>")
+        head = git(self.root, "rev-parse", "HEAD").stdout.strip()
+        self.assertEqual(post_commit(self.root), 0)
+        ref_update = f"refs/heads/main {head} refs/heads/main {self.base}\n"
+        self.assertEqual(pre_push(self.root, ref_update), 0)
 
 
 if __name__ == "__main__":

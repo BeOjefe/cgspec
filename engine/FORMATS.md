@@ -1,5 +1,5 @@
 # CGSpec engine: file formats and hook contract
-Created: unknown · Last edited: 2026-10-29T17:06:58Z
+Created: unknown · Last edited: 2026-10-29T22:56:36Z
 
 This file is the contract between the engine scripts, the hooks and the agent. The JSON
 Schemas in `schemas/` are the machine-checked source; this page explains them. Spec section
@@ -163,12 +163,38 @@ Human-readable CGSpec Markdown documents (except the append-only inbox and ledge
 ## Git adapter ownership
 
 `owned-files.json` is installer state, not user approval. Under `adapters`,
-`git_hooks` stores only installed event names (`pre-commit`, `commit-msg`).
+`git_hooks` stores only installed event names (`pre-commit`, `commit-msg`, `pre-push`).
 Paths are discovered from the current Git checkout at operation time. Legacy
 `git_abs` and `git` entries are read for recognized event names only, never as
 filesystem targets; upgrade replaces them with `git_hooks`. Uninstall preserves
 scripts that differ from the installed template. Linked worktrees use Git's
 common directory and therefore share hooks; this is not per-worktree ownership.
+
+## Approval provenance and local signatures
+
+An inbox approval authorizes a change only when backed by verifiable hook
+provenance. An approval entry in `docs/_cgspec/07-state/approvals.json` must carry
+the host-supplied `session_id`, positive integer `captured_ns`, `excerpt`, and
+`sha256` matching the message excerpt digest. The local commit gate verifies that
+fresh approvals have valid session provenance, consistent capture timestamps, and
+no replays of the same event across candidate or historical approvals. When
+hook heartbeat records are present, the approval's session and capture time must
+align with recorded, authenticated hook activity. Bare inbox lines or hand-edited
+entries in `approvals.json` lack verifiable provenance and are rejected.
+
+The agent contract strictly forbids invoking `cgspec_hook.py user-message`
+directly from a shell, script, or wrapper. When hook capture is unavailable,
+authorizations use the human signed-trailer path: the commit message carries
+`Approved-by: Name <email>` and the commit is signed with a private key whose
+public counterpart is listed in `project.json` `approver_keys`.
+
+The signed-trailer signature check runs locally as well as in CI. Because
+`commit-msg` runs before Git creates the signed commit object, the installed
+`post-commit` hook immediately verifies the newly-created commit (`HEAD`)
+against `approver_keys`, reporting any missing or invalid signatures.
+The installed blocking `pre-push` hook verifies all outgoing commits against each
+commit's parent policy, preventing any unsigned or unprovenanced changes from
+being published. Upgrade installs these hooks while preserving custom hooks.
 
 ## IDs
 
@@ -245,6 +271,8 @@ and `--tool` tells the hook how to read it. Events:
 | `stop` | agent wants to end | yes, at most 2 times in a row (counter on disk) |
 | `pre-commit` | git pre-commit | yes |
 | `commit-msg` | git commit-msg | yes |
+| `post-commit` | git post-commit; verifies finished approval commits immediately upon creation | no (reports local error) |
+| `pre-push` | git pre-push; verifies finished approval commits on every outgoing ref update | yes |
 | `ci` | CI governance stage | yes |
 | `proof seal`, `proof map` | protected CI signing stages before and after integration | yes; refuse missing/untrusted inputs |
 

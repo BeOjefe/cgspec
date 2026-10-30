@@ -367,6 +367,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.event in CLI_MODULES: return importlib.import_module(f"_lib.{CLI_MODULES[args.event]}").cli(root, args)
         if args.event == "pre-tool": return pre_tool(root, args.tool, sys.stdin.read())
         if args.event == "pre-commit": return pre_commit(root)
+        if args.event == "post-commit": from _lib.local_approval_gate import post_commit; return post_commit(root)
+        if args.event == "pre-push": from _lib.local_approval_gate import pre_push; return pre_push(root, sys.stdin.read())
         if args.event == "post-tool": return post_tool(root, args.tool, sys.stdin.read())
         if args.event == "doc": return cmd_doc(root, args)
         if args.event == "check": from _lib.checks import cli; return cli(root, args)
