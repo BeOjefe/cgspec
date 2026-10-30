@@ -236,7 +236,7 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     reasons += [f"{c.path}: cache files may not be committed (__pycache__/.pyc)" for c in changes
                 if c.status != "D" and ("__pycache__/" in c.path or c.path.endswith(".pyc"))]
     code_changes = [c for c in changes if (needs_tier(c.path) or (c.old_path and needs_tier(c.old_path)))
-                    and c.path not in exempt
+                    and c.path not in exempt and (not c.old_path or c.old_path not in exempt)
                     and not trust.engine_file(c.path) and not c.path.startswith(trust.ENGINE)
                     and c.path != parity_manifest.MANIFEST]
     reasons += _tier_rules(view, code_changes, tier, classes)
@@ -246,7 +246,7 @@ def evaluate(root: Path, view: View, release_dir: Path | None = None, strict: bo
     reasons += parity_manifest.gate(view, changes, project)
     reasons += _document_dates(view, changes)
     for change in changes:
-        if change.path.startswith(trust.ENGINE) or change.path in exempt:
+        if change.path.startswith(trust.ENGINE) or change.path in exempt or (change.old_path and change.old_path in exempt):
             continue  # engine files are checked above; install-owned files (e.g. copied skills) come from the plugin
         raw_bytes = view.read_new(change.path) if change.status != "D" else None
         if raw_bytes and b"\x00" not in raw_bytes:

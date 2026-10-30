@@ -173,7 +173,7 @@ def update_gitignore(root: Path, owned: dict) -> None:
 
 def new_owned() -> dict:
     return {"schema": 1, "cgspec_version": version(), "installed_at": utc_now(),
-            "created": {}, "dirs": [], "replaced": {}, "gitignore_added": []}
+            "created": {}, "dirs": [], "replaced": {}, "deleted": {}, "gitignore_added": []}
 
 
 def cmd_install(root: Path, args: argparse.Namespace) -> int:
