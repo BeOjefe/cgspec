@@ -49,8 +49,16 @@ def affected_test_records(root: Path, base: str) -> list[dict]:
         project = json.loads(project_result.stdout) if project_result.returncode == 0 else {}
     except ValueError:
         project = {}
-    if not isinstance(project, dict):
-        project = {}
+    old_project_result = git(root, "show", f"{base}:docs/_cgspec/project.json")
+    try:
+        old_project = json.loads(old_project_result.stdout) if old_project_result.returncode == 0 else {}
+    except ValueError:
+        old_project = {}
+    if not isinstance(old_project, dict):
+        old_project = {}
+    project_test_changed = any(old_project.get(k) != project.get(k) for k in ("test_command", "test_runners", "test_environments"))
+    from . import gates
+    code_changed = {p for p in changed if gates.needs_tier(p) and not p.startswith(".agents/skills/")}
     runner_inputs = {}
     raw_environments = project.get("test_environments", [])
     environments = {item.get("id"): item for item in raw_environments if isinstance(item, dict)} \
@@ -80,7 +88,7 @@ def affected_test_records(root: Path, base: str) -> list[dict]:
         watched = {record.get("test_file")} | dependencies | runner_inputs.get(record.get("runner_id"), set())
         from .test_evolution import known_closure
         unknown_closure = not known_closure(semantics)
-        if (unknown_closure and changed) or "docs/_cgspec/project.json" in changed or changed & watched:
+        if (unknown_closure and code_changed) or project_test_changed or changed & watched:
             record["_file"] = rel
             records.append(record)
     return records
