@@ -105,6 +105,7 @@ def git_project(root: Path, profile: str = "web-workspace") -> None:
     (root / "src/login/form.ts").write_text("export const f = 1;\n")
     git(root, "add", "-A")
     git(root, "commit", "-q", "-m", "init")
+    git(root, "checkout", "-q", "-b", "codex/test-work")
 
 
 def approve(root: Path, text: str = "approved, go ahead") -> str:
@@ -155,6 +156,10 @@ def make_git_plan(root: Path, slice_id: str = "SLICE-001", outcome_id: str = "OU
                   branch: str | None = None) -> None:
     """Declare a minimal git execution plan for a slice so implementation gates pass."""
     branch = branch or git(root, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+    project = json.loads((root / "docs/_cgspec/project.json").read_text())
+    if branch in project.get("protected_branches", []):
+        branch = f"codex/{slice_id.lower()}"
+        git(root, "checkout", "-q", "-b", branch)
     base = git(root, "rev-parse", "HEAD").stdout.strip()
     draft = {
         "repositories": [{

@@ -57,11 +57,13 @@ def editor_reason(root: Path, tier: dict, rel: str, classes: dict) -> str | None
     if missing := {item["id"] for item in matched} - planned:
         return f"{rel} covers outcomes absent from the git execution plan: {', '.join(sorted(missing))}"
     reasons = []
+    from .project_policy import effective_requirements
+    requirements = effective_requirements(root, data)
     for item in matched:
         oid = item["id"]
         if oid not in data["active_outcomes"]:
             reasons.append(f"{oid} is not active; run start begin --outcome {oid}")
-        reasons += start.eligibility_errors(data, oid, start.mocks_enabled(), start.root_reader(root))
+        reasons += start.eligibility_errors(data, oid, start.mocks_enabled(), start.root_reader(root), requirements)
     return "; ".join(dict.fromkeys(reasons)) or None
 
 
@@ -206,6 +208,9 @@ def commit_implementation(view, tier: dict, paths: set[str]) -> list[str]:
     if not rel:
         return [f"{slice_id} has no success agreement in the candidate"]
     errors = start.validate_record(data)
+    from .project_policy import effective_from_reader, plan_errors, project_from_reader, record_errors
+    project, _ = project_from_reader(view.read_new)
+    errors += record_errors(project, data)
     if errors:
         return [f"{rel}: {error}" for error in errors]
     if data.get("slice") != slice_id:
@@ -213,6 +218,7 @@ def commit_implementation(view, tier: dict, paths: set[str]) -> list[str]:
     if data["status"] != "In progress":
         return [f"{slice_id} is {data['status']}; implementation requires active, ready outcomes"]
     reasons = []
+    reasons += plan_errors(project, plan)
     touched_outcomes = {item["id"] for path in paths for item in _matching(data, path)}
     planned_outcomes = {oid for repo in plan["repositories"] for oid in repo["outcomes"]}
     if missing := touched_outcomes - planned_outcomes:
@@ -220,9 +226,12 @@ def commit_implementation(view, tier: dict, paths: set[str]) -> list[str]:
     if len(touched_outcomes) > 1:
         reasons.append("commit combines implementation for unrelated outcomes; split it into logical behavior commits")
     results = {result["id"]: result for result in data["readiness"]["checks"]}
-    for req in data["prerequisites"]:
+    requirements, _ = effective_from_reader(view.read_new, data)
+    for req in requirements:
         if req["when"] == "before_start" and touched_outcomes.intersection(req["outcomes"]):
-            reasons += _probe_binding(view, req, results[req["id"]]["input_hashes"])
+            result = results.get(req["id"])
+            if result:
+                reasons += _probe_binding(view, req, result["input_hashes"])
     for path in sorted(paths):
         matched = _matching(data, path)
         if not matched:
@@ -233,6 +242,6 @@ def commit_implementation(view, tier: dict, paths: set[str]) -> list[str]:
             if oid not in data["active_outcomes"]:
                 reasons.append(f"{path}: {oid} is not active")
             reasons += [f"{path}: {reason}" for reason in
-                        start.eligibility_errors(data, oid, start.mocks_enabled(), view.read_new)]
+                        start.eligibility_errors(data, oid, start.mocks_enabled(), view.read_new, requirements)]
     problem = _approval_reason(view, rel, data)
     return reasons + ([problem] if problem else [])

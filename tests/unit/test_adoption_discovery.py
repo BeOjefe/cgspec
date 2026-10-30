@@ -36,7 +36,7 @@ class AdoptionDiscoveryTests(unittest.TestCase):
         self.assertEqual(len(data["repos"]), 1)
         repo = data["repos"][0]
         self.assertTrue(repo["reachable"])
-        self.assertEqual(repo["git"]["branch"], "main")
+        self.assertEqual(repo["git"]["branch"], "codex/test-work")
         self.assertEqual(repo["git"]["head"], git(self.root, "rev-parse", "HEAD").stdout.strip())
         self.assertIn("src/a.ts", repo["dirty"]["modified"])
         self.assertIn("notes.txt", repo["dirty"]["untracked"])
