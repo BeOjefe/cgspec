@@ -292,8 +292,6 @@ def run(root: Path, base: str | None, rerun_tests: bool = True,
         or bool(require_issue)
         or bool(project_data.get("require_issue_linking"))
         or os.environ.get("CGSPEC_REQUIRE_ISSUE") == "1"
-        or os.environ.get("GITHUB_EVENT_NAME") == "pull_request"
-        or bool(os.environ.get("GITHUB_BASE_REF"))
     )
     if enforce_issue:
         if not has_issue_reference(root, base, pr):
