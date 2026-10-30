@@ -21,6 +21,7 @@ This directory houses technical research spikes, comparative benchmarks, and exp
 - **[`RES-005`](RES-005-anthropic-design-plugin-structure-and-skills.md):** Anthropic's `design` plugin 1.2.0: how a first-party multi-skill plugin is structured, and what each skill enforces versus leaves to prose. Source: `Design-1.2.0-v1/`.
 - **[`RES-006`](RES-006-scroll-craft-skill-standard-and-verification.md):** Nate Herk's `scroll-craft` 0.3.0: a skill that ships a design standard with its own verification scripts. Source: `scrollcraft/`.
 - **[`RES-007`](RES-007-claude-code-hooks-benchmark-and-hygiene-gates.md):** Community Claude Code hook taxonomy (`r/ClaudeCode/1t93ikr`): pre-write hygiene gates (`CRLF`, 400-line cap, workstation paths), anti-deflection on `--blocked`, and starter template checks.
+- **[`RES-008`](RES-008-ostack-gstack-governance-philosophy-comparison.md):** `ostack`/`gstack` (`github.com/mr-daedalium/ostack-saas`): a governance-philosophy comparison, not a feature-gap benchmark — its approval-minimizing `/autoplan` is the deliberate inverse of CGSpec's approval-capture premise; its `canary` post-deploy drift monitor is the one piece worth adapting.
 
 ---
 
