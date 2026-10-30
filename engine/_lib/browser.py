@@ -14,7 +14,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-DRIVER = Path(__file__).with_name("browser_driver.js")
+DRIVER = Path(__file__).with_name("browser_driver.cjs")
 TIMEOUT = 900
 AUDIT_VIEWPORTS = ("desktop", "mobile")
 MAGIC = {".png": b"\x89PNG\r\n\x1a\n", ".webm": b"\x1a\x45\xdf\xa3"}
@@ -27,7 +27,7 @@ def expected_viewports(item: dict) -> list[str]:
 
 
 def expected_files(item: dict, shots: Path, viewport: str) -> list[Path]:
-    """Artifacts the driver must leave for one viewport of one run (names match browser_driver.js)."""
+    """Artifacts the driver must leave for one viewport of one run (names match browser_driver.cjs)."""
     label = f"{item['label']}-{viewport}"
     files = [shots / f"{label}.png"]
     if item.get("kind") == "audit":
