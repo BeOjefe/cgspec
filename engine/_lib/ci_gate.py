@@ -268,15 +268,8 @@ def effective_base(root: Path, base: str | None) -> str:
     return base
 
 
-def run(root: Path, base: str | None, rerun_tests: bool = True,
-        release_dir: Path | None = None,
-        pr: str | None = None,
-        require_issue: bool | None = None) -> tuple[list[str], list[str]]:
-    """(problems, notes) for the range base..HEAD."""
-    problems, notes = [], []
-    base = effective_base(root, base)
-    notes.append(f"checking {base[:10]}..HEAD")
-
+def check_issue_linking(root: Path, base: str, pr: str | None,
+                        require_issue: bool | None) -> tuple[list[str], list[str]]:
     pj_file = root / "docs" / "_cgspec" / "project.json"
     project_data = {}
     if pj_file.exists():
@@ -293,11 +286,25 @@ def run(root: Path, base: str | None, rerun_tests: bool = True,
         or bool(project_data.get("require_issue_linking"))
         or os.environ.get("CGSPEC_REQUIRE_ISSUE") == "1"
     )
-    if enforce_issue:
-        if not has_issue_reference(root, base, pr):
-            problems.append("candidate PR or commit range has no associated issue reference (e.g. closes #<id>, fixes #<id>, or #<id>)")
-        else:
-            notes.append("verified PR-to-issue reference")
+    if not enforce_issue:
+        return [], []
+    if not has_issue_reference(root, base, pr):
+        return ["candidate PR or commit range has no associated issue reference (e.g. closes #<id>, fixes #<id>, or #<id>)"], []
+    return [], ["verified PR-to-issue reference"]
+
+
+def run(root: Path, base: str | None, rerun_tests: bool = True,
+        release_dir: Path | None = None,
+        pr: str | None = None,
+        require_issue: bool | None = None) -> tuple[list[str], list[str]]:
+    """(problems, notes) for the range base..HEAD."""
+    problems, notes = [], []
+    base = effective_base(root, base)
+    notes.append(f"checking {base[:10]}..HEAD")
+
+    issue_problems, issue_notes = check_issue_linking(root, base, pr, require_issue)
+    problems += issue_problems
+    notes += issue_notes
 
     for commit in commits_in_range(root, base):
         subject = git(root, "log", "-1", "--format=%h %s", commit).stdout.strip()
