@@ -18,17 +18,20 @@ TEST_TIMEOUT = 600
 
 ISSUE_PATTERN = re.compile(
     r"(?:(?i:\b(?:closes|closed|fixes|fixed|resolves|resolved|issue)\b:?\s*)?#\d+\b|"
-    r"https?://github\.com/[^/\s]+/[^/\s]+/issues/\d+\b|"
+    r"https?://[^/\s]+/[^/\s]+/[^/\s]+/issues/\d+\b|"
     r"\b[a-zA-Z0-9_-]+#\d+\b|"
     r"\b(?:GH|gh)-\d+\b|"
     r"(?i:\b(?:closes|closed|fixes|fixed|resolves|resolved|issue)\s+\d+\b))"
 )
-BRANCH_ISSUE_PATTERN = re.compile(r"(?:^|[/-])(?:issue[-/]?|gh-?|fix[-/]?|feat[-/]?)?(\d+)(?:[/-]|$)")
+BRANCH_ISSUE_PATTERN = re.compile(
+    r"(?i)(?:^|[/-])(?:(?:issue|gh)[-/]?|#|(?:fix|fixes|feat|feature)[-/]#?)(\d+)(?:[/-]|$)|"
+    r"^(?:[a-zA-Z0-9_-]+/)?(\d+)(?:[/-]|$)"
+)
 
 
 def has_issue_reference(root: Path, base: str, pr: str | None = None) -> bool:
     if pr:
-        if ISSUE_PATTERN.search(pr) or re.search(r"\b\d+\b", pr):
+        if ISSUE_PATTERN.search(pr) or (pr.strip().isdigit() and int(pr.strip()) > 0):
             return True
     for commit in commits_in_range(root, base):
         msg = git(root, "log", "-1", "--format=%B", commit).stdout
@@ -280,11 +283,19 @@ def check_issue_linking(root: Path, base: str, pr: str | None,
     if not isinstance(project_data, dict):
         project_data = {}
 
+    is_ci_pr = (
+        os.environ.get("GITHUB_EVENT_NAME") == "pull_request"
+        and (
+            not os.environ.get("GITHUB_WORKSPACE")
+            or Path(os.environ["GITHUB_WORKSPACE"]).resolve() == root.resolve()
+        )
+    )
     enforce_issue = (
         pr is not None
         or bool(require_issue)
         or bool(project_data.get("require_issue_linking"))
         or os.environ.get("CGSPEC_REQUIRE_ISSUE") == "1"
+        or is_ci_pr
     )
     if not enforce_issue:
         return [], []

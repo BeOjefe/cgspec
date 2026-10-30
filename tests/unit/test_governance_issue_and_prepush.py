@@ -118,6 +118,54 @@ class IssueLinkingGateTests(unittest.TestCase):
         self.assertEqual(res.returncode, 1, res.stdout + res.stderr)
         self.assertIn("candidate PR or commit range has no associated issue reference", res.stdout)
 
+    def test_pr_metadata_with_arbitrary_numbers_fails_without_issue_link(self):
+        self.set_t0()
+        (self.root / "src/a.ts").write_text("export const a = 2;\n")
+        commit(self.root, "fix: update logic")
+        res = self.ci("--pr", "Refactor phase 2 of login module without issue reference")
+        self.assertEqual(res.returncode, 1, res.stdout + res.stderr)
+        self.assertIn("candidate PR or commit range has no associated issue reference", res.stdout)
+
+    def test_pr_metadata_with_numeric_id_only_passes(self):
+        self.set_t0()
+        (self.root / "src/a.ts").write_text("export const a = 2;\n")
+        commit(self.root, "fix: update logic")
+        res = self.ci("--pr", "76")
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+        self.assertIn("verified PR-to-issue reference", res.stdout)
+
+    def test_branch_with_step_or_patch_number_fails_linking(self):
+        git(self.root, "checkout", "-q", "-b", "refactor-step-1")
+        self.set_t0()
+        (self.root / "src/a.ts").write_text("export const a = 2;\n")
+        commit(self.root, "fix: update logic on step branch")
+        res = self.ci("--pr", "")
+        self.assertEqual(res.returncode, 1, res.stdout + res.stderr)
+        self.assertIn("candidate PR or commit range has no associated issue reference", res.stdout)
+
+    def test_branch_with_feat_slash_issue_number_passes(self):
+        git(self.root, "checkout", "-q", "-b", "feat/76-login")
+        self.set_t0()
+        (self.root / "src/a.ts").write_text("export const a = 2;\n")
+        commit(self.root, "fix: update logic on feat issue branch")
+        res = self.ci("--pr", "")
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+        self.assertIn("verified PR-to-issue reference", res.stdout)
+
+    def test_ci_pr_environment_variable_enforces_linking(self):
+        self.set_t0()
+        (self.root / "src/a.ts").write_text("export const a = 2;\n")
+        commit(self.root, "fix: unlinked pr commit")
+        os.environ["GITHUB_EVENT_NAME"] = "pull_request"
+        os.environ["GITHUB_WORKSPACE"] = str(self.root)
+        try:
+            res = self.ci()
+            self.assertEqual(res.returncode, 1, res.stdout + res.stderr)
+            self.assertIn("candidate PR or commit range has no associated issue reference", res.stdout)
+        finally:
+            os.environ.pop("GITHUB_EVENT_NAME", None)
+            os.environ.pop("GITHUB_WORKSPACE", None)
+
     def test_unconfigured_without_pr_flag_preserves_legacy_behavior(self):
         self.set_t0()
         (self.root / "src/a.ts").write_text("export const a = 2;\n")
@@ -197,6 +245,42 @@ class PrePushTestExecutionGateTests(unittest.TestCase):
             self.assertEqual(pre_push(self.root, ref_update), 0)
         finally:
             os.environ.pop("CGSPEC_SKIP_PRE_PUSH_TESTS", None)
+
+    def test_pre_push_executes_test_runners_with_test_file_substitution(self):
+        from _lib.local_approval_gate import pre_push
+        runner = {
+            "id": "unit",
+            "command": ["python3", "{test_file}"],
+            "cwd": ".",
+            "timeout_seconds": 30,
+            "applies_to": ["tests/**"],
+        }
+        self.set_project_config(test_command=None, test_runners=[runner])
+        (self.root / "tests").mkdir(exist_ok=True)
+        (self.root / "tests/failing_runner.py").write_text("import sys\nsys.exit(1)\n")
+        current_head = commit(self.root, "test: add failing runner test")
+        ref_update = f"refs/heads/codex/test-work {current_head} refs/heads/codex/test-work {self.base}\n"
+        self.assertEqual(pre_push(self.root, ref_update), 1)
+
+        (self.root / "tests/failing_runner.py").write_text("import sys\nsys.exit(0)\n")
+        fixed_head = commit(self.root, "test: fix runner test")
+        ref_update = f"refs/heads/codex/test-work {fixed_head} refs/heads/codex/test-work {self.base}\n"
+        self.assertEqual(pre_push(self.root, ref_update), 0)
+
+    def test_pre_push_executes_test_runners_without_test_file(self):
+        from _lib.local_approval_gate import pre_push
+        runner = {
+            "id": "suite",
+            "command": ["python3", "-c", "import sys; sys.exit(0)"],
+            "cwd": ".",
+            "timeout_seconds": 30,
+        }
+        self.set_project_config(test_command=None, test_runners=[runner])
+        agents_file = self.root / "AGENTS.md"
+        agents_file.write_text(agents_file.read_text() + "\n<!-- push work -->\n")
+        current_head = commit(self.root, "docs: outgoing work")
+        ref_update = f"refs/heads/codex/test-work {current_head} refs/heads/codex/test-work {self.base}\n"
+        self.assertEqual(pre_push(self.root, ref_update), 0)
 
     def test_git_pre_push_event_alias(self):
         self.set_project_config(test_command=["python3", "-c", "import sys; sys.exit(0)"])

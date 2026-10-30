@@ -50,33 +50,76 @@ def _find_test_files(root: Path, commits: set[str], test_globs: list[str]) -> li
     for sha in sorted(commits):
         view = View.commit(root, sha)
         for c in view.changes():
-            if c.status != "D" and (match_any(c.path, test_globs) or c.path.startswith("tests/")) and (root / c.path).is_file():
+            if c.status != "D" and (match_any(c.path, test_globs) or c.path.startswith(("tests/", "test/"))) and (root / c.path).is_file():
                 if c.path not in touched:
                     touched.append(c.path)
-    if not touched and (root / "tests").is_dir():
-        for p in sorted((root / "tests").rglob("*")):
-            if p.is_file() and not p.name.startswith(".") and not p.name.startswith("__"):
-                rel = p.relative_to(root).as_posix()
-                if match_any(rel, test_globs) or rel.endswith((".py", ".js", ".ts")):
-                    touched.append(rel)
+    if not touched:
+        for folder in ("tests", "test", "spec", "specs"):
+            tdir = root / folder
+            if tdir.is_dir():
+                for p in sorted(tdir.rglob("*")):
+                    if p.is_file() and not p.name.startswith((".", "_", "helper", "conftest")):
+                        rel = p.relative_to(root).as_posix()
+                        if match_any(rel, test_globs) or rel.endswith((".py", ".js", ".ts", ".jsx", ".tsx")):
+                            if rel not in touched:
+                                touched.append(rel)
     return touched
 
 
-def _run_runners(root: Path, test_runners: list) -> list[str]:
+def _run_test_cmd(root: Path, commits: set[str], test_cmd: list[str], test_globs: list[str]) -> list[str]:
+    failures = []
+    if "{test_file}" in test_cmd:
+        for tf in _find_test_files(root, commits, test_globs):
+            cmd = [tf if part == "{test_file}" else part for part in test_cmd]
+            try:
+                res = subprocess.run(cmd, cwd=root, capture_output=True, text=True, timeout=300)
+                if res.returncode != 0:
+                    detail = (res.stderr or res.stdout or "").strip()
+                    failures.append(f"test {tf} failed (exit {res.returncode}): {detail}" if detail else f"test {tf} failed (exit {res.returncode})")
+            except Exception as exc:
+                failures.append(f"could not run test {tf} ({cmd}): {exc}")
+    else:
+        try:
+            res = subprocess.run(test_cmd, cwd=root, capture_output=True, text=True, timeout=600)
+            if res.returncode != 0:
+                detail = (res.stderr or res.stdout or "").strip()
+                failures.append(f"test command {' '.join(test_cmd)} failed (exit {res.returncode}): {detail}" if detail else f"test command {' '.join(test_cmd)} failed (exit {res.returncode})")
+        except Exception as exc:
+            failures.append(f"could not run test command {' '.join(test_cmd)}: {exc}")
+    return failures
+
+
+def _run_runners(root: Path, test_runners: list, commits: set[str], test_globs: list[str]) -> list[str]:
     failures = []
     for runner in test_runners:
         if not isinstance(runner, dict):
             continue
         cmd = runner.get("command")
-        if isinstance(cmd, list) and cmd:
-            runner_cwd = root / runner.get("cwd", ".")
+        if not (isinstance(cmd, list) and cmd):
+            continue
+        runner_cwd = root / runner.get("cwd", ".")
+        timeout = runner.get("timeout_seconds", 300)
+        runner_id = runner.get("id", "default")
+        globs = runner.get("applies_to") if isinstance(runner.get("applies_to"), list) else test_globs
+
+        if "{test_file}" in cmd:
+            for tf in _find_test_files(root, commits, globs):
+                sub_cmd = [tf if part == "{test_file}" else part for part in cmd]
+                try:
+                    res = subprocess.run(sub_cmd, cwd=runner_cwd, capture_output=True, text=True, timeout=timeout)
+                    if res.returncode != 0:
+                        detail = (res.stderr or res.stdout or "").strip()
+                        failures.append(f"test runner {runner_id} on {tf} failed (exit {res.returncode}): {detail}" if detail else f"test runner {runner_id} on {tf} failed (exit {res.returncode})")
+                except Exception as exc:
+                    failures.append(f"could not run test runner {runner_id} on {tf} ({sub_cmd}): {exc}")
+        else:
             try:
-                res = subprocess.run(cmd, cwd=runner_cwd, capture_output=True, text=True, timeout=runner.get("timeout_seconds", 300))
+                res = subprocess.run(cmd, cwd=runner_cwd, capture_output=True, text=True, timeout=timeout)
                 if res.returncode != 0:
                     detail = (res.stderr or res.stdout or "").strip()
-                    failures.append(f"test runner {runner.get('id', 'default')} failed (exit {res.returncode}): {detail}" if detail else f"test runner {runner.get('id', 'default')} failed (exit {res.returncode})")
+                    failures.append(f"test runner {runner_id} failed (exit {res.returncode}): {detail}" if detail else f"test runner {runner_id} failed (exit {res.returncode})")
             except Exception as exc:
-                failures.append(f"could not run test runner {runner.get('id', 'default')} ({cmd}): {exc}")
+                failures.append(f"could not run test runner {runner_id} ({cmd}): {exc}")
     return failures
 
 
@@ -102,26 +145,9 @@ def run_pre_push_tests(root: Path, commits: set[str]) -> list[str]:
     test_globs = classes.get("tests", ["tests/**"]) if isinstance(classes.get("tests"), list) else ["tests/**"]
 
     if isinstance(test_cmd, list) and test_cmd:
-        if "{test_file}" in test_cmd:
-            for tf in _find_test_files(root, commits, test_globs):
-                cmd = [tf if part == "{test_file}" else part for part in test_cmd]
-                try:
-                    res = subprocess.run(cmd, cwd=root, capture_output=True, text=True, timeout=300)
-                    if res.returncode != 0:
-                        detail = (res.stderr or res.stdout or "").strip()
-                        failures.append(f"test {tf} failed (exit {res.returncode}): {detail}" if detail else f"test {tf} failed (exit {res.returncode})")
-                except Exception as exc:
-                    failures.append(f"could not run test {tf} ({cmd}): {exc}")
-        else:
-            try:
-                res = subprocess.run(test_cmd, cwd=root, capture_output=True, text=True, timeout=600)
-                if res.returncode != 0:
-                    detail = (res.stderr or res.stdout or "").strip()
-                    failures.append(f"test command {' '.join(test_cmd)} failed (exit {res.returncode}): {detail}" if detail else f"test command {' '.join(test_cmd)} failed (exit {res.returncode})")
-            except Exception as exc:
-                failures.append(f"could not run test command {' '.join(test_cmd)}: {exc}")
-    elif isinstance(test_runners, list):
-        failures.extend(_run_runners(root, test_runners))
+        failures.extend(_run_test_cmd(root, commits, test_cmd, test_globs))
+    elif isinstance(test_runners, list) and test_runners:
+        failures.extend(_run_runners(root, test_runners, commits, test_globs))
 
     return failures
 
